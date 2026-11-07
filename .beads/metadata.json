@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "leafspring",
+  "project_id": "812fbb4e-2d8d-4ed3-b368-2cdbaca77bff"
+}
