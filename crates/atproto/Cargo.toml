@@ -1,0 +1,7 @@
+[package]
+name = "springleaf-atproto"
+description = "Generic ATProto client surface for springleaf (XRPC, sessions, records, blobs)"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

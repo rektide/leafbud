@@ -1,0 +1,7 @@
+[package]
+name = "springleaf-leaflet"
+description = "Leaflet record types, blocks/facets, markdown conversion, and slug/URL rules for springleaf"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

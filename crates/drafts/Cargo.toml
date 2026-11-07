@@ -1,0 +1,16 @@
+[package]
+name = "springleaf-drafts"
+description = "leaflet.pub web surface: cookie-authed /home RSC parsing and read RPCs"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+jiff.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
