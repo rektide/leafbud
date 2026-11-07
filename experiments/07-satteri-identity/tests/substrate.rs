@@ -90,3 +90,13 @@ fn native_mdx_is_not_literal_only_and_carries_arbitrary_javascript() {
     assert_eq!(arena.get_str(value), "danger()");
     assert_eq!(decode_mdx_jsx_attr(bytes, 1).0, MDX_ATTR_SPREAD);
 }
+
+#[test]
+fn native_mdx_intentionally_disables_indented_code() {
+    let source = "    {/* springleaf:key looks-like-code */}\n\nFollowing prose.\n";
+    let (plain, _) = native(source, Mode::Plain);
+    let (mdx, errors) = native(source, Mode::Mdx);
+    assert!(errors.is_empty());
+    assert_eq!(plain.get_node(plain.get_children(0)[0]).node_type, MdastNodeType::Code as u8);
+    assert_eq!(mdx.get_node(mdx.get_children(0)[0]).node_type, MdastNodeType::MdxFlowExpression as u8);
+}

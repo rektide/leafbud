@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use satteri_arena::{Arena, Mdast, StringRef, decode_string_ref_data};
 use satteri_ast::mdast::*;
 use satteri_pulldown_cmark::{MDX_OPTIONS, Options};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 #[derive(Clone, Copy, Debug)]
@@ -22,16 +22,16 @@ impl Mode {
             Self::Plain => Options::empty(),
             Self::Attributes => Options::ENABLE_ATTRIBUTES,
             Self::Mdx => MDX_OPTIONS,
-            Self::Author => MDX_OPTIONS | Options::ENABLE_ATTRIBUTES,
+            Self::Author => MDX_OPTIONS,
         }
     }
 
     fn lowers_keys(self) -> bool {
-        matches!(self, Self::Attributes | Self::Author)
+        matches!(self, Self::Attributes)
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -60,6 +60,7 @@ pub enum Kind {
     Link,
     Image,
     Component,
+    Comment,
     Expression,
     Esm,
     Other(String),
@@ -71,6 +72,9 @@ pub struct Node {
     pub kind: Kind,
     pub span: Span,
     pub key: Option<String>,
+    /// Only comment keys expose an exact annotation range. Native attribute
+    /// metadata and JSX property codecs do not expose individual token ranges.
+    pub key_span: Option<Span>,
     pub value: Option<String>,
     pub details: Value,
     pub data: Value,
@@ -89,6 +93,9 @@ pub struct Diagnostic {
 pub struct Parsed {
     #[serde(skip)]
     original: String,
+    /// Native arena offsets exclude an initial UTF-8 BOM. Add this base to
+    /// slice original_source() rather than the parser's BOM-stripped source.
+    pub position_source_start: usize,
     pub tree: Node,
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -200,6 +207,85 @@ fn lower_keys(arena: &mut Arena<Mdast>, diagnostics: &mut Vec<Diagnostic>) {
     }
 }
 
+fn reserved_directive(value: &str) -> Option<Result<&str, &'static str>> {
+    if !value.trim_start().starts_with("/* springleaf:") {
+        return None;
+    }
+    Some(
+        value
+            .strip_prefix("/* springleaf:key ")
+            .and_then(|v| v.strip_suffix(" */"))
+            .filter(|key| valid_key(key))
+            .ok_or("expected one comment: {/* springleaf:key NAME */}; NAME matches [A-Za-z][A-Za-z0-9_.-]*"),
+    )
+}
+
+fn comment_only(value: &str) -> bool {
+    value
+        .strip_prefix("/*")
+        .and_then(|v| v.strip_suffix("*/"))
+        .is_some_and(|body| !body.contains("*/"))
+}
+
+/// Bind native MDX expression nodes to immediate siblings, with no scanning of
+/// source lines and no injected lexer. Removal is through the public arena API.
+fn bind_comments(arena: &mut Arena<Mdast>, parent: u32, diagnostics: &mut Vec<Diagnostic>) {
+    let children = arena.get_children(parent).to_vec();
+    for &child in &children {
+        bind_comments(arena, child, diagnostics);
+    }
+    let mut keep = Vec::new();
+    for (index, &id) in children.iter().enumerate() {
+        let kind = MdastNodeType::from_u8(arena.get_node(id).node_type).unwrap();
+        if !matches!(kind, MdastNodeType::MdxFlowExpression | MdastNodeType::MdxTextExpression) {
+            keep.push(id);
+            continue;
+        }
+        let value = arena.get_str(decode_expression_data(arena.get_type_data(id)).value).to_owned();
+        let Some(directive) = reserved_directive(&value) else {
+            keep.push(id);
+            continue;
+        };
+        let key = match directive {
+            Ok(key) => key,
+            Err(message) => {
+                diagnose(diagnostics, arena, id, "malformed-key", message);
+                continue;
+            }
+        };
+        if kind != MdastNodeType::MdxFlowExpression {
+            diagnose(
+                diagnostics,
+                arena,
+                id,
+                "misplaced-key",
+                "key comments must be native flow expressions on their own line",
+            );
+            continue;
+        }
+        let Some(&target) = children.get(index + 1) else {
+            diagnose(diagnostics, arena, id, "unbound-key", "no following sibling in this container");
+            continue;
+        };
+        let target_kind = MdastNodeType::from_u8(arena.get_node(target).node_type).unwrap();
+        if !block_kind(target_kind) {
+            diagnose(
+                diagnostics,
+                arena,
+                id,
+                "unsupported-target",
+                format!("immediate sibling is {target_kind:?}; no skipping"),
+            );
+            continue;
+        }
+        let mut metadata = data(arena, target);
+        metadata["springleafKey"] = key.into();
+        metadata["springleafKeySpan"] = serde_json::to_value(span(arena, id)).unwrap();
+        arena.set_node_data(target, serde_json::to_vec(&metadata).unwrap());
+    }
+    arena.set_children(parent, &keep);
+}
+
 fn string(arena: &Arena<Mdast>, reference: StringRef) -> String {
     arena.get_str(reference).into()
 }
@@ -265,7 +351,13 @@ fn project(arena: &Arena<Mdast>, id: u32) -> Node {
         }
         M::MdxFlowExpression | M::MdxTextExpression | M::MdxjsEsm => {
             value = Some(string(arena, decode_expression_data(bytes).value));
-            if raw_kind == M::MdxjsEsm { Kind::Esm } else { Kind::Expression }
+            if raw_kind == M::MdxjsEsm {
+                Kind::Esm
+            } else if comment_only(value.as_deref().unwrap()) {
+                Kind::Comment
+            } else {
+                Kind::Expression
+            }
         }
         other => Kind::Other(other.name().into()),
     };
@@ -275,6 +367,7 @@ fn project(arena: &Arena<Mdast>, id: u32) -> Node {
         kind,
         span: span(arena, id),
         key: metadata.get("springleafKey").and_then(Value::as_str).map(str::to_owned),
+        key_span: metadata.get("springleafKeySpan").map(|value| serde_json::from_value(value.clone()).unwrap()),
         value,
         details,
         data: metadata,
@@ -293,10 +386,7 @@ fn literal_gate(node: &mut Node, diagnostics: &mut Vec<Diagnostic>) {
         })
     };
     if matches!(node.kind, Kind::Expression | Kind::Esm) {
-        fail(
-            "unsupported-expression",
-            "standalone expressions/ESM (including comment directives) are outside the attribute dialect".into(),
-        );
+        fail("unsupported-expression", "standalone expressions/ESM are not literal document data".into());
     }
     if node.kind == Kind::Component {
         let name = node.details["name"].as_str().unwrap();
@@ -334,10 +424,14 @@ fn literal_gate(node: &mut Node, diagnostics: &mut Vec<Diagnostic>) {
         if let Some(key) = props.get("key") {
             if let Some(key) = key.as_str().filter(|key| valid_key(key)) {
                 if node.key.is_some() {
-                    fail("key-collision", "component has both native attribute and key property".into());
+                    fail("key-collision", "component has both comment annotation and key property".into());
                     node.key = None;
+                    node.key_span = None;
+                    node.data.as_object_mut().unwrap().remove("springleafKey");
+                    node.data.as_object_mut().unwrap().remove("springleafKeySpan");
                 } else {
                     node.key = Some(key.into());
+                    node.data["springleafKey"] = key.into();
                 }
             } else {
                 fail("invalid-key", "component key must be an author-key string".into());
@@ -364,9 +458,12 @@ fn reject_duplicates(node: &mut Node, duplicates: &HashMap<String, Vec<Span>>, d
         diagnostics.push(Diagnostic {
             code: "duplicate-key".into(),
             message: format!("duplicate prose/component key {:?}", node.key),
-            span: node.span,
+            span: node.key_span.unwrap_or(node.span),
         });
         node.key = None;
+        node.key_span = None;
+        node.data.as_object_mut().unwrap().remove("springleafKey");
+        node.data.as_object_mut().unwrap().remove("springleafKeySpan");
     }
     for child in &mut node.children {
         reject_duplicates(child, duplicates, diagnostics);
@@ -394,6 +491,9 @@ pub fn parse(source: &str, mode: Mode) -> Parsed {
     if mode.lowers_keys() {
         lower_keys(&mut arena, &mut diagnostics);
     }
+    if matches!(mode, Mode::Author) {
+        bind_comments(&mut arena, 0, &mut diagnostics);
+    }
     let mut tree = project(&arena, 0);
     if matches!(mode, Mode::Author) {
         literal_gate(&mut tree, &mut diagnostics);
@@ -405,6 +505,7 @@ pub fn parse(source: &str, mode: Mode) -> Parsed {
     diagnostics.sort_by(|a, b| (a.span.start, &a.code).cmp(&(b.span.start, &b.code)));
     Parsed {
         original: source.into(),
+        position_source_start: if source.starts_with('\u{feff}') { 3 } else { 0 },
         tree,
         diagnostics,
     }
