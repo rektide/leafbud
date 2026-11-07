@@ -1,0 +1,23 @@
+{
+  "repository": "https://github.com/vercel-labs/mdxjs-rs-turbopack",
+  "branch_observed": "turbopack",
+  "revision": "700e192fbdbad5874208addfbf421dcf1eca7a20",
+  "tree": "3d5ac556760d4c1801f5c3c6e29a386827e56b4b",
+  "package": "mdxjs",
+  "package_version": "1.0.4",
+  "upstream_baseline": "282729e6a0750c19dfd9217bc511971bf3295a29",
+  "git_archive_tar_sha256": "c3f7cdaf687fe875ec8b7507b2323ea02e44910441e73ce277bf214d1e048eee",
+  "git_archive_command": "git archive --format=tar 700e192fbdbad5874208addfbf421dcf1eca7a20 | sha256sum",
+  "source_sha256": {
+    "Cargo.toml": "844ce2cadc399fe107365fe296944f1abfceb59c276ac55451ef92b09f7fc1cb",
+    "src/lib.rs": "aca302b3998194c44c30d39530190267d059e08f0152b9c7b01ad993bb8fba09",
+    "src/configuration.rs": "f33303a20948313abbf13a7780db40b901a5183f95d901a911c7269ac76f8965"
+  },
+  "markdown": {
+    "registry_version": "1.0.0",
+    "registry_checksum": "a5cab8f2cadc416a82d2e783a1946388b31654d391d1c7d92cc1f03e295b1deb",
+    "inspected_revision": "1506572f9b406431402928f3a8b3df0b4ae2d8f5"
+  },
+  "experiment_lock_sha256": "8986dfa8679d852bf315d24b309b8f5943a97cbbb882a28042e86a0db1930a39",
+  "local_patches": []
+}
