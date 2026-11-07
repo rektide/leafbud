@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only Leaflet draft-internals probe (experiment 02).
 
-Token is read at runtime from ~/.config/leaflet/auth-token (or $LEAFLET_TOKEN)
+Token is read at runtime from ~/.config/springleaf/auth-token (or $LEAFLET_TOKEN)
 and is never printed or written anywhere. All requests are GETs or the
 documented read RPCs; no push/mutations are issued.
 
@@ -20,7 +20,7 @@ import urllib.request
 import uuid
 
 BASE = "https://leaflet.pub"
-TOKEN_PATH = os.path.expanduser("~/.config/leaflet/auth-token")
+TOKEN_PATH = os.path.expanduser("~/.config/springleaf/auth-token")
 
 
 def token() -> str:

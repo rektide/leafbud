@@ -6,7 +6,8 @@
 //! `publish build/run`, `sync`.
 //!
 //! Auth model: the `auth_token` cookie value resolved from `--token` >
-//! `$LEAFLET_AUTH_TOKEN` > `~/.config/leaflet/auth-token`. The token is
+//! `$LEAFLET_AUTH_TOKEN` > `$XDG_CONFIG_HOME/springleaf/auth-token`
+//! (else `~/.config/springleaf/auth-token`). The token is
 //! never echoed, logged, or embedded in error messages — including at
 //! debug/trace levels.
 //!
@@ -31,7 +32,7 @@ mod workspace;
     name = "springleaf",
     version,
     about = "A leaflet.pub client for agents and the CLI",
-    after_help = "The auth token is the auth_token cookie value: --token, $LEAFLET_AUTH_TOKEN, or ~/.config/leaflet/auth-token. It is never printed or logged."
+    after_help = "The auth token is the auth_token cookie value: --token, $LEAFLET_AUTH_TOKEN, or ~/.config/springleaf/auth-token. It is never printed or logged."
 )]
 struct Cli {
     /// Leaflet base URL (default https://leaflet.pub; env LEAFLET_BASE_URL)
@@ -39,7 +40,7 @@ struct Cli {
     base_url: Option<String>,
 
     /// Auth token (auth_token cookie value; env LEAFLET_AUTH_TOKEN; else
-    /// ~/.config/leaflet/auth-token). Never printed or logged.
+    /// ~/.config/springleaf/auth-token). Never printed or logged.
     #[arg(long, global = true, value_name = "TOKEN")]
     token: Option<String>,
 
@@ -336,15 +337,16 @@ async fn run(cli: Cli) -> Result<i32> {
     }
 }
 
-/// Token resolution: --token > $LEAFLET_AUTH_TOKEN > ~/.config/leaflet/auth-token.
-/// The value is trimmed and returned opaque; it is never printed, logged, or
-/// embedded in errors.
+/// Token resolution: --token > $LEAFLET_AUTH_TOKEN >
+/// $XDG_CONFIG_HOME/springleaf/auth-token. The value is trimmed and
+/// returned opaque; it is never printed, logged, or embedded in errors.
 fn resolve_token(flag_or_env: Option<&str>) -> Result<Option<String>> {
     if let Some(token) = flag_or_env.map(str::trim).filter(|t| !t.is_empty()) {
         return Ok(Some(token.to_string()));
     }
-    let home = std::env::var_os("HOME").context("token file: cannot locate ~/.config/leaflet/auth-token ($HOME unset)")?;
-    let path = std::path::Path::new(&home).join(".config/leaflet/auth-token");
+    let path = workspace::xdg_config_dir()
+        .context("token file: locating the springleaf XDG config dir")?
+        .join("auth-token");
     match std::fs::read_to_string(&path) {
         Ok(contents) => {
             let token = contents.trim();
@@ -402,7 +404,7 @@ async fn drafts_list(client: &LeafletClient, json: bool, fetch: bool) -> Result<
             DraftsError::NoHomePayload => anyhow::anyhow!(
                 "{err}\nhint: `springleaf auth status` checks the token; \
                  it is read from --token, $LEAFLET_AUTH_TOKEN, or \
-                 ~/.config/leaflet/auth-token"
+                 ~/.config/springleaf/auth-token"
             ),
             other => anyhow::Error::new(other),
         })

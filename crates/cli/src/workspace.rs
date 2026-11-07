@@ -11,9 +11,10 @@
 //! ```
 //!
 //! Root resolution: `--root` flag > the `workspace` key in the XDG config
-//! toml (`$XDG_CONFIG_HOME/springleaf.toml`, else `~/.config/`) > cwd.
-//! (The workspace key must live there — a toml inside the workspace
-//! cannot be found before the workspace is known.)
+//! toml (`$XDG_CONFIG_HOME/springleaf/springleaf.toml`, else
+//! `~/.config/springleaf/`) > cwd. (The workspace key must live there —
+//! a toml inside the workspace cannot be found before the workspace is
+//! known.)
 //!
 //! Record files stay **pure** ATProto record JSON (no frontmatter, no
 //! local fields); all local state lives in the sidecar
@@ -155,11 +156,10 @@ pub fn now_rfc3339() -> String {
     jiff::Timestamp::now().to_string()
 }
 
-/// Path of the optional XDG config toml: `$XDG_CONFIG_HOME/springleaf.toml`,
-/// else `~/.config/springleaf.toml` — the same file `pubs list` reads
-/// for its handle default and the only place a `workspace` key can be
-/// found before the workspace itself is known.
-pub fn xdg_config_toml_path() -> Result<std::path::PathBuf> {
+/// The springleaf XDG config dir: `$XDG_CONFIG_HOME/springleaf`, else
+/// `~/.config/springleaf` — home of the optional `springleaf.toml`
+/// (identity defaults + the `workspace` key) and the `auth-token` file.
+pub fn xdg_config_dir() -> Result<std::path::PathBuf> {
     let dir = match std::env::var_os("XDG_CONFIG_HOME") {
         Some(xdg) if !xdg.is_empty() => std::path::PathBuf::from(xdg),
         _ => {
@@ -167,7 +167,16 @@ pub fn xdg_config_toml_path() -> Result<std::path::PathBuf> {
             std::path::PathBuf::from(home).join(".config")
         }
     };
-    Ok(dir.join("springleaf.toml"))
+    Ok(dir.join("springleaf"))
+}
+
+/// Path of the optional XDG config toml:
+/// `$XDG_CONFIG_HOME/springleaf/springleaf.toml`, else
+/// `~/.config/springleaf/springleaf.toml` — the same file `pubs list`
+/// reads for its handle default and the only place a `workspace` key can
+/// be found before the workspace itself is known.
+pub fn xdg_config_toml_path() -> Result<std::path::PathBuf> {
+    Ok(xdg_config_dir()?.join("springleaf.toml"))
 }
 
 /// The `workspace` key from the XDG config toml, if any. Relative paths

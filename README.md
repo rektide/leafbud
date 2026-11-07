@@ -95,8 +95,9 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   human rendering covers title, rights, entity set, publication linkage,
   published documents, and state.
 - `pubs list` needs no leaflet auth: it resolves `--handle` (a handle or
-  a full DID; default: `handle` from springleaf.toml in the XDG config
-  dir, hand-parsed — no toml crate yet), then reads
+  a full DID; default: `handle` from `springleaf.toml` in the springleaf
+  XDG config dir — `$XDG_CONFIG_HOME/springleaf/`, hand-parsed — no toml
+  crate yet), then reads
   `site.standard.publication` + `pub.leaflet.publication` from the PDS
   via `listRecords`. The record decoder tries the jacquard-generated
   types first and falls back to raw field extraction (third-party
@@ -138,8 +139,9 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   in the sidecar (`rkey`, `uri`, `cid`, `publication`, `publishedAt`,
   `lastPutAt`, `contentHash` sha256 of the record file, `remoteCid`).
 - Root resolution: `--root` > the `workspace` key in the XDG config
-  `springleaf.toml` (the only place it can be found before the workspace
-  is known) > cwd. `drafts/` and `posted/` are created on demand.
+  `springleaf.toml` (`$XDG_CONFIG_HOME/springleaf/springleaf.toml` — the
+  only place it can be found before the workspace is known) > cwd.
+  `drafts/` and `posted/` are created on demand.
 - `publish build` needs a publication target: `--publication <at-uri>`
   or `publication` in the workspace `springleaf.toml`. Passing the flag
   also fetches the publication record (one public read) to derive the
@@ -161,12 +163,18 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
 
 ## Auth model
 
+springleaf's config lives under one XDG dir —
+`$XDG_CONFIG_HOME/springleaf/` (else `~/.config/springleaf/`):
+`springleaf.toml` (identity defaults, the `workspace` root key),
+`auth-token` (web cookie), and `session.json` (app-password session).
+
 Two surfaces, never mixed:
 
 - **leaflet.pub web cookie** (`auth status`, `drafts …`): the
   `auth_token` cookie value resolved from `--token` >
-  `$LEAFLET_AUTH_TOKEN` > `~/.config/leaflet/auth-token` (one line, mode
-  600 recommended).
+  `$LEAFLET_AUTH_TOKEN` > `$XDG_CONFIG_HOME/springleaf/auth-token`
+  (else `~/.config/springleaf/auth-token`; one line, mode 600
+  recommended).
 - **ATProto app-password session** (`publish run`, `sync --force`):
   `ATPROTO_HANDLE` + `ATPROTO_APP_PASSWORD` (an app password, not the
   account password), `ATPROTO_PDS` optional (default

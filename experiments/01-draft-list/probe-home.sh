@@ -3,7 +3,7 @@
 # print quick surface stats. Read-only; token read at runtime, never printed.
 # Output HTML goes to an uncommitted scratch path (never commit real data).
 set -eu
-T=$(cat ~/.config/leaflet/auth-token)
+T=$(cat ~/.config/springleaf/auth-token)
 OUT="${1:-/tmp/opencode/springleaf-01/home.html}"
 curl -s -H "Cookie: auth_token=$T" -o "$OUT" https://leaflet.pub/home
 echo "saved: $OUT ($(wc -c < "$OUT") bytes)"

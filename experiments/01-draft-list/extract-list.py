@@ -2,7 +2,7 @@
 """Prototype of `springleaf drafts list` extraction (experiment 01).
 
 Reads /home HTML (from file, or fetched live with the cookie from
-~/.config/leaflet/auth-token), parses the RSC flight payload, and emits the
+~/.config/springleaf/auth-token), parses the RSC flight payload, and emits the
 draft list as JSON (schema v1, see REPORT.md) or a human table.
 
 Read-only. The auth token is read at runtime and never printed or logged.
@@ -22,7 +22,7 @@ import urllib.request
 
 HOME_URL = "https://leaflet.pub/home"
 RPC_URL = "https://leaflet.pub/api/rpc/get_leaflet_data"
-TOKEN_PATH = __import__("pathlib").Path.home() / ".config/leaflet/auth-token"
+TOKEN_PATH = __import__("pathlib").Path.home() / ".config/springleaf/auth-token"
 UUID_HREF = re.compile(r'href="/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"')
 PUSH = re.compile(r"self\.__next_f\.push\((\[.*?\])\)</script>", re.S)
 KNOWN_ROUTES = {

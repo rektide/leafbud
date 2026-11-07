@@ -3,7 +3,7 @@
 # Response envelope is documented in REPORT.md. Raw JSON lands in scratch.
 # Usage: probe-rpc.sh <token-id> [more ids...]
 set -eu
-T=$(cat ~/.config/leaflet/auth-token)
+T=$(cat ~/.config/springleaf/auth-token)
 mkdir -p /tmp/opencode/springleaf-01
 for id in "$@"; do
   OUT="/tmp/opencode/springleaf-01/rpc-$id.json"

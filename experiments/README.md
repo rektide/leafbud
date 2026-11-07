@@ -8,7 +8,7 @@ receipt for later crate design.
 Rules:
 
 1. **No credentials.** Read tokens at runtime from
-   `~/.config/leaflet/auth-token` (or env); never print, log, or commit
+   `~/.config/springleaf/auth-token` (or env); never print, log, or commit
    token values.
 2. **Synthetic fixtures.** Committed HTML/JSON fixtures use fabricated ids,
    handles, and content mimicking the real shape. Real responses get
