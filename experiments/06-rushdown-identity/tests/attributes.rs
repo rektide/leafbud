@@ -104,6 +104,14 @@ fn attribute_in_middle_is_an_error_not_silent_prose() {
 }
 
 #[test]
+fn reference_definitions_alone_are_not_prose_for_a_tail_key() {
+    let result = parse("[reference]: https://example.com\n{#missing-prose}\n", Mode::Attributes);
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].code, "unbound-key");
+    assert!(keyed(&result.blocks).is_empty());
+}
+
+#[test]
 fn attribute_shaped_text_in_heading_link_label_or_emphasis_is_literal() {
     let result = good("## [Label {#literal}](https://example.com)\n\n## **{#literal}**\n\n## Text {#literal} trailing text\n");
     assert!(keyed(&result.blocks).is_empty());

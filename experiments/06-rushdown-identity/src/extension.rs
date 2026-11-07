@@ -273,7 +273,7 @@ impl AstTransformer for BindKeys {
                 Placement::HeadingSuffix => arena[node].parent().filter(|&parent| matches!(arena[parent].kind_data(), KindData::Heading(_))),
                 Placement::ParagraphTail => arena[node]
                     .parent()
-                    .filter(|&parent| matches!(arena[parent].kind_data(), KindData::Paragraph(_))),
+                    .filter(|&parent| matches!(arena[parent].kind_data(), KindData::Paragraph(_)) && arena[node].previous_sibling().is_some()),
                 Placement::OrphanTail => None,
                 Placement::MisplacedDirective => None,
                 Placement::BeforeBlock => arena[node].next_sibling().filter(|&next| {
