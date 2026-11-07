@@ -22,6 +22,7 @@ use std::fmt::Write as _;
 use uuid::Uuid;
 
 mod author;
+mod config;
 mod export;
 mod publish;
 mod sync;
@@ -163,7 +164,8 @@ enum PubsCommand {
         #[arg(long)]
         json: bool,
         /// Handle (or full DID) whose publications to list; default:
-        /// `handle` from springleaf.toml in the XDG config dir, if any
+        /// `handle` layered from the workspace springleaf.toml and the
+        /// XDG config toml (workspace wins)
         #[arg(long, value_name = "HANDLE")]
         handle: Option<String>,
     },
@@ -227,8 +229,8 @@ struct SyncArgs {
     /// Emit the v1 JSON report schema
     #[arg(long)]
     json: bool,
-    /// Handle (or full DID) to sync against; default: workspace toml,
-    /// XDG config toml, else $ATPROTO_HANDLE
+    /// Handle (or full DID) to sync against; default: --handle flag >
+    /// workspace toml > XDG config toml > $ATPROTO_HANDLE
     #[arg(long, value_name = "HANDLE")]
     handle: Option<String>,
     #[arg(long, value_name = "DIR")]
@@ -344,7 +346,7 @@ fn resolve_token(flag_or_env: Option<&str>) -> Result<Option<String>> {
     if let Some(token) = flag_or_env.map(str::trim).filter(|t| !t.is_empty()) {
         return Ok(Some(token.to_string()));
     }
-    let path = workspace::xdg_config_dir()
+    let path = config::xdg_config_dir()
         .context("token file: locating the springleaf XDG config dir")?
         .join("auth-token");
     match std::fs::read_to_string(&path) {
@@ -606,13 +608,23 @@ struct PubsIdentity {
 
 /// `pubs list`: resolve the handle (or DID) → PDS, then `listRecords`
 /// both publication collections to exhaustion (public, unauthenticated).
+/// The handle layers like every other config key — flag > workspace
+/// toml > global toml — resolving the workspace via the global
+/// `workspace` key when needed, so listing follows the same identity
+/// defaults as `sync`/`publish`. Unlike sync there is no
+/// `$ATPROTO_HANDLE` fallback: this is a casual public read, not a
+/// session operation.
 async fn pubs_list(json: bool, handle: Option<String>) -> Result<i32> {
-    let input = match handle.or_else(default_handle_from_config) {
+    let global = config::global_layer()?;
+    let ws = workspace::Workspace::resolve(None, &global)?;
+    let layered = config::layered(&config::Config::from_flags(handle, None), Some(&ws.root), &global)?;
+    let input = match layered.handle {
         Some(h) => h,
         None => {
             eprintln!(
-                "error: no handle: pass --handle <handle> (or set `handle` in {})",
-                config_toml_path()?.display()
+                "error: no handle: pass --handle <handle> (or set `handle` in {} or {})",
+                ws.root.join(config::CONFIG_FILE_NAME).display(),
+                config::xdg_config_toml_path()?.display()
             );
             return Ok(2);
         }
@@ -726,16 +738,6 @@ fn pubs_table(list: &PubsList) -> String {
         list.count, standard, legacy,
     );
     out
-}
-
-/// Path of the optional identity-defaults config (see `workspace`).
-fn config_toml_path() -> Result<std::path::PathBuf> {
-    workspace::xdg_config_toml_path()
-}
-
-/// Default handle from the config file, if present.
-fn default_handle_from_config() -> Option<String> {
-    workspace::toml_value_at(&config_toml_path().ok()?, "handle")
 }
 
 #[cfg(test)]
@@ -974,5 +976,5 @@ mod tests {
         );
     }
 
-    // (`handle` toml parsing is covered in `workspace`'s tests.)
+    // (`handle` toml layering is covered in `config`'s tests.)
 }

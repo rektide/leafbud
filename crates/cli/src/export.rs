@@ -104,7 +104,8 @@ pub(crate) async fn drafts_export_cmd(
     overwrite: bool,
     json: bool,
 ) -> Result<i32> {
-    let ws = Workspace::resolve(root.as_deref())?;
+    let global = crate::config::global_layer()?;
+    let ws = Workspace::resolve(root.as_deref(), &global)?;
     let data = client
         .get_leaflet_data(token_id)
         .await
@@ -189,7 +190,7 @@ mod tests {
     #[test]
     fn export_writes_the_pure_golden_record() {
         let tmp = TempDir::new("export");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         let (snapshot, data, did) = fixture_export();
         let outcome = export_and_write(&ws, &snapshot, &data, did.as_deref(), &options(None), false).unwrap();
         assert_eq!(outcome.slug, "synthetic-title");
@@ -210,7 +211,7 @@ mod tests {
     #[test]
     fn export_refuses_existing_and_overwrites() {
         let tmp = TempDir::new("export-overwrite");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         let (snapshot, data, did) = fixture_export();
         export_and_write(&ws, &snapshot, &data, did.as_deref(), &options(None), false).unwrap();
         let err = export_and_write(&ws, &snapshot, &data, did.as_deref(), &options(None), false)
@@ -223,7 +224,7 @@ mod tests {
     #[test]
     fn slug_override_and_validation_gate() {
         let tmp = TempDir::new("export-slug");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         let (snapshot, data, did) = fixture_export();
         let outcome = export_and_write(&ws, &snapshot, &data, did.as_deref(), &options(Some("custom-slug".into())), false).unwrap();
         assert_eq!(outcome.slug, "custom-slug");
