@@ -2871,11 +2871,13 @@ dependencies = [
 name = "springleaf-drafts"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "jiff",
  "regex",
  "reqwest 0.13.5",
  "serde",
  "serde_json",
+ "springleaf-leaflet",
  "thiserror",
  "tracing",
  "uuid",

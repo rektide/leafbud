@@ -28,6 +28,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod facts;
+pub mod fractional;
+pub mod pull;
+
 /// Default production base URL.
 pub const DEFAULT_BASE_URL: &str = "https://leaflet.pub";
 
@@ -82,6 +86,8 @@ pub enum Error {
     Parse(#[from] serde_json::Error),
     #[error("unexpected response from {rpc}: {detail}")]
     BadResponse { rpc: String, detail: String },
+    #[error("structural error in the draft fact graph: {0}")]
+    Structure(String),
 }
 
 // ---------------------------------------------------------------------------

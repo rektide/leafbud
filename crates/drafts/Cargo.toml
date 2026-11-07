@@ -5,11 +5,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64.workspace = true
 jiff.workspace = true
 regex.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+springleaf-leaflet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 uuid.workspace = true
