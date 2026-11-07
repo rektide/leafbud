@@ -17,3 +17,7 @@ thiserror.workspace = true
 tracing.workspace = true
 uuid = { workspace = true, features = ["v7"] }
 
+[dev-dependencies]
+# loopback responder for the offline /new probe tests (create.rs)
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "rt-multi-thread"] }
+

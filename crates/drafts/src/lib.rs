@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub mod author;
+pub mod create;
 pub mod extract;
 pub mod facts;
 pub mod fractional;
@@ -676,6 +677,10 @@ pub fn parse_home_leaflets(html: &str, source: &str) -> Result<LeafletList, Erro
 #[derive(Clone)]
 pub struct LeafletClient {
     http: reqwest::Client,
+    /// Redirect-following disabled — for the `/new` probe only, where
+    /// the 307's Location header is the payload (`create` module). All
+    /// other requests use `http` with reqwest's default policy.
+    http_no_redirect: reqwest::Client,
     base_url: String,
 }
 
@@ -708,12 +713,26 @@ impl LeafletClient {
             let value = reqwest::header::HeaderValue::from_str(&cookie).map_err(|_| Error::BadToken)?;
             headers.insert(reqwest::header::COOKIE, value);
         }
-        let http = reqwest::Client::builder().default_headers(headers).build()?;
-        Ok(Self { http, base_url: base })
+        let http = reqwest::Client::builder().default_headers(headers.clone()).build()?;
+        let http_no_redirect = reqwest::Client::builder()
+            .default_headers(headers)
+            .redirect(reqwest::redirect::Policy::none())
+            .build()?;
+        Ok(Self {
+            http,
+            http_no_redirect,
+            base_url: base,
+        })
     }
 
     fn url_for(&self, path: &str) -> String {
         format!("{}/{}", self.base_url, path)
+    }
+
+    /// The base URL this client talks to (for rendering URLs; never a
+    /// secret).
+    pub fn base_url(&self) -> &str {
+        &self.base_url
     }
 
     /// Raw `GET /home`: the HTML document including the RSC flight payload.

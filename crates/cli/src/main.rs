@@ -2,8 +2,8 @@
 //!
 //! Commands: `auth status`, `drafts list [--json] [--fetch]`,
 //! `drafts show <token-id> [--json]`, `drafts export <token-id>`
-//! (read-only pull → canonical record in drafts/), `pubs list`,
-//! `publish build/run`, `sync`.
+//! (read-only pull → canonical record in drafts/), `drafts create`
+//! (operator-gated /new mint), `pubs list`, `publish build/run`, `sync`.
 //!
 //! Auth model: the `auth_token` cookie value resolved from `--token` >
 //! `$LEAFLET_AUTH_TOKEN` > `$XDG_CONFIG_HOME/springleaf/auth-token`
@@ -22,6 +22,7 @@ use std::fmt::Write as _;
 use uuid::Uuid;
 
 mod author;
+mod create;
 mod export;
 mod publish;
 mod sync;
@@ -100,6 +101,20 @@ enum DraftsCommand {
         /// Permission token id (uuid)
         token_id: Uuid,
         /// Emit the raw get_leaflet_data result JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Mint a fresh editor draft via GET /new and harvest its token id
+    /// from the 307 Location header — closes the "push cannot mint
+    /// drafts" gap (design/draft-extraction.glm53m.md §The new-draft
+    /// gap). A real write: refuses without --yes (exit 2).
+    Create {
+        /// Execute the mint (required; without it the command only
+        /// prints exactly what will happen and exits 2)
+        #[arg(long)]
+        yes: bool,
+        /// Emit the v1 JSON schema (the plan before --yes; the outcome
+        /// after)
         #[arg(long)]
         json: bool,
     },
@@ -311,6 +326,9 @@ async fn run(cli: Cli) -> Result<i32> {
                 Command::Drafts(DraftsArgs {
                     cmd: DraftsCommand::Show { token_id, json },
                 }) => drafts_show(&client, &token_id, json).await,
+                Command::Drafts(DraftsArgs {
+                    cmd: DraftsCommand::Create { yes, json },
+                }) => create::drafts_create_cmd(&client, yes, json, None).await,
                 Command::Drafts(DraftsArgs {
                     cmd:
                         DraftsCommand::Export {
