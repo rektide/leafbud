@@ -86,7 +86,17 @@ auth) on the resolved PDS, by rkey:
 | present, hash unchanged | cid changed | remote drift: report, require `--pull` (adopt remote bytes + update sidecar) or `--force` (re-put) |
 | present, hash changed | cid changed | true conflict: block, demand explicit resolution |
 | absent | present | `--pull` adopts remote record into posted/ (with sidecar); default reports orphan |
+| present (posted+sidecar) | absent | **local-missing** (added in build; the original table lacked this row): report; `--force` re-puts |
 | present (drafts/) | — | untouched by sync; `publish` promotes |
+
+Indeterminates (added in build): a posted file without a sidecar, or a
+sidecar without `remoteCid`, cannot be classified — they report as explicit
+`no-sidecar`/drift rows rather than guessed clean; `--force` resolves by
+re-putting. Session-store hardening is file 0600 + **parent dir 0700** (a
+0600 directory is untraversable). The `workspace` key lives in the XDG
+config `springleaf.toml` (a toml inside the workspace cannot be found before
+the root is known); a workspace-local toml may supply `handle`/`pds`/
+`publication`.
 
 No deletion ever happens automatically — cleanup is deliberate, per repo
 policy. CIDs come from `listRecords` item metadata.
