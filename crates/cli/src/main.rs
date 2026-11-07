@@ -1,7 +1,9 @@
 //! springleaf — a leaflet.pub client for agents and the CLI (stage 2).
 //!
 //! Commands: `auth status`, `drafts list [--json] [--fetch]`,
-//! `drafts show <token-id> [--json]`. Read-only against production.
+//! `drafts show <token-id> [--json]`, `drafts export <token-id>`
+//! (read-only pull → canonical record in drafts/), `pubs list`,
+//! `publish build/run`, `sync`.
 //!
 //! Auth model: the `auth_token` cookie value resolved from `--token` >
 //! `$LEAFLET_AUTH_TOKEN` > `~/.config/leaflet/auth-token`. The token is
@@ -18,6 +20,7 @@ use springleaf_drafts::{DEFAULT_BASE_URL, Error as DraftsError, LeafletClient, L
 use std::fmt::Write as _;
 use uuid::Uuid;
 
+mod export;
 mod publish;
 mod sync;
 mod workspace;
@@ -95,6 +98,27 @@ enum DraftsCommand {
         /// Permission token id (uuid)
         token_id: Uuid,
         /// Emit the raw get_leaflet_data result JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Pull one editor draft (read-only) and write its canonical record
+    /// to drafts/<slug>.json — the extraction half of
+    /// design/draft-extraction.glm53m.md. Never writes to leaflet.pub.
+    Export {
+        /// Permission token id (uuid)
+        token_id: Uuid,
+        /// Workspace root (default: `workspace` from the XDG config
+        /// springleaf.toml, else cwd)
+        #[arg(long, value_name = "DIR")]
+        root: Option<std::path::PathBuf>,
+        /// Slug override (drives the filename and the record path);
+        /// default: slugify of the derived title
+        #[arg(long, value_name = "SLUG")]
+        slug: Option<String>,
+        /// Replace an existing drafts/<slug>.json
+        #[arg(long)]
+        overwrite: bool,
+        /// Emit the v1 JSON schema (slug/path/blocks/warns)
         #[arg(long)]
         json: bool,
     },
@@ -262,6 +286,16 @@ async fn run(cli: Cli) -> Result<i32> {
                 Command::Drafts(DraftsArgs {
                     cmd: DraftsCommand::Show { token_id, json },
                 }) => drafts_show(&client, &token_id, json).await,
+                Command::Drafts(DraftsArgs {
+                    cmd:
+                        DraftsCommand::Export {
+                            token_id,
+                            root,
+                            slug,
+                            overwrite,
+                            json,
+                        },
+                }) => export::drafts_export_cmd(&client, &token_id.to_string(), root, slug, overwrite, json).await,
                 _ => unreachable!("pubs/publish/sync dispatched above"),
             }
         }
