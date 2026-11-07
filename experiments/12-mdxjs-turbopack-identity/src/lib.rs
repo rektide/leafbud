@@ -31,7 +31,7 @@ pub struct Binding {
     pub key: String,
     /// Index walk through the original ordered mdast, not a persistent identity.
     pub path: Vec<usize>,
-    /// Complete comment span; None for component attributes, absent in upstream AST.
+    /// Complete marker/comment span; None for component attributes, absent in upstream AST.
     pub annotation_span: Option<Span>,
 }
 
@@ -61,6 +61,9 @@ pub struct Inspection<'a> {
     pub tree: Node,
     /// Ephemeral data views over tree, never a maintained sidecar.
     pub components: Vec<Component>,
+    /// Reserved declarative markers to consume before any future lowering.
+    /// The raw inspection AST intentionally still contains these source nodes.
+    pub consumed_annotations: Vec<Vec<usize>>,
     pub bindings: Vec<Binding>,
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -72,7 +75,9 @@ pub fn stock(source: &str) -> Result<Node, markdown::message::Message> {
 pub fn inspect(source: &str) -> Result<Inspection<'_>, markdown::message::Message> {
     let tree = stock(source)?;
     let mut adapter = Adapter {
+        source,
         components: vec![],
+        consumed_annotations: vec![],
         bindings: vec![],
         diagnostics: vec![],
     };
@@ -102,6 +107,7 @@ pub fn inspect(source: &str) -> Result<Inspection<'_>, markdown::message::Messag
         original_source: source,
         tree,
         components: adapter.components,
+        consumed_annotations: adapter.consumed_annotations,
         bindings: adapter.bindings,
         diagnostics: adapter.diagnostics,
     })
@@ -128,19 +134,25 @@ fn comment_only(value: &str) -> bool {
         .is_some_and(|v| !v.contains("*/"))
 }
 
-struct Adapter {
+struct Adapter<'a> {
+    source: &'a str,
     components: Vec<Component>,
+    consumed_annotations: Vec<Vec<usize>>,
     bindings: Vec<Binding>,
     diagnostics: Vec<Diagnostic>,
 }
 
-impl Adapter {
+impl Adapter<'_> {
     fn error(&mut self, code: &'static str, node: &Node) {
         self.diagnostics.push(Diagnostic { code, span: span(node) });
     }
 
     fn visit(&mut self, node: &Node, path: &[usize]) {
         match node {
+            Node::MdxJsxTextElement(e) if e.name.as_deref() == Some("Key") => {
+                self.error("misplaced-key", node);
+                return;
+            }
             Node::MdxJsxFlowElement(e) => self.component(node, path, e.name.as_deref(), &e.attributes, true),
             Node::MdxJsxTextElement(e) => self.component(node, path, e.name.as_deref(), &e.attributes, false),
             Node::MdxFlowExpression(e) => self.expression(node, &e.value),
@@ -172,13 +184,17 @@ impl Adapter {
         for (index, child) in children.iter().enumerate() {
             let mut child_path = path.to_vec();
             child_path.push(index);
-            if let Node::MdxFlowExpression(expression) = child
-                && reserved(&expression.value)
-            {
+            let marker = match child {
+                Node::MdxFlowExpression(e) if reserved(&e.value) => Some(directive(&e.value).ok_or("malformed-key")),
+                Node::MdxJsxFlowElement(e) if e.name.as_deref() == Some("Key") => Some(key_component(self.source, child, &e.attributes)),
+                _ => None,
+            };
+            if let Some(marker) = marker {
+                self.consumed_annotations.push(child_path);
                 if let Some((_, annotation)) = pending.take() {
                     self.error("unbound-key", annotation);
                 }
-                if let Some(key) = directive(&expression.value) {
+                if let Ok(key) = marker {
                     // Same blank-before guard as 09. This is rejection, not code repair.
                     let separated = index == 0
                         || children[index - 1]
@@ -190,8 +206,8 @@ impl Adapter {
                     } else {
                         pending = Some((key.into(), child));
                     }
-                } else {
-                    self.error("malformed-key", child);
+                } else if let Err(code) = marker {
+                    self.error(code, child);
                 }
                 continue;
             }
@@ -281,4 +297,23 @@ impl Adapter {
             properties,
         });
     }
+}
+
+fn key_component<'a>(source: &str, node: &Node, attributes: &'a [AttributeContent]) -> Result<&'a str, &'static str> {
+    // mdast omits the self-closing flag. The native node's source range exposes
+    // its actual closing delimiter; this is not lexical preprocessing or JSX parsing.
+    let region = span(node).and_then(|s| source.get(s.start..s.end)).ok_or("key-source-span")?;
+    if !region.trim_end().ends_with("/>") || node.children().is_some_and(|c| !c.is_empty()) {
+        return Err("paired-key-unsupported");
+    }
+    let [AttributeContent::Property(property)] = attributes else {
+        return Err("malformed-key-component");
+    };
+    let Some(AttributeValue::Literal(id)) = &property.value else {
+        return Err("malformed-key-component");
+    };
+    if property.name != "id" || !valid_key(id) {
+        return Err("malformed-key-component");
+    }
+    Ok(id)
 }

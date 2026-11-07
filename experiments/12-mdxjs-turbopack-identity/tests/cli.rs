@@ -32,3 +32,13 @@ fn negative_observation_component_code_trap_remains_false_clean() {
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(value["bindings"][0]["key"], "accidental");
 }
+
+#[test]
+fn key_candidate_is_consumed_but_paired_group_is_not_silently_defined() {
+    let output = run("check", "key-candidate.mdx");
+    assert!(output.status.success(), "{output:?}");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["bindings"].as_array().unwrap().len(), 5);
+    assert_eq!(value["consumed_annotations"].as_array().unwrap().len(), 5);
+    assert_eq!(run("check", "key-paired.mdx").status.code(), Some(2));
+}
