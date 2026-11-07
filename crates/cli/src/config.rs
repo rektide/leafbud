@@ -125,8 +125,9 @@ pub fn layered(flags: &Config, workspace_root: Option<&Path>, global: &Config) -
 }
 
 /// The pure figment stack over already-parsed layers (the layering
-/// matrix, testable without touching disk).
-fn stack(flags: &Config, workspace_layer: Option<&Config>, global: &Config) -> Result<Config> {
+/// matrix, testable without touching disk). `config show` also uses it
+/// to attribute each effective value to the layer that supplied it.
+pub(crate) fn stack(flags: &Config, workspace_layer: Option<&Config>, global: &Config) -> Result<Config> {
     let mut figment = Figment::new().merge(Serialized::defaults(global.clone()));
     if let Some(workspace) = workspace_layer {
         figment = figment.merge(Serialized::defaults(workspace.clone()));
@@ -176,7 +177,7 @@ fn unset_empty_values(mut config: Config) -> Config {
 /// safe (nextest runs each test per-process; the lock covers the plain
 /// runner).
 #[cfg(test)]
-pub(crate) fn with_env_vars(sets: &[(&str, Option<&str>)], f: impl FnOnce()) {
+pub(crate) fn with_env_vars<R>(sets: &[(&str, Option<&str>)], f: impl FnOnce() -> R) -> R {
     use std::sync::{Mutex, OnceLock};
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     let _guard = LOCK.get_or_init(|| Mutex::new(())).lock().unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -187,13 +188,14 @@ pub(crate) fn with_env_vars(sets: &[(&str, Option<&str>)], f: impl FnOnce()) {
             None => unsafe { std::env::remove_var(key) },
         }
     }
-    f();
+    let out = f();
     for (key, value) in saved {
         match value {
             Some(value) => unsafe { std::env::set_var(key, value) },
             None => unsafe { std::env::remove_var(key) },
         }
     }
+    out
 }
 
 #[cfg(test)]

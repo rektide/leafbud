@@ -85,6 +85,12 @@ springleaf publish run <slug-or-file> [--yes] [--json]
 springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
                                            #   report posted/ vs the PDS (default:
                                            #   report-only, no writes)
+springleaf config show [--json]            # the effective layered config + which
+                                           #   file each value came from
+springleaf config set <key> <value>        # write one key (workspace|handle|pds|
+                                           #   publication) to the global toml,
+                                           #   comments preserved; --workspace-file
+                                           #   targets the workspace toml instead
 ```
 
 - `drafts list` parses the `/home` RSC flight payload in one request.
@@ -189,6 +195,17 @@ is its own publication context. `pubs list` resolves its default
 handle through the same workspace + global layers (workspace found via
 the global `workspace` key), so every command shares one identity
 default.
+
+`config` works on these files directly: `config show` renders the
+effective layered values and which file each came from (the workspace
+is resolved the usual way — global key, else cwd); `config set
+<key> <value>` writes one key via toml_edit — comment- and
+sibling-preserving, creating the file when absent, refusing malformed
+files rather than rewriting them. Keys default to the global toml;
+`--workspace-file` targets the resolved workspace's toml instead
+(valid for `handle`/`pds`/`publication` — the `workspace` key
+necessarily lives in the global file). Figment is read-only; the write
+path is that separate, deliberate half.
 
 **A malformed config is a loud error.** An absent file or key is
 simply unset, but a present `springleaf.toml` that fails to parse — or

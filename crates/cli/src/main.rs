@@ -3,7 +3,7 @@
 //! Commands: `auth status`, `drafts list [--json] [--fetch]`,
 //! `drafts show <token-id> [--json]`, `drafts export <token-id>`
 //! (read-only pull → canonical record in drafts/), `pubs list`,
-//! `publish build/run`, `sync`.
+//! `publish build/run`, `sync`, `config show/set`.
 //!
 //! Auth model: the `auth_token` cookie value resolved from `--token` >
 //! `$LEAFLET_AUTH_TOKEN` > `$XDG_CONFIG_HOME/springleaf/auth-token`
@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 mod author;
 mod config;
+mod config_cmd;
 mod export;
 mod publish;
 mod sync;
@@ -65,6 +66,8 @@ enum Command {
     Publish(PublishArgs),
     /// Reconcile posted/ against the PDS (report-only by default)
     Sync(SyncArgs),
+    /// Show or edit the layered springleaf.toml files
+    Config(ConfigArgs),
 }
 
 #[derive(Args)]
@@ -216,6 +219,39 @@ enum PublishCommand {
 }
 
 #[derive(Args)]
+struct ConfigArgs {
+    #[command(subcommand)]
+    cmd: ConfigCommand,
+}
+
+#[derive(Subcommand)]
+enum ConfigCommand {
+    /// Show the effective layered config and where each value came
+    /// from (workspace toml > global toml; no flag layer — flags are
+    /// per-invocation). --json emits the v1 schema.
+    Show {
+        /// Emit the v1 JSON schema
+        #[arg(long)]
+        json: bool,
+    },
+    /// Set one key (<workspace|handle|pds|publication>) in the global
+    /// springleaf.toml, comments preserved (toml_edit); creates the
+    /// file when absent, refuses malformed files
+    Set {
+        /// The key to set
+        #[arg(value_enum)]
+        key: config_cmd::ConfigKey,
+        /// The value (non-empty; empty counts as unset — edit the file
+        /// to remove a key)
+        value: String,
+        /// Write to the resolved workspace's springleaf.toml instead of
+        /// the global file (not valid for the `workspace` key)
+        #[arg(long)]
+        workspace_file: bool,
+    },
+}
+
+#[derive(Args)]
 struct SyncArgs {
     /// Adopt remote records into posted/ (a local write, never remote)
     #[arg(long)]
@@ -293,6 +329,10 @@ async fn run(cli: Cli) -> Result<i32> {
             })
             .await
         }
+        Command::Config(ConfigArgs { cmd }) => match cmd {
+            ConfigCommand::Show { json } => config_cmd::config_show_cmd(json),
+            ConfigCommand::Set { key, value, workspace_file } => config_cmd::config_set_cmd(key, value, workspace_file),
+        },
         auth_or_drafts => {
             // Resolution order: flag > env > default / token file. The
             // token value is never echoed, logged, or embedded in error
@@ -333,7 +373,7 @@ async fn run(cli: Cli) -> Result<i32> {
                             json,
                         },
                 }) => author::drafts_author_cmd(&client, &token_id.to_string(), &from, root, yes, json, None).await,
-                _ => unreachable!("pubs/publish/sync dispatched above"),
+                _ => unreachable!("pubs/publish/sync/config dispatched above"),
             }
         }
     }

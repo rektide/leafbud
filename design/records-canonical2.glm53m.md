@@ -67,5 +67,7 @@ Tests stay offline and machine-independent: pure layering functions,
 under an env guard — never the real config dir.
 
 The operator-facing precedence table lives in the README's
-Configuration section. Remaining open items from the original
+Configuration section, which also covers the `config show` /
+`config set` command (toml_edit write path, comment-preserving;
+figment stays read-only). Remaining open items from the original
 (multi-publication drafts, CLI flag ordering) are unchanged.
