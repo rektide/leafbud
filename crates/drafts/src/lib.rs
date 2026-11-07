@@ -31,6 +31,7 @@ use uuid::Uuid;
 pub mod facts;
 pub mod fractional;
 pub mod pull;
+pub mod yjs;
 
 /// Default production base URL.
 pub const DEFAULT_BASE_URL: &str = "https://leaflet.pub";
