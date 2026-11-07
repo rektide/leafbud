@@ -1,7 +1,7 @@
 ---
 type: Assessment
 title: "Authoring parser selection after four completed experiments"
-description: "Comparative source-and-test review recommending native MDX structure with comment identities, a bounded markdown-rs literal-callback proof, and explicit code-ownership and dependency gates."
+description: "Comparative review of completed experiments 06–09 recommending native MDX structure and a bounded markdown-rs proof; provisional pending Satteri's separately commissioned mdxjs backend evidence."
 resource: /design/authoring-parser-assessment0.gpt6a.md
 status: proposal
 generated:
@@ -9,7 +9,7 @@ generated:
   by: model:openai/gpt-6-astra#medium
 sources:
   - resource: "opencode://ses_e48053fe8ffe3NnxwMn7hPx6TK"
-    title: "Independent comparative assessment after all four experiments completed; inspected reports, implementation, tests and selected pinned upstream source"
+    title: "Independent assessment of completed experiments 06–09; inspected reports, code, tests and pinned upstream source; clarified pending Satteri backend scope after commission expanded"
   - resource: /design/mdx-recreate0.gpt6a.md
     title: "Single-source recreation and native publication goal, read with the commissioning correction that ordinary prose needs no wrappers and keys are optional"
   - resource: /experiments/06-rushdown-identity/REPORT.md
@@ -52,6 +52,14 @@ sources:
 
 ## Executive recommendation
 
+**Scope: completed experiments 06–09 only.** Experiment 07 evaluates **Satteri's
+pulldown backend**, `satteri-pulldown-cmark`, not `satteri-mdxjs-rs`. The latter
+backend now has a separately commissioned experiment 10; an optional pulldown
+follow-up 11 may add evidence too. Neither unfinished experiment was read.
+The recommendation below is **provisional with respect to that pending backend
+comparison**. A separate revision/addendum should incorporate completed results;
+this document does not select between both Satteri backends.
+
 **Choose the native MDX tree architecture demonstrated by experiment 09, with
 preceding comment keys and literal-data components. Make `markdown-rs`'s public
 parse-only interface the next bounded substrate proof, rather than adopting
@@ -68,7 +76,7 @@ This distinguishes a demonstrated choice from a proposed refinement:
   literal/comment callback.** That interface exists and feeds the same mdast
   family, but equivalent data-boundary behavior without SWC is **not yet proved**.
   Do one small proof before selecting this dependency for production.
-- **Strongest alternative: Satteri's direct parser/arena API**, after adding and
+- **Strongest evaluated alternative: Satteri's pulldown parser/arena API**, after adding and
   proving a key-boundary rejection rule. It already parses semantic JSX with
   current Serde, but its present author adapter silently misbinds code-shaped
   input. Its smaller literal-policy gaps are ours to fix, not parser defects.
@@ -110,7 +118,7 @@ compiler substrate for lack of an unrequested body rewriter.
 All entries refer to the pinned experiments, not every capability of a project's
 latest release. “Native” means parser behavior; key and data policy remain ours.
 
-| Concern | Rushdown 0.18.0 / 06 | Satteri parser 0.6.7 / 07 | pulldown-cmark 0.13.6 / 08 | mdxjs 1.0.4 + markdown 1.0.0 / 09 |
+| Concern | Rushdown 0.18.0 / 06 | Satteri pulldown backend 0.6.7 / 07 | pulldown-cmark 0.13.6 / 08 | mdxjs 1.0.4 + markdown 1.0.0 / 09 |
 | --- | --- | --- | --- | --- |
 | `{#id}` | Custom inline heading suffix and final paragraph-line recognizers; works in chosen dialect | Native Markdown attributes; heading works with MDX flags, paragraph tail becomes rejected MDX expression | Implemented on plain offset events; native heading attrs deliberately off | Exact examples parse as expressions, not keys; some otherwise legal key punctuation fails SWC |
 | Comment keys | Exact MDX-shaped spelling via custom block parser; not native MDX | Native flow expression + sibling binder; currently unsafe interruption case | Not implemented; reserved spelling diagnoses | Native flow expression + sibling binder with blank-before guard |
@@ -133,7 +141,7 @@ those paths. That is attractive only if we account for the rich grammar we would
 then maintain ourselves. Their pre-1.0 APIs warrant pins and retained controls,
 not an invented claim that one upstream is unreliable.
 
-Satteri's executed API is **not the `satteri` 0.2.17 facade**. It is
+Satteri's executed API is **not the `satteri` 0.2.17 facade or its mdxjs backend**. It is
 `satteri-pulldown-cmark` 0.6.7 + `satteri-ast` 0.6.3 + `satteri-arena` 0.4.3,
 at source `7d1297b7e4551a1c5124fa07bd2d1d05f66236e6`. Its MDX feature brings
 OXC parsing dependencies (reported lock resolution 0.121.0). This is native Rust,
@@ -160,7 +168,12 @@ deployment/MSRV/cross-target integration remains unverified.
 
 ## The decisive negative control: literal code becoming identity
 
-The Satteri fixture is:
+Here and below, Satteri behavior means the **pulldown backend executed in 07**.
+No code-ownership, dependency or defect claim transfers automatically to
+`satteri-mdxjs-rs`; experiment 09 is upstream `wooorm/mdxjs-rs`, not Satteri's
+mdxjs backend either.
+
+The Satteri pulldown fixture is:
 
 ````text
 Code `first
@@ -258,7 +271,7 @@ not a promise of accepting every unmodified CommonMark document.
   works. The JSON-prop Poll counterexample proves the extension cannot distinguish
   component intent from prose. Raw text escapes/entities in its projection still
   need semantic decoding. Starts/payload segments are not complete CST ranges.
-- **07 / Satteri:** a real native component tree and comment expressions, including
+- **07 / Satteri pulldown backend:** a real native component tree and comment expressions, including
   multiline props and Markdown children; no facade compilation or JS execution
   needed. The adapter's Poll/Image registry is policy, not the parser's component
   limit. It does not demonstrate the exact nested Canvas fixture from 09, recursive
@@ -312,6 +325,9 @@ markdown route merits a proof rather than an immediate “easy replacement” cl
 **Recommend one isolated markdown-rs literal-callback experiment, using 09 as the
 behavioral reference.** It is new work to commission, not performed here. Avoid
 another four-way parser implementation or a new broad dialect investigation.
+This recommendation does not supersede the newly commissioned Satteri backend
+experiments: incorporate their completed evidence before commissioning this next
+step, since a demonstrated literal-only seam there could remove the need for it.
 
 1. **Boundary and dependency gate.** Use direct `markdown` with current production
    Serde requirements in an isolated workspace; demonstrate no mdxjs/SWC normal
