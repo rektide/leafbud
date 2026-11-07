@@ -10,9 +10,10 @@ Status: **stage 5** — `auth status`, `drafts list`/`show`/`export`
 `publish run` (writes; the live putRecord is still operator-gated — see
 [Publishing for real](#publishing-for-real-operator-gated)), `sync` (report-only by
 default), and the extraction ⇄ authoring pair complete:
-`drafts export` pulls a draft into a canonical record, and
-`drafts author` builds (and, operator-gated, pushes) the reverse
-mutation batch — see
+`drafts export` pulls a draft into a canonical record, `drafts author`
+builds (and, operator-gated, pushes) the reverse mutation batch, and
+`drafts create` (operator-gated) mints the fresh draft via `GET /new`
+— see
 [Authoring into leaflet drafts](#authoring-into-leaflet-drafts-operator-gated).
 The architecture, protocol map, and staged plan live in
 [`design/springleaf.glm53m.md`](design/springleaf.glm53m.md); the
@@ -40,7 +41,8 @@ crates/
              + publication-record lookup + record validation
   drafts/    springleaf-drafts: cookie-authed web surface — /home RSC parse,
              get_leaflet_data/pull/push RPCs, yjs text codec + fractional
-             keygen, extraction ⇄ authoring converters, v1 output schema
+             keygen, extraction ⇄ authoring converters, /new draft minting,
+             v1 output schema
   cli/       springleaf: the binary (clap commands, token resolution, output)
 design/      architecture + canonical record format
 experiments/ protocol probes and evidence (tracked, load-bearing)
@@ -68,6 +70,10 @@ draft.
 springleaf auth status                     # GET /home, report did/handle or anonymous
 springleaf drafts list [--json] [--fetch]  # leaflet table (or v1 JSON schema)
 springleaf drafts show <token-id> [--json] # one leaflet via get_leaflet_data
+springleaf drafts create [--yes] [--json]  # mint a fresh draft via GET /new
+                                           #   (harvests the token id from
+                                           #   the 307 Location; exit 2
+                                           #   without --yes)
 springleaf drafts export <token-id> [--root DIR] [--slug S] [--overwrite]
                                            #   read-only pull → canonical record
                                            #   in drafts/<slug>.json
@@ -120,7 +126,7 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   drawing/embedded-canvas blocks warn and skip (v0).
 - Exit codes: `0` ok, `1` operational error (anonymous `auth status`
   counts), `2` usage error or an intentional refusal (`publish run`,
-  `sync --force`, and `drafts author` without `--yes`).
+  `sync --force`, and `drafts create`/`drafts author` without `--yes`).
 
 ## Workspace: drafts/ and posted/
 
@@ -190,15 +196,26 @@ messages — including at `-v`/debug verbosity. `--base-url` (or
 
 ## Authoring into leaflet drafts (operator-gated)
 
-`drafts author --yes` is a **write against leaflet.pub** (a Replicache
-push through `POST /api/rpc/push`). No live push has been executed from
-this codebase — the flow is mock-verified end to end, and the live step
-is deliberately gated, exactly like `publish run`:
+Two **writes against leaflet.pub** live behind the `drafts` commands,
+both deliberately gated, exactly like `publish run` — neither has been
+executed live from this codebase; both flows are mock-verified end to
+end:
 
-1. **Pick a throwaway draft** (create one in the web UI; push cannot
-   mint drafts — that is a server-action-only path per
-   `experiments/02-draft-internals/REPORT.md` §3). Grab its token id
-   from `springleaf drafts list`.
+- `drafts create --yes` — one authenticated `GET /new`: the server runs
+  its creation action (a server-action-only path no Replicache mutation
+  covers, per `experiments/02-draft-internals/REPORT.md` §3) and
+  answers 307 whose Location header carries the fresh token id.
+- `drafts author --yes` — a Replicache push through
+  `POST /api/rpc/push`.
+
+1. **Mint a throwaway draft**: `springleaf drafts create` prints exactly
+   what the probe will do and exits 2; re-run with `--yes` to mint and
+   print the fresh token id. The `/new` Location shape is
+   source-verified, not live-captured — this is its acceptance probe,
+   and the mint happens even with a missing/invalid token (an orphan
+   draft nobody lists), so check `springleaf auth status` first. Or
+   create one in the web UI and grab its token id from
+   `springleaf drafts list`.
 2. **Dry-run** (default, always safe — read-only RPCs only):
    `springleaf drafts author <token-id> --from <slug-or-file>`
    prints the exact mutation batch — one line per mutation (name,
@@ -261,6 +278,12 @@ canonical-format design doc.
 - The homepage list may be paginated at the server (30 observed, cap
   unverified); `href_payload_mismatch` in the list output alarms on any
   drift between the DOM card hrefs and the payload rows.
+- `drafts create`'s `/new` Location shape
+  (`/<token-id>?focusFirstBlock&addToHome`, 307) is verified against the
+  leaflet source (@`600c7b5f`), not a live capture — experiments/02 has
+  no `/new` fixture. The parser accepts any 3xx whose first path segment
+  is a uuid (relative or absolute Location); the first gated `--yes` run
+  is the acceptance probe.
 - `drafts author` never destroys: it appends blocks after the target
   draft's last position and subpages after its last `root/page` key.
   Replacing draft content would take `removeBlock`/`retractFact`

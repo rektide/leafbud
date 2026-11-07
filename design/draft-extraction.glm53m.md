@@ -10,6 +10,8 @@ generated:
 sources:
   - resource: "opencode://ses_e4c9d0a5dffe6GpmPVETxrbW6S"
     title: "Session that read the Leaflet conversion sources, designed the coverage matrix and both directions, and wrote this document"
+  - resource: "opencode://ses_e48e1411effeFlQHJe2NwO9UjN"
+    title: "Session that built `drafts create` (5c): the /new redirect-harvest client and CLI gating, plus the 5c outcomes addendum"
   - resource: "file:///home/rektide/src/springleaf/design/records-canonical.glm53m.md"
     title: "The canonical format this pipeline targets (pure site.standard.document records)"
   - resource: "file:///home/rektide/src/springleaf/experiments/02-draft-internals/REPORT.md"
@@ -426,3 +428,40 @@ flagged:
 - The gated live push (§gates item 5) remains the open acceptance step;
   the README documents the operator procedure (throwaway draft → dry-run
   review → `--yes` → re-export and diff).
+
+## Outcomes (2026-11-07, after the 5c build)
+
+Shipped as `springleaf drafts create` — the (d) `/new` harvest promoted
+from v1 plan to implementation with the operator gate intact. Decisions
+and divergences, all flagged:
+
+- **The Location shape is source-verified, not live-captured.** No `/new`
+  redirect exists among experiments/02's fixtures (its probes were
+  read-only). The parser therefore accepts any 3xx (the source's
+  `redirect()` emits 307), relative or absolute Location, and requires
+  only a uuid first path segment; the assumed exact form
+  (`/<token-id>?focusFirstBlock&addToHome`, with `&welcomeModal`
+  inserted when the route's query carries it) is asserted against
+  `actions/createNewLeaflet.ts` @`600c7b5f` in unit tests. The first
+  operator-gated `--yes` run is the acceptance probe; a non-uuid target
+  (e.g. an anonymous redirect to `/login`) alarms with the segment in
+  the message.
+- **The mint is a write even when anonymous.** `insertLeaflet` never
+  consults the cookie — only the homepage-link CTE does — so a
+  missing/invalid token still mints an orphan draft nobody lists. The
+  CLI's dry-run prints that hazard and suggests `auth status` first;
+  the module docs record it.
+- **Redirects are disabled for the probe request only.** `LeafletClient`
+  carries a second inner reqwest client with `Policy::none()`; every
+  other request keeps reqwest's default follow behavior. A loopback
+  test proves exactly one request leaves the client — following the 307
+  would GET the new draft's page and lose the id.
+- CLI posture mirrors `drafts author`: dry-run default (prints exactly
+  what will happen, exit 2, the transport is never entered), `--yes`
+  executes through an injected transport (`CreateFn`, the `PushFn`
+  pattern), output is the new token id plus `drafts author`/`drafts
+  list` follow-on suggestions, with `--json` v1 schemas for both the
+  plan and the outcome.
+- The gated live probes remain open: both the `/new` mint (this stage's
+  acceptance step) and the stage-5b push are still unexecuted live from
+  this codebase.
