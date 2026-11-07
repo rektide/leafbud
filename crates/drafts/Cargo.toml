@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 base64.workspace = true
+jacquard-common.workspace = true
 jiff.workspace = true
 regex.workspace = true
 reqwest.workspace = true

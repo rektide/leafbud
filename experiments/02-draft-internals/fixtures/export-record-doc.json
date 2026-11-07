@@ -1,0 +1,35 @@
+{
+  "$type": "site.standard.document",
+  "content": {
+    "pages": [
+      {
+        "$type": "pub.leaflet.pages.linearDocument",
+        "blocks": [
+          {
+            "block": {
+              "$type": "pub.leaflet.blocks.header",
+              "level": 1,
+              "plaintext": "Synthetic title"
+            },
+            "$type": "pub.leaflet.pages.linearDocument#block"
+          },
+          {
+            "block": {
+              "$type": "pub.leaflet.blocks.text",
+              "plaintext": "Synthetic body copy"
+            },
+            "$type": "pub.leaflet.pages.linearDocument#block"
+          }
+        ],
+        "id": "01999000-0000-7aaa-8000-000000000003"
+      }
+    ],
+    "$type": "pub.leaflet.content"
+  },
+  "description": "A fixture description from permission_tokens",
+  "path": "/synthetic-title",
+  "publishedAt": "2026-11-07T00:05:30.799Z",
+  "site": "https://leaflet.pub/p/did:plc:aaaaaaaaaaaaaaaaaaaaaaaa",
+  "textContent": "Synthetic title\nSynthetic body copy",
+  "title": "Synthetic title"
+}

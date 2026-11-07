@@ -127,18 +127,29 @@ impl FactData {
                 None => FactData::Other { kind },
             },
             "ordered-reference" => match (string_at("value"), string_at("position")) {
-                (Some(v), Some(p)) => FactData::OrderedReference { value: v.to_string(), position: p.to_string() },
+                (Some(v), Some(p)) => FactData::OrderedReference {
+                    value: v.to_string(),
+                    position: p.to_string(),
+                },
                 _ => FactData::Other { kind },
             },
             "spatial-reference" => {
                 let pos = value.get("position");
-                match (string_at("value"), pos.and_then(|p| p.get("x")).and_then(Value::as_f64), pos.and_then(|p| p.get("y")).and_then(Value::as_f64)) {
+                match (
+                    string_at("value"),
+                    pos.and_then(|p| p.get("x")).and_then(Value::as_f64),
+                    pos.and_then(|p| p.get("y")).and_then(Value::as_f64),
+                ) {
                     (Some(v), Some(x), Some(y)) => FactData::SpatialReference { value: v.to_string(), x, y },
                     _ => FactData::Other { kind },
                 }
             }
             "image" => match (string_at("src"), number_at("height"), number_at("width")) {
-                (Some(src), Some(height), Some(width)) => FactData::Image(ImageData { src: src.to_string(), height, width }),
+                (Some(src), Some(height), Some(width)) => FactData::Image(ImageData {
+                    src: src.to_string(),
+                    height,
+                    width,
+                }),
                 _ => FactData::Other { kind },
             },
             "bluesky-post" => match value.get("value") {
@@ -152,14 +163,24 @@ impl FactData {
                     .and_then(Value::as_array)
                     .map(|a| a.iter().filter_map(Value::as_f64).collect::<Vec<_>>());
                 let fill = stroke.and_then(|s| s.get("fill")).and_then(|f| {
-                    let points = f.get("points").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_f64).collect::<Vec<_>>());
+                    let points = f
+                        .get("points")
+                        .and_then(Value::as_array)
+                        .map(|a| a.iter().filter_map(Value::as_f64).collect::<Vec<_>>());
                     let color = f.get("color").and_then(Value::as_str);
                     match (points, color) {
-                        (Some(points), Some(color)) => Some(StrokeFill { points, color: color.to_string() }),
+                        (Some(points), Some(color)) => Some(StrokeFill {
+                            points,
+                            color: color.to_string(),
+                        }),
                         _ => None,
                     }
                 });
-                match (points, stroke.and_then(|s| s.get("color")).and_then(Value::as_str), stroke.and_then(|s| s.get("size")).and_then(Value::as_f64)) {
+                match (
+                    points,
+                    stroke.and_then(|s| s.get("color")).and_then(Value::as_str),
+                    stroke.and_then(|s| s.get("size")).and_then(Value::as_f64),
+                ) {
                     (Some(points), Some(color), Some(size)) => FactData::InkStroke {
                         value: InkStroke {
                             points,
@@ -174,8 +195,15 @@ impl FactData {
             }
             "view-box" => {
                 let vb = value.get("value");
-                match (vb.and_then(|v| v.get("x")).and_then(Value::as_f64), vb.and_then(|v| v.get("y")).and_then(Value::as_f64), vb.and_then(|v| v.get("width")).and_then(Value::as_f64), vb.and_then(|v| v.get("height")).and_then(Value::as_f64)) {
-                    (Some(x), Some(y), Some(width), Some(height)) => FactData::ViewBox { value: ViewBox { x, y, width, height } },
+                match (
+                    vb.and_then(|v| v.get("x")).and_then(Value::as_f64),
+                    vb.and_then(|v| v.get("y")).and_then(Value::as_f64),
+                    vb.and_then(|v| v.get("width")).and_then(Value::as_f64),
+                    vb.and_then(|v| v.get("height")).and_then(Value::as_f64),
+                ) {
+                    (Some(x), Some(y), Some(width), Some(height)) => FactData::ViewBox {
+                        value: ViewBox { x, y, width, height },
+                    },
                     _ => FactData::Other { kind },
                 }
             }
@@ -282,6 +310,15 @@ impl ScanIndex {
             _ => None,
         }
     }
+
+    /// Cardinality-`one` entity pointer (`reference` payloads like
+    /// `block/card`).
+    pub fn reference(&self, entity: &str, attribute: &str) -> Option<&str> {
+        match self.one(entity, attribute).map(|f| &f.data) {
+            Some(FactData::Reference { value }) | Some(FactData::OrderedReference { value, .. }) => Some(value),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -310,19 +347,41 @@ mod tests {
             json!({"type": "awareness", "value": "someone"}),
             json!({"type": "color", "value": "1,0.5,0,1"}),
         ];
-        let parsed: Vec<FactData> = cases.iter().map(|v| FactData::parse(v)).collect();
+        let parsed: Vec<FactData> = cases.iter().map(FactData::parse).collect();
         assert_eq!(parsed[0], FactData::Text { value: "AQ==".into() });
         assert_eq!(parsed[1], FactData::String { value: "plain".into() });
-        assert_eq!(parsed[2], FactData::StringArray { value: vec!["a".into(), "b".into()] });
+        assert_eq!(
+            parsed[2],
+            FactData::StringArray {
+                value: vec!["a".into(), "b".into()]
+            }
+        );
         assert_eq!(parsed[3], FactData::Boolean { value: true });
         assert_eq!(parsed[4], FactData::Number { value: 2.0 });
         assert_eq!(parsed[5], FactData::Number { value: 1.5 });
         assert_eq!(parsed[6], FactData::Reference { value: "e2".into() });
-        assert_eq!(parsed[7], FactData::OrderedReference { value: "e2".into(), position: "a0".into() });
-        assert_eq!(parsed[8], FactData::SpatialReference { value: "e2".into(), x: 1.0, y: 2.5 });
+        assert_eq!(
+            parsed[7],
+            FactData::OrderedReference {
+                value: "e2".into(),
+                position: "a0".into()
+            }
+        );
+        assert_eq!(
+            parsed[8],
+            FactData::SpatialReference {
+                value: "e2".into(),
+                x: 1.0,
+                y: 2.5
+            }
+        );
         assert_eq!(
             parsed[9],
-            FactData::Image(ImageData { src: "https://x/img.png".into(), height: 100.0, width: 50.0 })
+            FactData::Image(ImageData {
+                src: "https://x/img.png".into(),
+                height: 100.0,
+                width: 50.0
+            })
         );
         assert!(matches!(parsed[10], FactData::BlueskyPost { .. }));
         assert_eq!(
@@ -333,15 +392,52 @@ mod tests {
                     color: "#fff".into(),
                     size: 4.0,
                     simulate_pressure: Some(true),
-                    fill: Some(StrokeFill { points: vec![1.0, 2.0, 3.0, 4.0], color: "#000".into() }),
+                    fill: Some(StrokeFill {
+                        points: vec![1.0, 2.0, 3.0, 4.0],
+                        color: "#000".into()
+                    }),
                 },
             }
         );
-        assert_eq!(parsed[12], FactData::ViewBox { value: ViewBox { x: 0.0, y: 0.0, width: 10.5, height: 9.0 } });
-        assert_eq!(parsed[13], FactData::Union { kind: "block-type-union".into(), value: "heading".into() });
-        assert_eq!(parsed[14], FactData::Union { kind: "date-time".into(), value: "2026-01-01T00:00:00Z".into() });
-        assert_eq!(parsed[15], FactData::Union { kind: "awareness".into(), value: "someone".into() });
-        assert_eq!(parsed[16], FactData::Union { kind: "color".into(), value: "1,0.5,0,1".into() });
+        assert_eq!(
+            parsed[12],
+            FactData::ViewBox {
+                value: ViewBox {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 10.5,
+                    height: 9.0
+                }
+            }
+        );
+        assert_eq!(
+            parsed[13],
+            FactData::Union {
+                kind: "block-type-union".into(),
+                value: "heading".into()
+            }
+        );
+        assert_eq!(
+            parsed[14],
+            FactData::Union {
+                kind: "date-time".into(),
+                value: "2026-01-01T00:00:00Z".into()
+            }
+        );
+        assert_eq!(
+            parsed[15],
+            FactData::Union {
+                kind: "awareness".into(),
+                value: "someone".into()
+            }
+        );
+        assert_eq!(
+            parsed[16],
+            FactData::Union {
+                kind: "color".into(),
+                value: "1,0.5,0,1".into()
+            }
+        );
     }
 
     #[test]
@@ -350,14 +446,29 @@ mod tests {
         assert_eq!(FactData::parse(&json!({})), FactData::Other { kind: String::new() });
         // Known tag, missing members: tolerated as Other, never an error.
         assert_eq!(FactData::parse(&json!({"type": "number"})), FactData::Other { kind: "number".into() });
-        assert_eq!(FactData::parse(&json!({"type": "ordered-reference", "value": "e"})), FactData::Other { kind: "ordered-reference".into() });
+        assert_eq!(
+            FactData::parse(&json!({"type": "ordered-reference", "value": "e"})),
+            FactData::Other {
+                kind: "ordered-reference".into()
+            }
+        );
     }
 
     #[test]
     fn scan_index_reads_preserve_wire_order() {
         let rows = vec![
-            row("f1", "page", "card/block", json!({"type": "ordered-reference", "value": "b1", "position": "a0"})),
-            row("f2", "page", "card/block", json!({"type": "ordered-reference", "value": "b2", "position": "a1"})),
+            row(
+                "f1",
+                "page",
+                "card/block",
+                json!({"type": "ordered-reference", "value": "b1", "position": "a0"}),
+            ),
+            row(
+                "f2",
+                "page",
+                "card/block",
+                json!({"type": "ordered-reference", "value": "b2", "position": "a1"}),
+            ),
             row("f3", "b1", "block/type", json!({"type": "block-type-union", "value": "text"})),
             row("f4", "b1", "block/text", json!({"type": "text", "value": "AQ=="})),
             row("f5", "b1", "block/is-list", json!({"type": "boolean", "value": false})),
@@ -373,6 +484,11 @@ mod tests {
     }
 
     fn row(id: &str, entity: &str, attribute: &str, data: serde_json::Value) -> FactRow {
-        FactRow { id: id.into(), entity: entity.into(), attribute: attribute.into(), data: FactData::parse(&data) }
+        FactRow {
+            id: id.into(),
+            entity: entity.into(),
+            attribute: attribute.into(),
+            data: FactData::parse(&data),
+        }
     }
 }

@@ -28,6 +28,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod extract;
 pub mod facts;
 pub mod fractional;
 pub mod pull;

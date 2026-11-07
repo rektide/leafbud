@@ -225,8 +225,9 @@ pub fn build_record(markdown: &str, publication: &str, options: &BuildOptions) -
 /// Re-add the `$type` discriminators jacquard's single-variant-union
 /// codegen drops (see module docs): `content.$type =
 /// "pub.leaflet.content"` and `pages[].blocks[].$type =
-/// "pub.leaflet.pages.linearDocument#block"`.
-fn reinject_type_discriminators(record: &mut serde_json::Value) {
+/// "pub.leaflet.pages.linearDocument#block"`. Shared by the record builder
+/// and the draft-extraction converter so both emit the same wire shape.
+pub fn reinject_type_discriminators(record: &mut serde_json::Value) {
     let Some(content) = record.get_mut("content").and_then(|c| c.as_object_mut()) else {
         return;
     };
