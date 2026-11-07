@@ -951,6 +951,316 @@ fn content_name(content: &Content) -> &'static str {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Encoder — the yjs_encode_text.py reference port, extended with marks
+// ---------------------------------------------------------------------------
+
+/// Encode failure (a facet span the text cannot carry).
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
+#[error("facet span {byte_start}..{byte_end} is out of bounds or off a char boundary of the {len}-byte text")]
+pub struct EncodeError {
+    pub byte_start: usize,
+    pub byte_end: usize,
+    pub len: usize,
+}
+
+/// A mark's yjs representation: the ContentFormat key + `writeAny` value
+/// the decoder's [`Mark`] recovery reads back — the exact shapes Leaflet's
+/// editor writes (`strong`/`em`/`code`/`strikethrough`/`underline` as
+/// `true`, `link` as `{href}`, `highlight` as `{color:"1"}` slot 1).
+fn mark_format(mark: &Mark) -> (String, AnyValue) {
+    match mark {
+        Mark::Strikethrough => ("strikethrough".into(), AnyValue::Bool(true)),
+        Mark::Code => ("code".into(), AnyValue::Bool(true)),
+        Mark::Highlight => ("highlight".into(), AnyValue::Object(vec![("color".into(), AnyValue::Str("1".into()))])),
+        Mark::Underline => ("underline".into(), AnyValue::Bool(true)),
+        Mark::Bold => ("strong".into(), AnyValue::Bool(true)),
+        Mark::Italic => ("em".into(), AnyValue::Bool(true)),
+        Mark::Link(href) => ("link".into(), AnyValue::Object(vec![("href".into(), AnyValue::Str(href.clone()))])),
+    }
+}
+
+/// Canonical mark order — the decoder's `active_marks` emission order.
+/// Encoding target sets in this order makes `decode(encode(x)) == x`
+/// hold exactly (order included) for run-normalized facet lists.
+fn mark_rank(mark: &Mark) -> u8 {
+    match mark {
+        Mark::Strikethrough => 0,
+        Mark::Code => 1,
+        Mark::Highlight => 2,
+        Mark::Underline => 3,
+        Mark::Bold => 4,
+        Mark::Italic => 5,
+        Mark::Link(_) => 6,
+    }
+}
+
+/// One content item of the XmlText, in emission order.
+enum EncodedItem {
+    Str(String),
+    Format { key: String, value: AnyValue },
+}
+
+impl EncodedItem {
+    /// Length in clock units (strings count UTF-16 code units — the unit
+    /// the decoder's clock arithmetic runs on).
+    fn clock_len(&self) -> u64 {
+        match self {
+            EncodedItem::Str(s) => s.encode_utf16().count() as u64,
+            EncodedItem::Format { .. } => 1,
+        }
+    }
+
+    fn content_ref(&self) -> u8 {
+        match self {
+            EncodedItem::Str(_) => 4,
+            EncodedItem::Format { .. } => 6,
+        }
+    }
+}
+
+/// Split `text` into maximal segments of constant mark set, validating
+/// every facet span (byte bounds + char boundaries). Facets may overlap;
+/// the segmentation merges them — the decoder round-trip therefore yields
+/// the *normalized* facet list (one run per segment, features merged),
+/// which is exactly the shape both the markdown converter and extraction
+/// emit.
+fn segments(text: &str, facets: &[FacetRun]) -> std::result::Result<Vec<(usize, usize, Vec<Mark>)>, EncodeError> {
+    for facet in facets {
+        let ok = facet.byte_start <= facet.byte_end
+            && facet.byte_end <= text.len()
+            && text.is_char_boundary(facet.byte_start)
+            && text.is_char_boundary(facet.byte_end);
+        if !ok {
+            return Err(EncodeError {
+                byte_start: facet.byte_start,
+                byte_end: facet.byte_end,
+                len: text.len(),
+            });
+        }
+    }
+    let mut points: std::collections::BTreeSet<usize> = [0, text.len()].into_iter().collect();
+    for facet in facets {
+        if facet.byte_start < facet.byte_end {
+            points.insert(facet.byte_start);
+            points.insert(facet.byte_end);
+        }
+    }
+    let mut bounds: Vec<usize> = points.into_iter().collect();
+    bounds.dedup();
+    let mut out = Vec::new();
+    for pair in bounds.windows(2) {
+        let (start, end) = (pair[0], pair[1]);
+        let mut marks: Vec<Mark> = Vec::new();
+        for facet in facets {
+            if facet.byte_start <= start && end <= facet.byte_end {
+                for mark in &facet.marks {
+                    if !marks.contains(mark) {
+                        marks.push(mark.clone());
+                    }
+                }
+            }
+        }
+        marks.sort_by_key(mark_rank);
+        out.push((start, end, marks));
+    }
+    Ok(out)
+}
+
+/// lib0 writer subset — the exact inverse of [`Reader`]'s primitives.
+struct Writer {
+    out: Vec<u8>,
+}
+
+impl Writer {
+    fn u8(&mut self, byte: u8) {
+        self.out.push(byte);
+    }
+
+    /// Unsigned varuint: 7 bits/byte, LSB first, `0x80` continuation.
+    fn varuint(&mut self, mut n: u64) {
+        while n > 0x7f {
+            self.u8(0x80 | (n & 0x7f) as u8);
+            n >>= 7;
+        }
+        self.u8(n as u8);
+    }
+
+    /// Sign-magnitude varint (`writeVarInt`): first byte `0x40` sign +
+    /// 6 payload bits, then 7-bit groups.
+    fn varint(&mut self, n: i64) {
+        let sign = if n < 0 { 0x40u8 } else { 0 };
+        let mut rest = n.unsigned_abs();
+        let mut byte = (rest & 0x3f) as u8 | sign;
+        rest >>= 6;
+        if rest != 0 {
+            byte |= 0x80;
+        }
+        self.u8(byte);
+        while rest >= 0x80 {
+            self.u8(((rest & 0x7f) as u8) | 0x80);
+            rest >>= 7;
+        }
+        if rest != 0 {
+            self.u8(rest as u8);
+        }
+    }
+
+    fn varstring(&mut self, s: &str) {
+        let bytes = s.as_bytes();
+        self.varuint(bytes.len() as u64);
+        self.out.extend_from_slice(bytes);
+    }
+
+    /// lib0 `writeAny` — the tag set [`Reader::any`] decodes (116–127).
+    fn write_any(&mut self, value: &AnyValue) {
+        match value {
+            AnyValue::Bytes(bytes) => {
+                self.u8(116);
+                self.varuint(bytes.len() as u64);
+                self.out.extend_from_slice(bytes);
+            }
+            AnyValue::Array(items) => {
+                self.u8(117);
+                self.varuint(items.len() as u64);
+                for item in items {
+                    self.write_any(item);
+                }
+            }
+            AnyValue::Object(entries) => {
+                self.u8(118);
+                self.varuint(entries.len() as u64);
+                for (key, value) in entries {
+                    self.varstring(key);
+                    self.write_any(value);
+                }
+            }
+            AnyValue::Str(s) => {
+                self.u8(119);
+                self.varstring(s);
+            }
+            AnyValue::Bool(true) => self.u8(120),
+            AnyValue::Bool(false) => self.u8(121),
+            AnyValue::BigInt(i) => {
+                self.u8(122);
+                self.out.extend_from_slice(&i.to_le_bytes());
+            }
+            AnyValue::Double(d) => {
+                self.u8(123);
+                self.out.extend_from_slice(&d.to_le_bytes());
+            }
+            AnyValue::Float(f) => {
+                self.u8(124);
+                self.out.extend_from_slice(&f.to_le_bytes());
+            }
+            AnyValue::Int(i) => {
+                self.u8(125);
+                self.varint(*i);
+            }
+            AnyValue::Null => self.u8(126),
+            AnyValue::Undefined => self.u8(127),
+        }
+    }
+}
+
+/// Encode a ProseMirror text block as a Yjs v1 update — the Rust port of
+/// `experiments/02-draft-internals/scripts/yjs_encode_text.py`, extended
+/// to carry marks as interleaved ContentFormat items (origin-chained like
+/// real editor updates; the plain-text form is byte-identical to the
+/// python reference and to yjs 13.6.18 `encodeStateAsUpdate` with the
+/// same clientID). The doc shape is the decoder's domain: `prosemirror`
+/// root → `paragraph` XmlElement → XmlText → items. No `meta.schemaVersion`
+/// is stamped (unstamped = version 0, editable by every client — the safe
+/// choice, experiment 02 §4).
+///
+/// Facet spans are UTF-8 byte offsets over `text`, matching the decoder's
+/// recovery arithmetic. Plaintext containing `\n` is encoded as a literal
+/// newline (not a `hard_break` XmlElement): it decodes back identically,
+/// though the editor may render it differently than an authored break.
+pub fn encode_block_text(text: &str, facets: &[FacetRun], client_id: u32) -> std::result::Result<String, EncodeError> {
+    let bytes = encode_block_text_bytes(text, facets, client_id)?;
+    use base64::Engine as _;
+    Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
+}
+
+/// [`encode_block_text`] returning raw update bytes.
+pub fn encode_block_text_bytes(text: &str, facets: &[FacetRun], client_id: u32) -> std::result::Result<Vec<u8>, EncodeError> {
+    // Build the content items from the mark segmentation.
+    let mut items: Vec<EncodedItem> = Vec::new();
+    let mut active: Vec<(String, AnyValue)> = Vec::new();
+    for (start, end, marks) in segments(text, facets)? {
+        let target: Vec<(String, AnyValue)> = marks.iter().map(mark_format).collect();
+        let contains = |list: &[(String, AnyValue)], key: &str| list.iter().any(|(k, _)| k == key);
+        // Close marks leaving the run (reverse open order), then open the
+        // new ones (null value = close, per the delta contract).
+        for (key, _) in active.iter().rev() {
+            if !contains(&target, key) {
+                items.push(EncodedItem::Format {
+                    key: key.clone(),
+                    value: AnyValue::Null,
+                });
+            }
+        }
+        for (key, value) in &target {
+            if !contains(&active, key) {
+                items.push(EncodedItem::Format {
+                    key: key.clone(),
+                    value: value.clone(),
+                });
+            }
+        }
+        active = target;
+        if end > start {
+            items.push(EncodedItem::Str(text[start..end].to_string()));
+        }
+    }
+
+    let mut w = Writer { out: Vec::new() };
+    w.varuint(1); // numClients
+    w.varuint((2 + items.len()) as u64); // numStructs (2 when empty — yjs skips the empty insert)
+    let client = u64::from(client_id);
+    w.varuint(client);
+    w.varuint(0); // startClock
+    // struct 0: paragraph XmlElement in root "prosemirror"
+    w.u8(0x07); // info: ContentType, no origin/rightOrigin/parentSub
+    w.varuint(1); // parentInfo: parent is a root-type name
+    w.varstring("prosemirror");
+    w.varuint(3); // typeRef: YXmlElement
+    w.varstring("paragraph");
+    // struct 1: XmlText child of the paragraph (clock 1)
+    w.u8(0x07);
+    w.varuint(0); // parentInfo: parent is an ID
+    w.varuint(client);
+    w.varuint(0); // …the paragraph's clock
+    w.varuint(6); // typeRef: YXmlText
+    // content items (clock from 2): the first names its parent (the
+    // XmlText at clock 1); every later one chains to its predecessor's
+    // last clock via origin — the shape real editor updates carry.
+    let mut clock = 2u64;
+    for (i, item) in items.iter().enumerate() {
+        if i == 0 {
+            w.u8(item.content_ref());
+            w.varuint(0); // parentInfo: parent is an ID
+            w.varuint(client);
+            w.varuint(1); // …the XmlText's clock
+        } else {
+            w.u8(0x80 | item.content_ref()); // origin set
+            w.varuint(client);
+            w.varuint(clock - 1);
+        }
+        match item {
+            EncodedItem::Str(s) => w.varstring(s),
+            EncodedItem::Format { key, value } => {
+                w.varstring(key);
+                w.write_any(value);
+            }
+        }
+        clock += item.clock_len();
+    }
+    w.varuint(0); // deleteSet: empty
+    Ok(w.out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1584,5 +1894,229 @@ mod tests {
         assert_eq!(SAMPLE1_HEX.len(), 126, "63 bytes of hex");
         assert_eq!(SAMPLE2_HEX.len(), 226, "113 bytes of hex");
         assert_eq!(hex(&bytes_of("b5ec6d")), "b5ec6d");
+    }
+
+    // ── encoder: byte parity with the python reference ───────────────────
+
+    /// Golden bytes produced by running the committed
+    /// `experiments/02-draft-internals/scripts/yjs_encode_text.py`
+    /// (`yjs_encode_text.py <text> --client <id> --hex`); regenerate
+    /// against that script if this table ever disagrees.
+    #[test]
+    fn encoder_is_byte_identical_to_the_python_reference() {
+        let vectors: &[(&str, u32, &str)] = &[
+            (
+                "Hello world",
+                979_896_792,
+                "0103d893a0d3030007010b70726f73656d6972726f7203097061726167726170680700d893a0d30300060400d893a0d303010b48656c6c6f20776f726c6400",
+            ),
+            ("", 42, "01022a0007010b70726f73656d6972726f72030970617261677261706807002a000600"),
+            (
+                "Synthetic title",
+                1_000_000_000,
+                "01038094ebdc030007010b70726f73656d6972726f72030970617261677261706807008094ebdc03000604008094ebdc03010f53796e746865746963207469746c6500",
+            ),
+            (
+                "Émigré — cafés of Montréal",
+                u32::MAX,
+                "0103ffffffff0f0007010b70726f73656d6972726f7203097061726167726170680700ffffffff0f00060400ffffffff0f0120c3896d696772c3a920e2809420636166c3a973206f66204d6f6e7472c3a9616c00",
+            ),
+            ("A", 1, "0103010007010b70726f73656d6972726f720309706172616772617068070001000604000101014100"),
+            (
+                "multi paragraph\nsecond line",
+                7,
+                "0103070007010b70726f73656d6972726f7203097061726167726170680700070006040007011b6d756c7469207061726167726170680a7365636f6e64206c696e6500",
+            ),
+        ];
+        for (text, client, expect_hex) in vectors {
+            let bytes = encode_block_text_bytes(text, &[], *client).unwrap();
+            assert_eq!(&hex(&bytes), expect_hex, "text {text:?} client {client}");
+        }
+        // The committed push fixture's two block/text values: same client
+        // (979896792), same texts — the encoder reproduces them verbatim.
+        assert_eq!(
+            encode_block_text("Synthetic title", &[], 979_896_792).unwrap(),
+            "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwEPU3ludGhldGljIHRpdGxlAA=="
+        );
+        assert_eq!(
+            encode_block_text("Synthetic body copy", &[], 979_896_792).unwrap(),
+            "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwETU3ludGhldGljIGJvZHkgY29weQA="
+        );
+    }
+
+    #[test]
+    fn encoded_plain_text_decodes_back_exactly() {
+        for (text, client) in [("Hello world", 979_896_792u32), ("", 7), ("É — ünïcode ✓", 1234)] {
+            let value = encode_block_text(text, &[], client).unwrap();
+            let decoded = decode_block_text(&value).unwrap();
+            assert_eq!(decoded.plaintext, text);
+            assert!(decoded.facets.is_empty(), "{text:?}");
+            assert_eq!(decoded.paragraph_count, 1);
+            assert_eq!(decoded.schema_version, None, "unstamped = version 0 (the safe choice)");
+        }
+    }
+
+    /// The round-trip property: decode(encode(text, facets)) == (text,
+    /// facets) for run-normalized facet lists — one facet per marked
+    /// segment with merged features, the exact shape both the markdown
+    /// converter and extraction emit. Overlapping inputs normalize.
+    #[test]
+    fn encoded_marks_round_trip_through_the_decoder() {
+        let run = |start: usize, end: usize, marks: &[Mark]| FacetRun {
+            byte_start: start,
+            byte_end: end,
+            marks: marks.to_vec(),
+        };
+        // The v0 mark set, exercised one at a time over non-ASCII text so
+        // byte-offset arithmetic must stay honest (é is 2 bytes, — is 3).
+        let text = "É precursor plain bold tail — underline code strike highlight link end";
+        let cases: Vec<FacetRun> = vec![
+            run(13, 18, &[Mark::Bold]),
+            run(25, 34, &[Mark::Underline]),
+            run(36, 40, &[Mark::Code]),
+            run(41, 48, &[Mark::Strikethrough]),
+            run(49, 59, &[Mark::Highlight]),
+            run(60, 64, &[Mark::Link("https://example.com".into())]),
+        ];
+        let value = encode_block_text(text, &cases, 42).unwrap();
+        let decoded = decode_block_text(&value).unwrap();
+        assert_eq!(decoded.plaintext, text);
+        assert_eq!(decoded.facets, cases, "exact run list (order included) for normalized input");
+
+        // Overlapping bold+link on one span merges into a single run with
+        // both marks (canonical order: bold before link).
+        let text = "prefix marked suffix";
+        let merged = vec![run(7, 13, &[Mark::Bold, Mark::Link("https://x.example".into())])];
+        let value = encode_block_text(text, &merged, 42).unwrap();
+        let decoded = decode_block_text(&value).unwrap();
+        assert_eq!(decoded.facets, merged);
+
+        // A partially-overlapping input (bold and italic spans) normalizes
+        // to per-segment runs — the property is equality after the same
+        // normalization, not echo of the input.
+        let text = "abcdef";
+        let raw = vec![run(0, 3, &[Mark::Bold]), run(2, 5, &[Mark::Italic])];
+        let value = encode_block_text(text, &raw, 42).unwrap();
+        let decoded = decode_block_text(&value).unwrap();
+        assert_eq!(decoded.plaintext, text);
+        assert_eq!(
+            decoded.facets,
+            vec![run(0, 2, &[Mark::Bold]), run(2, 3, &[Mark::Bold, Mark::Italic]), run(3, 5, &[Mark::Italic]),]
+        );
+
+        // Facet directly adjacent to another (close then reopen) and a
+        // facet at the very start/end of the text.
+        let text = "ab";
+        let edge = vec![run(0, 1, &[Mark::Code]), run(1, 2, &[Mark::Code])];
+        let value = encode_block_text(text, &edge, 42).unwrap();
+        assert_eq!(decode_block_text(&value).unwrap().facets, edge);
+
+        // Empty facet spans are dropped by normalization.
+        let value = encode_block_text("ab", &[run(1, 1, &[Mark::Bold])], 42).unwrap();
+        assert!(decode_block_text(&value).unwrap().facets.is_empty());
+    }
+
+    /// The format items are origin-chained exactly like the hand-built
+    /// fixture in `marks_render_as_byte_offset_facet_runs` — the wire
+    /// shape real editor updates carry, not a decoder-only convenience.
+    #[test]
+    fn encoded_wire_bytes_carry_origin_chained_format_items() {
+        use std::collections::BTreeMap;
+        let text = "bold";
+        let facets = [FacetRun {
+            byte_start: 0,
+            byte_end: 4,
+            marks: vec![Mark::Bold],
+        }];
+        let bytes = encode_block_text_bytes(text, &facets, 5).unwrap();
+        let update = decode_update(&bytes).unwrap();
+        let items = &update.clients[0].items;
+        assert_eq!(items.len(), 4, "paragraph, XmlText, format strong, string");
+        // struct 2: format strong (clock 2, first item — parentInfo present)
+        assert_eq!(items[2].id.clock, 2);
+        assert_eq!(items[2].info, 0x06);
+        assert_eq!(items[2].origin, None);
+        assert_eq!(items[2].parent, Some(Parent::Id(Id { client: 5, clock: 1 })));
+        assert_eq!(
+            items[2].content,
+            Content::Format {
+                key: "strong".into(),
+                value: AnyValue::Bool(true)
+            }
+        );
+        // struct 3: the string (clock 3), origin = the format's clock.
+        assert_eq!(items[3].id.clock, 3);
+        assert_eq!(items[3].info, 0x84);
+        assert_eq!(items[3].origin, Some(Id { client: 5, clock: 2 }));
+        assert_eq!(items[3].content, Content::Str("bold".into()));
+        // UTF-16 clock arithmetic: bold over "a" in "a—b" makes the items
+        // format(2), "a"(3), close-format(4), "—b"(5) — close formats are
+        // items with clocks like any other, and the em-dash is one UTF-16
+        // unit.
+        let bytes = encode_block_text_bytes(
+            "a—b",
+            &[FacetRun {
+                byte_start: 0,
+                byte_end: 1,
+                marks: vec![Mark::Bold],
+            }],
+            9,
+        )
+        .unwrap();
+        let items = &decode_update(&bytes).unwrap().clients[0].items;
+        assert_eq!(items.len(), 6);
+        assert_eq!(items[3].id.clock, 3); // "a" (len 1)
+        assert_eq!(items[4].id.clock, 4); // format strong null (close)
+        assert_eq!(items[4].origin, Some(Id { client: 9, clock: 3 }));
+        assert_eq!(
+            items[4].content,
+            Content::Format {
+                key: "strong".into(),
+                value: AnyValue::Null
+            }
+        );
+        assert_eq!(items[5].id.clock, 5); // "—b" (— is 1 utf-16 unit + b)
+        assert_eq!(items[5].origin, Some(Id { client: 9, clock: 4 }));
+    }
+
+    #[test]
+    fn encoder_rejects_bad_spans() {
+        let err = encode_block_text(
+            "abc",
+            &[FacetRun {
+                byte_start: 2,
+                byte_end: 9,
+                marks: vec![Mark::Bold],
+            }],
+            1,
+        )
+        .unwrap_err();
+        assert_eq!(err.len, 3);
+        // Mid-character boundary (é is 2 bytes: offset 1 is inside it).
+        assert!(
+            encode_block_text(
+                "éx",
+                &[FacetRun {
+                    byte_start: 1,
+                    byte_end: 3,
+                    marks: vec![Mark::Bold]
+                }],
+                1
+            )
+            .is_err()
+        );
+        // Inverted span.
+        assert!(
+            encode_block_text(
+                "abc",
+                &[FacetRun {
+                    byte_start: 2,
+                    byte_end: 1,
+                    marks: vec![Mark::Bold]
+                }],
+                1
+            )
+            .is_err()
+        );
     }
 }
