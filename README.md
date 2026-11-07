@@ -22,8 +22,10 @@ The architecture, protocol map, and staged plan live in
 [`design/springleaf.glm53m.md`](design/springleaf.glm53m.md); the
 on-disk record format is specified by
 [`design/records-canonical.glm53m.md`](design/records-canonical.glm53m.md)
-(the ATProto record *is* the document); the extraction algorithm was
-proven by
+(the ATProto record *is* the document); the `page.parts` federated
+mention services that leaflet's editor consumes are researched in
+[`design/page-parts.glm53m.md`](design/page-parts.glm53m.md); the extraction
+algorithm was proven by
 [`experiments/01-draft-list/REPORT.md`](experiments/01-draft-list/REPORT.md)
 and the record builder by
 [`experiments/03-post-builder/REPORT.md`](experiments/03-post-builder/REPORT.md)
