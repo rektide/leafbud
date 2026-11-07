@@ -750,7 +750,7 @@ mod tests {
     #[tokio::test]
     async fn run_accepts_standalone_site_records() {
         let (_tmp, ws) = workspace();
-        let path = standalone_record(&ws);
+        let _path = standalone_record(&ws);
 
         // Dry-run: exit 2, target + /p/ URL printed, no transport opened.
         let called = Arc::new(AtomicBool::new(false));
