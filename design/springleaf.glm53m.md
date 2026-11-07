@@ -84,8 +84,9 @@ springleaf/
   crates/
     atproto/   # springleaf-atproto: XRPC client, app-password sessions,
                #   DID/handle→PDS resolution, records, blobs. Generic ATProto.
-    leaflet/   # springleaf-leaflet: record serde types (site.standard.*,
-               #   pub.leaflet.*), blocks/facets, markdown⇄blocks, slug/URL rules
+    leaflet/   # springleaf-leaflet: GENERATED record types (jacquard-codegen
+               #   from pinned leaflet lexicons; committed code = the pin) +
+               #   markdown⇄blocks converter + slug/URL rules
     drafts/    # springleaf-drafts: web surface — cookie auth, /home discovery,
                #   get_leaflet_data, facts/pull readers; (later) push mutations
     cli/       # springleaf: the binary — clap commands, config, output formats
@@ -105,7 +106,8 @@ Dependency direction: `cli → drafts, leaflet, atproto`; `leaflet → atproto`
 | Errors | `thiserror` (libs), `anyhow` (cli) | |
 | Time | `jiff` | |
 | Diagnostics | `tracing` + `tracing-subscriber` | |
-| HTML parse | `scraper` (html5ever + CSS selectors) | de-facto standard; scrape surface kept minimal (id discovery only). Lighter alternatives if it chafes: `dom_smoothie`, `lol_html` |
+| Home listing | RSC flight parse (no DOM crate) | experiment 01: one GET, concat `self.__next_f.push` chunks, brace-match `permission_token_on_homepage`; href set kept as drift alarm only. If DOM scraping ever returns: `scraper` / `dom_smoothie` / `lol_html` |
+| Lexicon types | `jacquard-codegen` (dev-time) + `jacquard-common`/`jacquard-lexicon` (runtime) | see "Updates" — verdict (b) from experiments/04: generate typed site.standard.* + pub.leaflet.* modules from the pinned leaflet checkout; committed generated code IS the pin |
 | IDs | `uuid` | token ids are UUIDv7; sortable by creation |
 | Tests | `cargo-nextest`; `wiremock` for HTTP | synthetic fixtures only — never commit real home HTML or tokens |
 
@@ -163,9 +165,27 @@ fixtures, findings promoted into `design/` when load-bearing.
 - **Undocumented mutations** (stage 5): the push vocabulary and Yjs encoding
   are the hard part; experiments/02 must scope it before any build.
 - **Lexicon drift**: record shapes move (noteleaf's dead
-  `pub.leaflet.document.draft` is the cautionary tale); pin lexicon JSON at
-  a SHA (noteleaf's `tools fetch lexicons --sha` pattern) when generating
-  types.
+  `pub.leaflet.document.draft` is the cautionary tale). Pinning strategy
+  (revised per experiments/04): regenerate `crates/leaflet` types with
+  `jacquard-codegen` from a SHA-pinned leaflet checkout; the committed
+  generated code is the pin. Regeneration is a deliberate, reviewed stage.
 - **Blob GC**: verify top-level `blobs[]` mirroring semantics before
-  shipping images.
+  shipping images. The jacquard-generated `pub.leaflet.content` schema
+  itself documents the mirroring rule (experiments/04), which partially
+  answers this — verification still required.
+- **Jacquard dependency risk**: high quality but 97% single-author (Orual),
+  silent ~4 months as of 2026-11, and 0.11→0.12 was a wholesale breaking
+  rewrite. Verdict (b) limits exposure: codegen at dev time, small runtime
+  deps, exact version pins, thin hand-rolled `atproto` crate preserved.
 - No time estimates anywhere in this plan, by policy.
+
+## Updates
+
+- **2026-11-07, after experiments/01 + 04**: home listing switched from
+  HTML scraping to RSC-flight parsing (no DOM crate in v0; see
+  `experiments/01-draft-list/REPORT.md`). Lexicon strategy switched from
+  hand-written serde + JSON pinning to jacquard codegen with committed
+  generated code as the pin — verdict (b), lexicon toolchain only, thin
+  `atproto` crate preserved (see `experiments/04-jacquard/REPORT.md`).
+  Auth note: jacquard's `FileAuthStore` lacks 0600 hardening — springleaf
+  owns its own session-file permissions either way.
