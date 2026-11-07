@@ -155,7 +155,10 @@ mod tests {
         assert_eq!(snapshot.facts[0].attribute, "root/page");
         assert_eq!(
             snapshot.facts[0].data,
-            FactData::OrderedReference { value: "01999000-0000-7aaa-8000-000000000003".into(), position: "a0".into() }
+            FactData::OrderedReference {
+                value: "01999000-0000-7aaa-8000-000000000003".into(),
+                position: "a0".into()
+            }
         );
         assert_eq!(snapshot.facts[1].attribute, "theme/page-leaflet-watermark");
         // Extras: initialized + draft_contributors, not facts.
@@ -185,7 +188,7 @@ mod tests {
         assert_eq!(snapshot.facts.len(), 1);
         assert_eq!(snapshot.extras.get("publication_tags"), Some(&json!(["news", "meta"])));
         assert_eq!(snapshot.publication_tags(), Some(vec!["news".to_string(), "meta".to_string()]));
-        assert!(snapshot.extras.get("initialized").is_none());
+        assert!(!snapshot.extras.contains_key("initialized"));
     }
 
     #[test]
