@@ -278,7 +278,7 @@ prune policy.
   `app/(app)/(identity)/new/route.ts:7-15` is a plain GET route
   (`force-dynamic`, `force-no-store`) that calls `createNewLeaflet` with
   `redirectUser: true`; `actions/createNewLeaflet.ts:56-59` then
-  `redirect("/${permTokenId}?focusFirstBuffer…")` — a 307 whose **Location
+  `redirect("/${permTokenId}?focusFirstBlock…")` — a 307 whose **Location
   header carries the new token id**. One authenticated GET (no Next-Action
   id, no body) creates a doc draft (h1 seed, watermark fact, homepage link —
   `addToHomepage` defaults true) and hands us the id. It is still a write:
