@@ -19,3 +19,10 @@ Rules:
 4. **Promote findings.** Load-bearing conclusions graduate into `design/`
    when a build stage consumes them.
 5. One subdir per topic: `NN-topic/REPORT.md` + scripts + fixtures.
+
+## Offline authoring evidence
+
+- [06 — Rushdown Markdown block identities](06-rushdown-identity/REPORT.md): an
+  isolated runnable extension experiment for `{#id}` and preceding comment keys;
+  preserves ordinary Markdown prose and identifies the separate MDX grammar gap.
+  No Leaflet requests or writes are involved.

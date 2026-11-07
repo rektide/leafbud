@@ -46,6 +46,13 @@ unbound and duplicate keys diagnose. Grammar: `[A-Za-z][A-Za-z0-9_.-]*`, unique
 document-wide. Escape the opening brace to write a reserved attribute literally.
 Code and ordinary non-reserved braces remain ordinary Markdown.
 
+The [assessment and check receipts](REPORT.md) recommend attributes for selected
+prose, and document the strict attachment rules, source-position limits and
+unimplemented MDX/component grammar. There are 39 offline tests. The projection's
+`content` is an inspection flattening: raw Text escapes/entities are not yet
+semantic Leaflet text. `content_segments` are payload positions, not complete
+rewriter ranges; no source reconstruction or source writer is supplied.
+
 The published dependency is pinned exactly to `rushdown = "=0.18.0"`, matching
 [`yuin/rushdown` revision e5eb4e4](https://github.com/yuin/rushdown/tree/e5eb4e4446541ea0ed53111c1b37e779283ff57c).
 Extension constructors, `InlineParser`, `BlockParser`, temporary `KindData::Extension`
