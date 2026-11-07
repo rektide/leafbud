@@ -112,13 +112,13 @@ fn digit_index(c: u8, key: &str) -> Result<usize, KeyError> {
 /// sorts strictly between them.
 fn midpoint(a: &str, b: Option<&str>) -> Result<String, KeyError> {
     let zero = BASE_62_DIGITS[0];
-    if let Some(b) = b {
-        if a.as_bytes() >= b.as_bytes() {
-            return Err(KeyError::Order {
-                a: a.to_string(),
-                b: b.to_string(),
-            });
-        }
+    if let Some(b) = b
+        && a.as_bytes() >= b.as_bytes()
+    {
+        return Err(KeyError::Order {
+            a: a.to_string(),
+            b: b.to_string(),
+        });
     }
     let trailing_zero = |s: &str| s.as_bytes().last() == Some(&zero);
     if trailing_zero(a) || b.is_some_and(trailing_zero) {
@@ -147,7 +147,7 @@ fn midpoint(a: &str, b: Option<&str>) -> Result<String, KeyError> {
     };
     if digit_b > digit_a + 1 {
         // Math.round of the mean (half rounds up, as JS does).
-        let mid = (digit_a + digit_b + 1) / 2;
+        let mid = (digit_a + digit_b).div_ceil(2);
         return Ok((BASE_62_DIGITS[mid] as char).to_string());
     }
     match b {
@@ -237,19 +237,18 @@ pub fn generate_key_between(a: Option<&str>, b: Option<&str>) -> Result<String, 
     if let Some(b) = b {
         validate_order_key(b)?;
     }
-    if let (Some(a), Some(b)) = (a, b) {
-        if a.as_bytes() >= b.as_bytes() {
-            return Err(KeyError::Order {
-                a: a.to_string(),
-                b: b.to_string(),
-            });
-        }
+    if let (Some(a), Some(b)) = (a, b)
+        && a.as_bytes() >= b.as_bytes()
+    {
+        return Err(KeyError::Order {
+            a: a.to_string(),
+            b: b.to_string(),
+        });
     }
     match (a, b) {
         (None, None) => Ok(format!("a{}", BASE_62_DIGITS[0] as char)),
         (None, Some(b)) => {
             let ib = integer_part(b)?;
-            let fb = &b[ib.len()..];
             // The 3.2.0 source has a smallest-integer special case here,
             // but its own validateOrderKey rejects that key as input, so
             // the branch is unreachable; integer_part + the walk below

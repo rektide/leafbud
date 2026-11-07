@@ -2021,7 +2021,6 @@ mod tests {
     /// shape real editor updates carry, not a decoder-only convenience.
     #[test]
     fn encoded_wire_bytes_carry_origin_chained_format_items() {
-        use std::collections::BTreeMap;
         let text = "bold";
         let facets = [FacetRun {
             byte_start: 0,
