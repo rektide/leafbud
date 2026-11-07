@@ -1,7 +1,19 @@
 [package]
 name = "springleaf-leaflet"
-description = "Leaflet record types, blocks/facets, markdown conversion, and slug/URL rules for springleaf"
+description = "Leaflet record types (jacquard-generated, pinned), markdown→blocks conversion, and slug/URL rules for springleaf"
 version.workspace = true
 edition.workspace = true
 
+[features]
+# Namespace gates carried over from the generated lib.rs so regenerations
+# stay drop-in (see LEAFLET-PIN.md). All three are on by default.
+default = ["com_atproto", "pub_leaflet", "site_standard"]
+com_atproto = []
+pub_leaflet = []
+site_standard = []
+
 [dependencies]
+jacquard-common.workspace = true
+jacquard-derive.workspace = true
+jacquard-lexicon.workspace = true
+serde = { workspace = true }

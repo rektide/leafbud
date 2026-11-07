@@ -1,8 +1,48 @@
-//! springleaf-leaflet — Leaflet record vocabulary for springleaf (stage 3, not
-//! yet built).
+//! springleaf-leaflet — Leaflet record vocabulary for springleaf.
 //!
-//! Stage 3 adds serde record types (`site.standard.*`, `pub.leaflet.*`),
-//! blocks/facets, markdown⇄blocks conversion, and the slug/rkey + URL
-//! derivation rules. Until then this crate is an intentional placeholder with
-//! no code; see `design/springleaf.glm53m.md` §Architecture and
-//! `experiments/03-post-builder/` for the record shapes it will carry.
+//! Two layers:
+//!
+//! - **Generated lexicon bindings** (crate-root modules `com_atproto`,
+//!   `pub_leaflet`, `site_standard`, `builder_types`): typed, validating
+//!   record types produced by `jacquard-codegen` from the SHA-pinned
+//!   leaflet lexicon checkout. The generated tree is committed — the
+//!   committed code IS the pin. Regeneration procedure, source SHA, and
+//!   runtime dependency pins: [`LEAFLET-PIN.md`] in the crate root.
+//! - **Hand-written code** (`markdown`, `record`): the markdown→blocks
+//!   converter at social-cli's v0 subset (paragraphs, ATX headings,
+//!   link/bold/italic/code facets with UTF-8 **byte** offsets), the
+//!   frontmatter → `site.standard.document` record builder with the
+//!   `path == "/" + rkey` invariant, and the published-URL derivation
+//!   rules (`{pubDomain}/{slug}`, else the `/lish/{did}/{pubRkey}/{rkey}`
+//!   fallback). Proven by `experiments/03-post-builder/`.
+//!
+//! One wire-shape adaptation sits at the boundary (see `record`): jacquard
+//! collapses single-variant lexicon unions to the bare struct, so the
+//! `$type` discriminators on `content` (`pub.leaflet.content`) and on
+//! block wrappers (`pub.leaflet.pages.linearDocument#block`) — which real
+//! records and experiment 03 both carry — are re-injected after
+//! serialization. Deserialization needs no help: unknown `$type` fields
+//! land in the generated `extra_data` maps.
+
+extern crate alloc;
+
+// ── Generated lexicon bindings (DO NOT EDIT — see LEAFLET-PIN.md) ─────────
+// Declarations mirror the codegen's lib.rs (feature-gated namespaces +
+// builder_types). The allows scope generated-code lint noise (unused
+// imports, camelCase NSID function names, builder idioms) to these
+// modules only; hand-written code stays fully lint-clean.
+
+#[cfg(feature = "com_atproto")]
+#[allow(unused_imports, non_snake_case, clippy::all)]
+pub mod com_atproto;
+
+#[cfg(feature = "pub_leaflet")]
+#[allow(unused_imports, non_snake_case, clippy::all)]
+pub mod pub_leaflet;
+
+#[cfg(feature = "site_standard")]
+#[allow(unused_imports, non_snake_case, clippy::all)]
+pub mod site_standard;
+
+#[allow(unused_imports, non_snake_case, clippy::all)]
+pub mod builder_types;

@@ -12,6 +12,9 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
+jacquard-common = { version = "=0.12.1", default-features = false, features = ["std"] }
+jacquard-derive = "=0.12.1"
+jacquard-lexicon = { version = "=0.12.1", default-features = false }
 anyhow = "1.0.104"
 clap = { version = "4.6.7", features = ["derive", "env"] }
 jiff = "0.2.39"
