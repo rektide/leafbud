@@ -189,3 +189,9 @@ fixtures, findings promoted into `design/` when load-bearing.
   `atproto` crate preserved (see `experiments/04-jacquard/REPORT.md`).
   Auth note: jacquard's `FileAuthStore` lacks 0600 hardening — springleaf
   owns its own session-file permissions either way.
+- **2026-11-07, after stage 3**: well-known `/.well-known/atproto-did` in
+  production serves the **bare DID**, not the `did=…` prefixed form implied
+  by experiments/03 — the resolver accepts both. reqwest 0.13's TLS feature
+  is `rustls` (not `rustls-tls`). jacquard-codegen collapses single-variant
+  unions to bare structs; the record builder re-injects `$type`
+  discriminators post-serialization (idempotent, tested).
