@@ -26,6 +26,8 @@ sources:
     title: "Locally inspected removeBlock semantics, including image cleanup and nested content"
   - resource: /experiments/02-draft-internals/REPORT.md
     title: "Earlier source and live-read evidence for pull/push, acknowledgments, and Yjs behavior"
+  - resource: /design/document-sync0.gpt6a.md
+    title: "Read only after the independent Sol option was committed; comparison and revised leans below"
 ---
 
 # Document-centered springleaf — Sol's independent option
@@ -323,3 +325,42 @@ shared verbs rather than a growing collection of lifecycle-specific commands.
   evidence for the editor adapter, not authority for append-only normal flow.
 - [Configuration revision](/design/records-canonical2.glm53m.md): already-landed
   global/workspace layering remains useful across the redesigned commands.
+
+## Join: comparison after both independent options were committed
+
+Read [Astra's option](/design/document-sync0.gpt6a.md) only after preserving the
+independent proposal above in commit `c51ee169`. The options agree on the main
+architecture without requiring a compromise: one logical file, one active
+target union, two independently witnessed edges, semantic hashing, optional
+bidirectional tidy, local create, explicit native publication, no Markdown
+source/output synchronization, and no sidecar compatibility work.
+
+Meaningful differences and my revised recommendations:
+
+| Topic | Sol independent option | Astra independent option | Revised lean, not acceptance |
+|---|---|---|---|
+| Conflict memory | Pair of local/remote hashes; inspect current endpoints; no promised three-way merge | Embedded agreed document as common ancestor | Adopt Astra's self-contained base snapshot for useful base/local/remote inspection; derive hashes consistently and avoid duplicating snapshots per edge |
+| Published updates | Lean toward a Leaflet-managed adapter, retaining editor machinery | Native first publication, then CAS-protected PDS updates | Prefer Leaflet-managed updates under the user's "publish being Leaflet" intent, but expose the editor-input/PDS-output checks and weaker concurrency; ask before choosing PDS-only update semantics |
+| Placement | Conventional draft/post dirs, explicit transition moves | No required state dirs, publication never moves a file | Lifecycle must be embedded, not inferred from dir; keep familiar default dirs but distinguish default layout from an optional tidy placement policy |
+| Remote witness | Normalized paired projections with field coverage | Full draft fact/metadata revision including opaque material, plus agreed document | Adopt full draft drift witness separately from editable projection; otherwise unsupported-content changes can be missed |
+| Forced Markdown loss | Accepted projection plus explicit retained-local/loss report | Keep loss/local-change indication relative to full remote baseline | Preserve explicit persistent loss status; don't present lossy encoding as fully synchronized |
+
+An agreed document is an ancestor only for the supported mapping; a full draft
+fact digest detects opaque changes but cannot reconstruct opaque content or
+make it mergeable. Store enough to explain that distinction, rather than
+calling an extracted document a complete draft backup.
+
+The published-update choice is the largest fork. A Leaflet-managed post can
+remain one active lifecycle/adapter, but that adapter has multiple upstream
+artifacts to inspect: the editor input, application document, and actual PDS
+output. Keep one remote edge at the user level without hiding these inputs in
+its plan. Do not reset this composite witness when only one component was
+observed or updated. If we instead choose record-following updates, explicitly
+document that web editor content can diverge and later overwrite them through
+native republish. Similar command names cannot erase that behavior difference.
+
+Neither independent option is the accepted redesign. Final design should
+settle published-update semantics and placement policy, specify one baseline
+schema and adapter coverage contract, and verify the native transport before
+implementation. The limited loss guard should remain proportional to actual
+conversion loss rather than becoming a new safety-policy subsystem.
