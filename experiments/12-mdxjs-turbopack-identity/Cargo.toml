@@ -1,0 +1,13 @@
+[package]
+name = "mdxjs-turbopack-identity-experiment"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+markdown = { version = "=1.0.0", features = ["serde"] }
+mdxjs = { git = "https://github.com/vercel-labs/mdxjs-rs-turbopack.git", rev = "700e192fbdbad5874208addfbf421dcf1eca7a20", version = "1.0.4" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
