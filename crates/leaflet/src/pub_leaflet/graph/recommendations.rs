@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -26,7 +26,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Record declaring the publications a publication recommends
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -106,7 +106,7 @@ impl<S: BosStr> LexiconSchema for Recommendations<S> {
 
 pub mod recommendations_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -149,10 +149,7 @@ pub mod recommendations_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct RecommendationsBuilder<
-    St: recommendations_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct RecommendationsBuilder<St: recommendations_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<AtUri<S>>, Option<Vec<AtUri<S>>>),
     _type: PhantomData<fn() -> S>,
@@ -200,10 +197,7 @@ where
     St::Publication: recommendations_state::IsUnset,
 {
     /// Set the `publication` field (required)
-    pub fn publication(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> RecommendationsBuilder<recommendations_state::SetPublication<St>, S> {
+    pub fn publication(mut self, value: impl Into<AtUri<S>>) -> RecommendationsBuilder<recommendations_state::SetPublication<St>, S> {
         self._fields.0 = Option::Some(value.into());
         RecommendationsBuilder {
             _state: PhantomData,
@@ -219,10 +213,7 @@ where
     St::Recommendations: recommendations_state::IsUnset,
 {
     /// Set the `recommendations` field (required)
-    pub fn recommendations(
-        mut self,
-        value: impl Into<Vec<AtUri<S>>>,
-    ) -> RecommendationsBuilder<recommendations_state::SetRecommendations<St>, S> {
+    pub fn recommendations(mut self, value: impl Into<Vec<AtUri<S>>>) -> RecommendationsBuilder<recommendations_state::SetRecommendations<St>, S> {
         self._fields.1 = Option::Some(value.into());
         RecommendationsBuilder {
             _state: PhantomData,
@@ -247,10 +238,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> Recommendations<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> Recommendations<S> {
         Recommendations {
             publication: self._fields.0.unwrap(),
             recommendations: self._fields.1.unwrap(),
@@ -260,10 +248,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_graph_recommendations() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.graph.recommendations"),
@@ -272,30 +260,19 @@ fn lexicon_doc_pub_leaflet_graph_recommendations() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Record(LexRecord {
-                    description: Some(
-                        CowStr::new_static(
-                            "Record declaring the publications a publication recommends",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static("Record declaring the publications a publication recommends")),
                     key: Some(CowStr::new_static("any")),
                     record: LexRecordRecord::Object(LexObject {
-                        required: Some(
-                            vec![
-                                SmolStr::new_static("publication"),
-                                SmolStr::new_static("recommendations")
-                            ],
-                        ),
+                        required: Some(vec![SmolStr::new_static("publication"), SmolStr::new_static("recommendations")]),
                         properties: {
                             #[allow(unused_mut)]
                             let mut map = BTreeMap::new();
                             map.insert(
                                 SmolStr::new_static("publication"),
                                 LexObjectProperty::String(LexString {
-                                    description: Some(
-                                        CowStr::new_static(
-                                            "The publication making the recommendations; must live in the same repo as this record",
-                                        ),
-                                    ),
+                                    description: Some(CowStr::new_static(
+                                        "The publication making the recommendations; must live in the same repo as this record",
+                                    )),
                                     format: Some(LexStringFormat::AtUri),
                                     ..Default::default()
                                 }),
@@ -303,11 +280,7 @@ fn lexicon_doc_pub_leaflet_graph_recommendations() -> LexiconDoc<'static> {
                             map.insert(
                                 SmolStr::new_static("recommendations"),
                                 LexObjectProperty::Array(LexArray {
-                                    description: Some(
-                                        CowStr::new_static(
-                                            "Publications this publication recommends",
-                                        ),
-                                    ),
+                                    description: Some(CowStr::new_static("Publications this publication recommends")),
                                     items: LexArrayItem::String(LexString {
                                         format: Some(LexStringFormat::AtUri),
                                         ..Default::default()

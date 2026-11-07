@@ -17,3 +17,7 @@ jacquard-common.workspace = true
 jacquard-derive.workspace = true
 jacquard-lexicon.workspace = true
 serde = { workspace = true }
+serde_json = { workspace = true }
+springleaf-atproto = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true, features = ["v7"] }

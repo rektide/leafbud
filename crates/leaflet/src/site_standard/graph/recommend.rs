@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -26,7 +26,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Record declaring a recommendation of a document.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -105,7 +105,7 @@ impl<S: BosStr> LexiconSchema for Recommend<S> {
 
 pub mod recommend_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -196,10 +196,7 @@ where
     St::CreatedAt: recommend_state::IsUnset,
 {
     /// Set the `createdAt` field (required)
-    pub fn created_at(
-        mut self,
-        value: impl Into<Datetime>,
-    ) -> RecommendBuilder<recommend_state::SetCreatedAt<St>, S> {
+    pub fn created_at(mut self, value: impl Into<Datetime>) -> RecommendBuilder<recommend_state::SetCreatedAt<St>, S> {
         self._fields.0 = Option::Some(value.into());
         RecommendBuilder {
             _state: PhantomData,
@@ -215,10 +212,7 @@ where
     St::Document: recommend_state::IsUnset,
 {
     /// Set the `document` field (required)
-    pub fn document(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> RecommendBuilder<recommend_state::SetDocument<St>, S> {
+    pub fn document(mut self, value: impl Into<AtUri<S>>) -> RecommendBuilder<recommend_state::SetDocument<St>, S> {
         self._fields.1 = Option::Some(value.into());
         RecommendBuilder {
             _state: PhantomData,
@@ -243,10 +237,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> Recommend<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> Recommend<S> {
         Recommend {
             created_at: self._fields.0.unwrap(),
             document: self._fields.1.unwrap(),
@@ -256,10 +247,10 @@ where
 }
 
 fn lexicon_doc_site_standard_graph_recommend() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("site.standard.graph.recommend"),
@@ -268,19 +259,10 @@ fn lexicon_doc_site_standard_graph_recommend() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Record(LexRecord {
-                    description: Some(
-                        CowStr::new_static(
-                            "Record declaring a recommendation of a document.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static("Record declaring a recommendation of a document.")),
                     key: Some(CowStr::new_static("tid")),
                     record: LexRecordRecord::Object(LexObject {
-                        required: Some(
-                            vec![
-                                SmolStr::new_static("document"),
-                                SmolStr::new_static("createdAt")
-                            ],
-                        ),
+                        required: Some(vec![SmolStr::new_static("document"), SmolStr::new_static("createdAt")]),
                         properties: {
                             #[allow(unused_mut)]
                             let mut map = BTreeMap::new();
@@ -294,11 +276,9 @@ fn lexicon_doc_site_standard_graph_recommend() -> LexiconDoc<'static> {
                             map.insert(
                                 SmolStr::new_static("document"),
                                 LexObjectProperty::String(LexString {
-                                    description: Some(
-                                        CowStr::new_static(
-                                            "AT-URI reference to the document record being recommended (ex: at://did:plc:abc123/site.standard.document/xyz789).",
-                                        ),
-                                    ),
+                                    description: Some(CowStr::new_static(
+                                        "AT-URI reference to the document record being recommended (ex: at://did:plc:abc123/site.standard.document/xyz789).",
+                                    )),
                                     format: Some(LexStringFormat::AtUri),
                                     ..Default::default()
                                 }),

@@ -19,7 +19,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// A subscribe/signup form for the publication. Renders the publication's subscribe form; carries no configurable data.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Default)]
@@ -45,10 +45,10 @@ impl<S: BosStr> LexiconSchema for Signup<S> {
 }
 
 fn lexicon_doc_pub_leaflet_blocks_signup() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.signup"),
@@ -57,11 +57,9 @@ fn lexicon_doc_pub_leaflet_blocks_signup() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "A subscribe/signup form for the publication. Renders the publication's subscribe form; carries no configurable data.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "A subscribe/signup form for the publication. Renders the publication's subscribe form; carries no configurable data.",
+                    )),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]

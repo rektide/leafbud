@@ -46,3 +46,11 @@ pub mod site_standard;
 
 #[allow(unused_imports, non_snake_case, clippy::all)]
 pub mod builder_types;
+
+// ── Hand-written layers ────────────────────────────────────────────────────
+
+pub mod markdown;
+pub mod record;
+
+pub use markdown::{MarkdownError, convert_markdown};
+pub use record::{BuildError, BuildOptions, BuiltRecord, Frontmatter, build_record, derive_document_url, parse_frontmatter, slugify};

@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -26,7 +26,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Declares which questions asked on a document the author accepted or hid. Lives in the document's repo, with a record key matching the document's. An answered question shows unless hidden; any other question is pending.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -130,7 +130,7 @@ impl<S: BosStr> LexiconSchema for QuestionVisibility<S> {
 
 pub mod question_visibility_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -187,10 +187,7 @@ pub mod question_visibility_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct QuestionVisibilityBuilder<
-    St: question_visibility_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct QuestionVisibilityBuilder<St: question_visibility_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<Vec<AtUri<S>>>, Option<Vec<AtUri<S>>>, Option<AtUri<S>>),
     _type: PhantomData<fn() -> S>,
@@ -198,10 +195,7 @@ pub struct QuestionVisibilityBuilder<
 
 impl QuestionVisibility<DefaultStr> {
     /// Create a new builder for this type, using the default string type (DefaultStr = SmolStr) if needed
-    pub fn new() -> QuestionVisibilityBuilder<
-        question_visibility_state::Empty,
-        DefaultStr,
-    > {
+    pub fn new() -> QuestionVisibilityBuilder<question_visibility_state::Empty, DefaultStr> {
         QuestionVisibilityBuilder::new()
     }
 }
@@ -241,10 +235,7 @@ where
     St::Accepted: question_visibility_state::IsUnset,
 {
     /// Set the `accepted` field (required)
-    pub fn accepted(
-        mut self,
-        value: impl Into<Vec<AtUri<S>>>,
-    ) -> QuestionVisibilityBuilder<question_visibility_state::SetAccepted<St>, S> {
+    pub fn accepted(mut self, value: impl Into<Vec<AtUri<S>>>) -> QuestionVisibilityBuilder<question_visibility_state::SetAccepted<St>, S> {
         self._fields.0 = Option::Some(value.into());
         QuestionVisibilityBuilder {
             _state: PhantomData,
@@ -260,10 +251,7 @@ where
     St::Hidden: question_visibility_state::IsUnset,
 {
     /// Set the `hidden` field (required)
-    pub fn hidden(
-        mut self,
-        value: impl Into<Vec<AtUri<S>>>,
-    ) -> QuestionVisibilityBuilder<question_visibility_state::SetHidden<St>, S> {
+    pub fn hidden(mut self, value: impl Into<Vec<AtUri<S>>>) -> QuestionVisibilityBuilder<question_visibility_state::SetHidden<St>, S> {
         self._fields.1 = Option::Some(value.into());
         QuestionVisibilityBuilder {
             _state: PhantomData,
@@ -279,10 +267,7 @@ where
     St::Subject: question_visibility_state::IsUnset,
 {
     /// Set the `subject` field (required)
-    pub fn subject(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> QuestionVisibilityBuilder<question_visibility_state::SetSubject<St>, S> {
+    pub fn subject(mut self, value: impl Into<AtUri<S>>) -> QuestionVisibilityBuilder<question_visibility_state::SetSubject<St>, S> {
         self._fields.2 = Option::Some(value.into());
         QuestionVisibilityBuilder {
             _state: PhantomData,
@@ -309,10 +294,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> QuestionVisibility<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> QuestionVisibility<S> {
         QuestionVisibility {
             accepted: self._fields.0.unwrap(),
             hidden: self._fields.1.unwrap(),
@@ -323,10 +305,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_interactions_questionVisibility() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.interactions.questionVisibility"),

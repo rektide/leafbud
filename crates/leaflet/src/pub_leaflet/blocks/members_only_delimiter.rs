@@ -7,7 +7,7 @@
 
 #[allow(unused_imports)]
 use alloc::collections::BTreeMap;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -19,7 +19,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Marks where members-only content begins and declares which publication members can read past it.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Default)]
@@ -85,8 +85,7 @@ impl<S: BosStr> Serialize for MembersOnlyDelimiterAudience<S> {
     }
 }
 
-impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de>
-for MembersOnlyDelimiterAudience<S> {
+impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de> for MembersOnlyDelimiterAudience<S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -110,14 +109,10 @@ where
     type Output = MembersOnlyDelimiterAudience<S::Output>;
     fn into_static(self) -> Self::Output {
         match self {
-            MembersOnlyDelimiterAudience::Subscribers => {
-                MembersOnlyDelimiterAudience::Subscribers
-            }
+            MembersOnlyDelimiterAudience::Subscribers => MembersOnlyDelimiterAudience::Subscribers,
             MembersOnlyDelimiterAudience::Paid => MembersOnlyDelimiterAudience::Paid,
             MembersOnlyDelimiterAudience::Tiers => MembersOnlyDelimiterAudience::Tiers,
-            MembersOnlyDelimiterAudience::Other(v) => {
-                MembersOnlyDelimiterAudience::Other(v.into_static())
-            }
+            MembersOnlyDelimiterAudience::Other(v) => MembersOnlyDelimiterAudience::Other(v.into_static()),
         }
     }
 }
@@ -138,10 +133,10 @@ impl<S: BosStr> LexiconSchema for MembersOnlyDelimiter<S> {
 }
 
 fn lexicon_doc_pub_leaflet_blocks_membersOnlyDelimiter() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.membersOnlyDelimiter"),
@@ -150,11 +145,9 @@ fn lexicon_doc_pub_leaflet_blocks_membersOnlyDelimiter() -> LexiconDoc<'static> 
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Marks where members-only content begins and declares which publication members can read past it.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "Marks where members-only content begins and declares which publication members can read past it.",
+                    )),
                     required: Some(vec![SmolStr::new_static("audience")]),
                     properties: {
                         #[allow(unused_mut)]
@@ -162,25 +155,19 @@ fn lexicon_doc_pub_leaflet_blocks_membersOnlyDelimiter() -> LexiconDoc<'static> 
                         map.insert(
                             SmolStr::new_static("audience"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Whether access is available to all subscribers, all paid members, or selected paid tiers.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static(
+                                    "Whether access is available to all subscribers, all paid members, or selected paid tiers.",
+                                )),
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("tierIds"),
                             LexObjectProperty::Array(LexArray {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Paid tier ids that grant access when audience is tiers. An empty selection grants no membership access.",
-                                    ),
-                                ),
-                                items: LexArrayItem::String(LexString {
-                                    ..Default::default()
-                                }),
+                                description: Some(CowStr::new_static(
+                                    "Paid tier ids that grant access when audience is tiers. An empty selection grants no membership access.",
+                                )),
+                                items: LexArrayItem::String(LexString { ..Default::default() }),
                                 ..Default::default()
                             }),
                         );

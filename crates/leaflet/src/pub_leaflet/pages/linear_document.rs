@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -20,9 +20,6 @@ use jacquard_derive::{IntoStatic, open_union};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
 use crate::pub_leaflet::blocks::blockquote::Blockquote;
 use crate::pub_leaflet::blocks::bsky_post::BskyPost;
 use crate::pub_leaflet::blocks::button::Button;
@@ -51,6 +48,9 @@ use crate::pub_leaflet::blocks::text::Text;
 use crate::pub_leaflet::blocks::unordered_list::UnorderedList;
 use crate::pub_leaflet::blocks::website::Website;
 use crate::pub_leaflet::pages::linear_document;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -61,7 +61,6 @@ pub struct Block<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockAlignment<S: BosStr = DefaultStr> {
@@ -148,7 +147,6 @@ where
     }
 }
 
-
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(tag = "$type", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -211,7 +209,6 @@ pub enum BlockBlock<S: BosStr = DefaultStr> {
     Drawing(Box<Drawing<S>>),
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
 pub struct LinearDocument<S: BosStr = DefaultStr> {
@@ -224,7 +221,6 @@ pub struct LinearDocument<S: BosStr = DefaultStr> {
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
 pub struct Position<S: BosStr = DefaultStr> {
@@ -233,7 +229,6 @@ pub struct Position<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -244,7 +239,6 @@ pub struct Quote<S: BosStr = DefaultStr> {
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Hash)]
 pub struct TextAlignCenter;
 impl core::fmt::Display for TextAlignCenter {
@@ -252,7 +246,6 @@ impl core::fmt::Display for TextAlignCenter {
         write!(f, "textAlignCenter")
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Hash)]
 pub struct TextAlignJustify;
@@ -262,7 +255,6 @@ impl core::fmt::Display for TextAlignJustify {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Hash)]
 pub struct TextAlignLeft;
 impl core::fmt::Display for TextAlignLeft {
@@ -270,7 +262,6 @@ impl core::fmt::Display for TextAlignLeft {
         write!(f, "textAlignLeft")
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Hash)]
 pub struct TextAlignRight;
@@ -342,7 +333,7 @@ impl<S: BosStr> LexiconSchema for Quote<S> {
 
 pub mod block_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -434,10 +425,7 @@ where
     St::Block: block_state::IsUnset,
 {
     /// Set the `block` field (required)
-    pub fn block(
-        mut self,
-        value: impl Into<BlockBlock<S>>,
-    ) -> BlockBuilder<block_state::SetBlock<St>, S> {
+    pub fn block(mut self, value: impl Into<BlockBlock<S>>) -> BlockBuilder<block_state::SetBlock<St>, S> {
         self._fields.1 = Option::Some(value.into());
         BlockBuilder {
             _state: PhantomData,
@@ -471,10 +459,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.pages.linearDocument"),
@@ -487,10 +475,7 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("alignment"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("alignment"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map.insert(
                             SmolStr::new_static("block"),
                             LexObjectProperty::Union(LexRefUnion {
@@ -522,7 +507,7 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
                                     CowStr::new_static("pub.leaflet.blocks.questions"),
                                     CowStr::new_static("pub.leaflet.blocks.membersOnlyDelimiter"),
                                     CowStr::new_static("pub.leaflet.blocks.postHeader"),
-                                    CowStr::new_static("pub.leaflet.blocks.drawing")
+                                    CowStr::new_static("pub.leaflet.blocks.drawing"),
                                 ],
                                 ..Default::default()
                             }),
@@ -549,10 +534,7 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("id"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("id"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map.insert(
                             SmolStr::new_static("theme"),
                             LexObjectProperty::Ref(LexRef {
@@ -568,27 +550,18 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("position"),
                 LexUserType::Object(LexObject {
-                    required: Some(
-                        vec![SmolStr::new_static("block"), SmolStr::new_static("offset")],
-                    ),
+                    required: Some(vec![SmolStr::new_static("block"), SmolStr::new_static("offset")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
                         map.insert(
                             SmolStr::new_static("block"),
                             LexObjectProperty::Array(LexArray {
-                                items: LexArrayItem::Integer(LexInteger {
-                                    ..Default::default()
-                                }),
+                                items: LexArrayItem::Integer(LexInteger { ..Default::default() }),
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("offset"),
-                            LexObjectProperty::Integer(LexInteger {
-                                ..Default::default()
-                            }),
-                        );
+                        map.insert(SmolStr::new_static("offset"), LexObjectProperty::Integer(LexInteger { ..Default::default() }));
                         map
                     },
                     ..Default::default()
@@ -597,9 +570,7 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("quote"),
                 LexUserType::Object(LexObject {
-                    required: Some(
-                        vec![SmolStr::new_static("start"), SmolStr::new_static("end")],
-                    ),
+                    required: Some(vec![SmolStr::new_static("start"), SmolStr::new_static("end")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
@@ -622,22 +593,10 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
                     ..Default::default()
                 }),
             );
-            map.insert(
-                SmolStr::new_static("textAlignCenter"),
-                LexUserType::Token(LexToken { ..Default::default() }),
-            );
-            map.insert(
-                SmolStr::new_static("textAlignJustify"),
-                LexUserType::Token(LexToken { ..Default::default() }),
-            );
-            map.insert(
-                SmolStr::new_static("textAlignLeft"),
-                LexUserType::Token(LexToken { ..Default::default() }),
-            );
-            map.insert(
-                SmolStr::new_static("textAlignRight"),
-                LexUserType::Token(LexToken { ..Default::default() }),
-            );
+            map.insert(SmolStr::new_static("textAlignCenter"), LexUserType::Token(LexToken { ..Default::default() }));
+            map.insert(SmolStr::new_static("textAlignJustify"), LexUserType::Token(LexToken { ..Default::default() }));
+            map.insert(SmolStr::new_static("textAlignLeft"), LexUserType::Token(LexToken { ..Default::default() }));
+            map.insert(SmolStr::new_static("textAlignRight"), LexUserType::Token(LexToken { ..Default::default() }));
             map
         },
         ..Default::default()
@@ -646,7 +605,7 @@ fn lexicon_doc_pub_leaflet_pages_linearDocument() -> LexiconDoc<'static> {
 
 pub mod linear_document_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -677,10 +636,7 @@ pub mod linear_document_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct LinearDocumentBuilder<
-    St: linear_document_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct LinearDocumentBuilder<St: linear_document_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (
         Option<Vec<linear_document::Block<S>>>,
@@ -732,10 +688,7 @@ where
     St::Blocks: linear_document_state::IsUnset,
 {
     /// Set the `blocks` field (required)
-    pub fn blocks(
-        mut self,
-        value: impl Into<Vec<linear_document::Block<S>>>,
-    ) -> LinearDocumentBuilder<linear_document_state::SetBlocks<St>, S> {
+    pub fn blocks(mut self, value: impl Into<Vec<linear_document::Block<S>>>) -> LinearDocumentBuilder<linear_document_state::SetBlocks<St>, S> {
         self._fields.0 = Option::Some(value.into());
         LinearDocumentBuilder {
             _state: PhantomData,
@@ -760,18 +713,12 @@ impl<St: linear_document_state::State, S: BosStr> LinearDocumentBuilder<St, S> {
 
 impl<St: linear_document_state::State, S: BosStr> LinearDocumentBuilder<St, S> {
     /// Set the `theme` field (optional)
-    pub fn theme(
-        mut self,
-        value: impl Into<Option<crate::pub_leaflet::theme::page::Page<S>>>,
-    ) -> Self {
+    pub fn theme(mut self, value: impl Into<Option<crate::pub_leaflet::theme::page::Page<S>>>) -> Self {
         self._fields.2 = value.into();
         self
     }
     /// Set the `theme` field to an Option value (optional)
-    pub fn maybe_theme(
-        mut self,
-        value: Option<crate::pub_leaflet::theme::page::Page<S>>,
-    ) -> Self {
+    pub fn maybe_theme(mut self, value: Option<crate::pub_leaflet::theme::page::Page<S>>) -> Self {
         self._fields.2 = value;
         self
     }
@@ -792,10 +739,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> LinearDocument<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> LinearDocument<S> {
         LinearDocument {
             blocks: self._fields.0.unwrap(),
             id: self._fields.1,
@@ -807,7 +751,7 @@ where
 
 pub mod position_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -898,10 +842,7 @@ where
     St::Block: position_state::IsUnset,
 {
     /// Set the `block` field (required)
-    pub fn block(
-        mut self,
-        value: impl Into<Vec<i64>>,
-    ) -> PositionBuilder<position_state::SetBlock<St>, S> {
+    pub fn block(mut self, value: impl Into<Vec<i64>>) -> PositionBuilder<position_state::SetBlock<St>, S> {
         self._fields.0 = Option::Some(value.into());
         PositionBuilder {
             _state: PhantomData,
@@ -917,10 +858,7 @@ where
     St::Offset: position_state::IsUnset,
 {
     /// Set the `offset` field (required)
-    pub fn offset(
-        mut self,
-        value: impl Into<i64>,
-    ) -> PositionBuilder<position_state::SetOffset<St>, S> {
+    pub fn offset(mut self, value: impl Into<i64>) -> PositionBuilder<position_state::SetOffset<St>, S> {
         self._fields.1 = Option::Some(value.into());
         PositionBuilder {
             _state: PhantomData,
@@ -956,7 +894,7 @@ where
 
 pub mod quote_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1001,10 +939,7 @@ pub mod quote_state {
 /// Builder for constructing an instance of this type.
 pub struct QuoteBuilder<St: quote_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
-    _fields: (
-        Option<linear_document::Position<S>>,
-        Option<linear_document::Position<S>>,
-    ),
+    _fields: (Option<linear_document::Position<S>>, Option<linear_document::Position<S>>),
     _type: PhantomData<fn() -> S>,
 }
 
@@ -1050,10 +985,7 @@ where
     St::End: quote_state::IsUnset,
 {
     /// Set the `end` field (required)
-    pub fn end(
-        mut self,
-        value: impl Into<linear_document::Position<S>>,
-    ) -> QuoteBuilder<quote_state::SetEnd<St>, S> {
+    pub fn end(mut self, value: impl Into<linear_document::Position<S>>) -> QuoteBuilder<quote_state::SetEnd<St>, S> {
         self._fields.0 = Option::Some(value.into());
         QuoteBuilder {
             _state: PhantomData,
@@ -1069,10 +1001,7 @@ where
     St::Start: quote_state::IsUnset,
 {
     /// Set the `start` field (required)
-    pub fn start(
-        mut self,
-        value: impl Into<linear_document::Position<S>>,
-    ) -> QuoteBuilder<quote_state::SetStart<St>, S> {
+    pub fn start(mut self, value: impl Into<linear_document::Position<S>>) -> QuoteBuilder<quote_state::SetStart<St>, S> {
         self._fields.1 = Option::Some(value.into());
         QuoteBuilder {
             _state: PhantomData,

@@ -23,7 +23,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -51,7 +51,7 @@ impl<S: BosStr> LexiconSchema for StrongRef<S> {
 
 pub mod strong_ref_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -142,10 +142,7 @@ where
     St::Cid: strong_ref_state::IsUnset,
 {
     /// Set the `cid` field (required)
-    pub fn cid(
-        mut self,
-        value: impl Into<Cid<S>>,
-    ) -> StrongRefBuilder<strong_ref_state::SetCid<St>, S> {
+    pub fn cid(mut self, value: impl Into<Cid<S>>) -> StrongRefBuilder<strong_ref_state::SetCid<St>, S> {
         self._fields.0 = Option::Some(value.into());
         StrongRefBuilder {
             _state: PhantomData,
@@ -161,10 +158,7 @@ where
     St::Uri: strong_ref_state::IsUnset,
 {
     /// Set the `uri` field (required)
-    pub fn uri(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> StrongRefBuilder<strong_ref_state::SetUri<St>, S> {
+    pub fn uri(mut self, value: impl Into<AtUri<S>>) -> StrongRefBuilder<strong_ref_state::SetUri<St>, S> {
         self._fields.1 = Option::Some(value.into());
         StrongRefBuilder {
             _state: PhantomData,
@@ -189,10 +183,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> StrongRef<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> StrongRef<S> {
         StrongRef {
             cid: self._fields.0.unwrap(),
             uri: self._fields.1.unwrap(),
@@ -202,10 +193,10 @@ where
 }
 
 fn lexicon_doc_com_atproto_repo_strongRef() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("com.atproto.repo.strongRef"),
@@ -214,9 +205,7 @@ fn lexicon_doc_com_atproto_repo_strongRef() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    required: Some(
-                        vec![SmolStr::new_static("uri"), SmolStr::new_static("cid")],
-                    ),
+                    required: Some(vec![SmolStr::new_static("uri"), SmolStr::new_static("cid")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();

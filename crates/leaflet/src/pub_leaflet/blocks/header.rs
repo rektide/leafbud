@@ -7,7 +7,7 @@
 
 #[allow(unused_imports)]
 use alloc::collections::BTreeMap;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -17,10 +17,10 @@ use jacquard_derive::IntoStatic;
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::pub_leaflet::richtext::facet::Facet;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::pub_leaflet::richtext::facet::Facet;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Default)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -68,10 +68,10 @@ impl<S: BosStr> LexiconSchema for Header<S> {
 }
 
 fn lexicon_doc_pub_leaflet_blocks_header() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.header"),
@@ -102,10 +102,7 @@ fn lexicon_doc_pub_leaflet_blocks_header() -> LexiconDoc<'static> {
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("plaintext"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("plaintext"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map
                     },
                     ..Default::default()

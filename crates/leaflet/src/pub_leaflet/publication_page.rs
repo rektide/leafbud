@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -24,10 +24,10 @@ use jacquard_derive::{IntoStatic, lexicon};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::pub_leaflet::content::Content;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::pub_leaflet::content::Content;
+use serde::{Deserialize, Serialize};
 /// A static page belonging to a publication (e.g. about / contact). The rkey is derived from the page path slug.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -120,7 +120,7 @@ impl<S: BosStr> LexiconSchema for PublicationPage<S> {
 
 pub mod publication_page_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -177,18 +177,9 @@ pub mod publication_page_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct PublicationPageBuilder<
-    St: publication_page_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct PublicationPageBuilder<St: publication_page_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
-    _fields: (
-        Option<Content<S>>,
-        Option<S>,
-        Option<AtUri<S>>,
-        Option<Datetime>,
-        Option<S>,
-    ),
+    _fields: (Option<Content<S>>, Option<S>, Option<AtUri<S>>, Option<Datetime>, Option<S>),
     _type: PhantomData<fn() -> S>,
 }
 
@@ -234,10 +225,7 @@ where
     St::Content: publication_page_state::IsUnset,
 {
     /// Set the `content` field (required)
-    pub fn content(
-        mut self,
-        value: impl Into<Content<S>>,
-    ) -> PublicationPageBuilder<publication_page_state::SetContent<St>, S> {
+    pub fn content(mut self, value: impl Into<Content<S>>) -> PublicationPageBuilder<publication_page_state::SetContent<St>, S> {
         self._fields.0 = Option::Some(value.into());
         PublicationPageBuilder {
             _state: PhantomData,
@@ -253,10 +241,7 @@ where
     St::Path: publication_page_state::IsUnset,
 {
     /// Set the `path` field (required)
-    pub fn path(
-        mut self,
-        value: impl Into<S>,
-    ) -> PublicationPageBuilder<publication_page_state::SetPath<St>, S> {
+    pub fn path(mut self, value: impl Into<S>) -> PublicationPageBuilder<publication_page_state::SetPath<St>, S> {
         self._fields.1 = Option::Some(value.into());
         PublicationPageBuilder {
             _state: PhantomData,
@@ -272,10 +257,7 @@ where
     St::Publication: publication_page_state::IsUnset,
 {
     /// Set the `publication` field (required)
-    pub fn publication(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> PublicationPageBuilder<publication_page_state::SetPublication<St>, S> {
+    pub fn publication(mut self, value: impl Into<AtUri<S>>) -> PublicationPageBuilder<publication_page_state::SetPublication<St>, S> {
         self._fields.2 = Option::Some(value.into());
         PublicationPageBuilder {
             _state: PhantomData,
@@ -330,10 +312,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> PublicationPage<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> PublicationPage<S> {
         PublicationPage {
             content: self._fields.0.unwrap(),
             path: self._fields.1.unwrap(),
@@ -346,10 +325,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_publicationPage() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.publicationPage"),
@@ -358,19 +337,16 @@ fn lexicon_doc_pub_leaflet_publicationPage() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Record(LexRecord {
-                    description: Some(
-                        CowStr::new_static(
-                            "A static page belonging to a publication (e.g. about / contact). The rkey is derived from the page path slug.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "A static page belonging to a publication (e.g. about / contact). The rkey is derived from the page path slug.",
+                    )),
                     key: Some(CowStr::new_static("any")),
                     record: LexRecordRecord::Object(LexObject {
-                        required: Some(
-                            vec![
-                                SmolStr::new_static("publication"),
-                                SmolStr::new_static("path"), SmolStr::new_static("content")
-                            ],
-                        ),
+                        required: Some(vec![
+                            SmolStr::new_static("publication"),
+                            SmolStr::new_static("path"),
+                            SmolStr::new_static("content"),
+                        ]),
                         properties: {
                             #[allow(unused_mut)]
                             let mut map = BTreeMap::new();
@@ -381,12 +357,7 @@ fn lexicon_doc_pub_leaflet_publicationPage() -> LexiconDoc<'static> {
                                     ..Default::default()
                                 }),
                             );
-                            map.insert(
-                                SmolStr::new_static("path"),
-                                LexObjectProperty::String(LexString {
-                                    ..Default::default()
-                                }),
-                            );
+                            map.insert(SmolStr::new_static("path"), LexObjectProperty::String(LexString { ..Default::default() }));
                             map.insert(
                                 SmolStr::new_static("publication"),
                                 LexObjectProperty::String(LexString {

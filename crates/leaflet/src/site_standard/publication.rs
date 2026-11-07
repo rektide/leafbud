@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -25,12 +25,12 @@ use jacquard_derive::{IntoStatic, lexicon};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::pub_leaflet::publication::Theme;
+use crate::site_standard::publication;
+use crate::site_standard::theme::basic::Basic;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::pub_leaflet::publication::Theme;
-use crate::site_standard::theme::basic::Basic;
-use crate::site_standard::publication;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(
@@ -66,7 +66,6 @@ pub struct PublicationGetRecordOutput<S: BosStr = DefaultStr> {
     pub uri: AtUri<S>,
     pub value: Publication<S>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -104,7 +103,6 @@ pub struct Preferences<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PreferencesPrevNextDirection<S: BosStr = DefaultStr> {
@@ -152,8 +150,7 @@ impl<S: BosStr> Serialize for PreferencesPrevNextDirection<S> {
     }
 }
 
-impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de>
-for PreferencesPrevNextDirection<S> {
+impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de> for PreferencesPrevNextDirection<S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -179,9 +176,7 @@ where
         match self {
             PreferencesPrevNextDirection::Ltr => PreferencesPrevNextDirection::Ltr,
             PreferencesPrevNextDirection::Rtl => PreferencesPrevNextDirection::Rtl,
-            PreferencesPrevNextDirection::Other(v) => {
-                PreferencesPrevNextDirection::Other(v.into_static())
-            }
+            PreferencesPrevNextDirection::Other(v) => PreferencesPrevNextDirection::Other(v.into_static()),
         }
     }
 }
@@ -268,19 +263,16 @@ impl<S: BosStr> LexiconSchema for Publication<S> {
             {
                 let mime = value.blob().mime_type.as_str();
                 let accepted: &[&str] = &["image/*"];
-                let matched = accepted
-                    .iter()
-                    .any(|pattern| {
-                        if *pattern == "*/*" {
-                            true
-                        } else if pattern.ends_with("/*") {
-                            let prefix = &pattern[..pattern.len() - 2];
-                            mime.starts_with(prefix)
-                                && mime.as_bytes().get(prefix.len()) == Some(&b'/')
-                        } else {
-                            mime == *pattern
-                        }
-                    });
+                let matched = accepted.iter().any(|pattern| {
+                    if *pattern == "*/*" {
+                        true
+                    } else if pattern.ends_with("/*") {
+                        let prefix = &pattern[..pattern.len() - 2];
+                        mime.starts_with(prefix) && mime.as_bytes().get(prefix.len()) == Some(&b'/')
+                    } else {
+                        mime == *pattern
+                    }
+                });
                 if !matched {
                     return Err(ConstraintError::BlobMimeTypeNotAccepted {
                         path: ValidationPath::from_field("icon"),
@@ -335,7 +327,7 @@ impl<S: BosStr> LexiconSchema for Preferences<S> {
 
 pub mod publication_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -473,10 +465,7 @@ where
     St::Name: publication_state::IsUnset,
 {
     /// Set the `name` field (required)
-    pub fn name(
-        mut self,
-        value: impl Into<S>,
-    ) -> PublicationBuilder<publication_state::SetName<St>, S> {
+    pub fn name(mut self, value: impl Into<S>) -> PublicationBuilder<publication_state::SetName<St>, S> {
         self._fields.3 = Option::Some(value.into());
         PublicationBuilder {
             _state: PhantomData,
@@ -488,18 +477,12 @@ where
 
 impl<St: publication_state::State, S: BosStr> PublicationBuilder<St, S> {
     /// Set the `preferences` field (optional)
-    pub fn preferences(
-        mut self,
-        value: impl Into<Option<publication::Preferences<S>>>,
-    ) -> Self {
+    pub fn preferences(mut self, value: impl Into<Option<publication::Preferences<S>>>) -> Self {
         self._fields.4 = value.into();
         self
     }
     /// Set the `preferences` field to an Option value (optional)
-    pub fn maybe_preferences(
-        mut self,
-        value: Option<publication::Preferences<S>>,
-    ) -> Self {
+    pub fn maybe_preferences(mut self, value: Option<publication::Preferences<S>>) -> Self {
         self._fields.4 = value;
         self
     }
@@ -524,10 +507,7 @@ where
     St::Url: publication_state::IsUnset,
 {
     /// Set the `url` field (required)
-    pub fn url(
-        mut self,
-        value: impl Into<UriValue<S>>,
-    ) -> PublicationBuilder<publication_state::SetUrl<St>, S> {
+    pub fn url(mut self, value: impl Into<UriValue<S>>) -> PublicationBuilder<publication_state::SetUrl<St>, S> {
         self._fields.6 = Option::Some(value.into());
         PublicationBuilder {
             _state: PhantomData,
@@ -557,10 +537,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> Publication<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> Publication<S> {
         Publication {
             basic_theme: self._fields.0,
             description: self._fields.1,
@@ -575,10 +552,10 @@ where
 }
 
 fn lexicon_doc_site_standard_publication() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("site.standard.publication"),
@@ -589,9 +566,7 @@ fn lexicon_doc_site_standard_publication() -> LexiconDoc<'static> {
                 LexUserType::Record(LexRecord {
                     key: Some(CowStr::new_static("tid")),
                     record: LexRecordRecord::Object(LexObject {
-                        required: Some(
-                            vec![SmolStr::new_static("url"), SmolStr::new_static("name")],
-                        ),
+                        required: Some(vec![SmolStr::new_static("url"), SmolStr::new_static("name")]),
                         properties: {
                             #[allow(unused_mut)]
                             let mut map = BTreeMap::new();
@@ -610,10 +585,7 @@ fn lexicon_doc_site_standard_publication() -> LexiconDoc<'static> {
                                     ..Default::default()
                                 }),
                             );
-                            map.insert(
-                                SmolStr::new_static("icon"),
-                                LexObjectProperty::Blob(LexBlob { ..Default::default() }),
-                            );
+                            map.insert(SmolStr::new_static("icon"), LexObjectProperty::Blob(LexBlob { ..Default::default() }));
                             map.insert(
                                 SmolStr::new_static("name"),
                                 LexObjectProperty::String(LexString {
@@ -632,9 +604,7 @@ fn lexicon_doc_site_standard_publication() -> LexiconDoc<'static> {
                             map.insert(
                                 SmolStr::new_static("theme"),
                                 LexObjectProperty::Union(LexRefUnion {
-                                    refs: vec![
-                                        CowStr::new_static("pub.leaflet.publication#theme")
-                                    ],
+                                    refs: vec![CowStr::new_static("pub.leaflet.publication#theme")],
                                     ..Default::default()
                                 }),
                             );
@@ -664,45 +634,31 @@ fn lexicon_doc_site_standard_publication() -> LexiconDoc<'static> {
                         );
                         map.insert(
                             SmolStr::new_static("showComments"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("showFirstLast"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("showInDiscover"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("showMentions"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("showOtherPublicationsInTags"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("showPrevNext"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("showRecommends"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map
                     },

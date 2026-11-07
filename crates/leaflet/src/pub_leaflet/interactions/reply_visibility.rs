@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -26,7 +26,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Declares which submitted replies are shown on a document. Lives in the document's repo, with a record key matching the document's.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -117,7 +117,7 @@ impl<S: BosStr> LexiconSchema for ReplyVisibility<S> {
 
 pub mod reply_visibility_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -160,10 +160,7 @@ pub mod reply_visibility_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct ReplyVisibilityBuilder<
-    St: reply_visibility_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct ReplyVisibilityBuilder<St: reply_visibility_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<Vec<AtUri<S>>>, Option<AtUri<S>>),
     _type: PhantomData<fn() -> S>,
@@ -211,10 +208,7 @@ where
     St::Allowed: reply_visibility_state::IsUnset,
 {
     /// Set the `allowed` field (required)
-    pub fn allowed(
-        mut self,
-        value: impl Into<Vec<AtUri<S>>>,
-    ) -> ReplyVisibilityBuilder<reply_visibility_state::SetAllowed<St>, S> {
+    pub fn allowed(mut self, value: impl Into<Vec<AtUri<S>>>) -> ReplyVisibilityBuilder<reply_visibility_state::SetAllowed<St>, S> {
         self._fields.0 = Option::Some(value.into());
         ReplyVisibilityBuilder {
             _state: PhantomData,
@@ -230,10 +224,7 @@ where
     St::Subject: reply_visibility_state::IsUnset,
 {
     /// Set the `subject` field (required)
-    pub fn subject(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> ReplyVisibilityBuilder<reply_visibility_state::SetSubject<St>, S> {
+    pub fn subject(mut self, value: impl Into<AtUri<S>>) -> ReplyVisibilityBuilder<reply_visibility_state::SetSubject<St>, S> {
         self._fields.1 = Option::Some(value.into());
         ReplyVisibilityBuilder {
             _state: PhantomData,
@@ -258,10 +249,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> ReplyVisibility<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> ReplyVisibility<S> {
         ReplyVisibility {
             allowed: self._fields.0.unwrap(),
             subject: self._fields.1.unwrap(),
@@ -271,10 +259,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_interactions_replyVisibility() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.interactions.replyVisibility"),
@@ -283,30 +271,19 @@ fn lexicon_doc_pub_leaflet_interactions_replyVisibility() -> LexiconDoc<'static>
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Record(LexRecord {
-                    description: Some(
-                        CowStr::new_static(
-                            "Declares which submitted replies are shown on a document. Lives in the document's repo, with a record key matching the document's.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "Declares which submitted replies are shown on a document. Lives in the document's repo, with a record key matching the document's.",
+                    )),
                     key: Some(CowStr::new_static("any")),
                     record: LexRecordRecord::Object(LexObject {
-                        required: Some(
-                            vec![
-                                SmolStr::new_static("subject"),
-                                SmolStr::new_static("allowed")
-                            ],
-                        ),
+                        required: Some(vec![SmolStr::new_static("subject"), SmolStr::new_static("allowed")]),
                         properties: {
                             #[allow(unused_mut)]
                             let mut map = BTreeMap::new();
                             map.insert(
                                 SmolStr::new_static("allowed"),
                                 LexObjectProperty::Array(LexArray {
-                                    description: Some(
-                                        CowStr::new_static(
-                                            "The pub.leaflet.interactions.reply records shown on the document.",
-                                        ),
-                                    ),
+                                    description: Some(CowStr::new_static("The pub.leaflet.interactions.reply records shown on the document.")),
                                     items: LexArrayItem::String(LexString {
                                         format: Some(LexStringFormat::AtUri),
                                         ..Default::default()
@@ -318,11 +295,7 @@ fn lexicon_doc_pub_leaflet_interactions_replyVisibility() -> LexiconDoc<'static>
                             map.insert(
                                 SmolStr::new_static("subject"),
                                 LexObjectProperty::String(LexString {
-                                    description: Some(
-                                        CowStr::new_static(
-                                            "The document whose replies this record moderates.",
-                                        ),
-                                    ),
+                                    description: Some(CowStr::new_static("The document whose replies this record moderates.")),
                                     format: Some(LexStringFormat::AtUri),
                                     ..Default::default()
                                 }),

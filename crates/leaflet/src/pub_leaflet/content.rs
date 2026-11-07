@@ -21,11 +21,11 @@ use jacquard_derive::{IntoStatic, open_union};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
 use crate::pub_leaflet::pages::canvas::Canvas;
 use crate::pub_leaflet::pages::linear_document::LinearDocument;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 /// Content format for leaflet documents
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -41,7 +41,6 @@ pub struct Content<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -80,19 +79,16 @@ impl<S: BosStr> LexiconSchema for Content<S> {
             {
                 let mime = value.blob().mime_type.as_str();
                 let accepted: &[&str] = &["application/json"];
-                let matched = accepted
-                    .iter()
-                    .any(|pattern| {
-                        if *pattern == "*/*" {
-                            true
-                        } else if pattern.ends_with("/*") {
-                            let prefix = &pattern[..pattern.len() - 2];
-                            mime.starts_with(prefix)
-                                && mime.as_bytes().get(prefix.len()) == Some(&b'/')
-                        } else {
-                            mime == *pattern
-                        }
-                    });
+                let matched = accepted.iter().any(|pattern| {
+                    if *pattern == "*/*" {
+                        true
+                    } else if pattern.ends_with("/*") {
+                        let prefix = &pattern[..pattern.len() - 2];
+                        mime.starts_with(prefix) && mime.as_bytes().get(prefix.len()) == Some(&b'/')
+                    } else {
+                        mime == *pattern
+                    }
+                });
                 if !matched {
                     return Err(ConstraintError::BlobMimeTypeNotAccepted {
                         path: ValidationPath::from_field("blob_pages"),
@@ -108,7 +104,7 @@ impl<S: BosStr> LexiconSchema for Content<S> {
 
 pub mod content_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -141,11 +137,7 @@ pub mod content_state {
 /// Builder for constructing an instance of this type.
 pub struct ContentBuilder<St: content_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
-    _fields: (
-        Option<BlobRef<S>>,
-        Option<Vec<BlobRef<S>>>,
-        Option<Vec<ContentPagesItem<S>>>,
-    ),
+    _fields: (Option<BlobRef<S>>, Option<Vec<BlobRef<S>>>, Option<Vec<ContentPagesItem<S>>>),
     _type: PhantomData<fn() -> S>,
 }
 
@@ -217,10 +209,7 @@ where
     St::Pages: content_state::IsUnset,
 {
     /// Set the `pages` field (required)
-    pub fn pages(
-        mut self,
-        value: impl Into<Vec<ContentPagesItem<S>>>,
-    ) -> ContentBuilder<content_state::SetPages<St>, S> {
+    pub fn pages(mut self, value: impl Into<Vec<ContentPagesItem<S>>>) -> ContentBuilder<content_state::SetPages<St>, S> {
         self._fields.2 = Option::Some(value.into());
         ContentBuilder {
             _state: PhantomData,
@@ -256,10 +245,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_content() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.content"),

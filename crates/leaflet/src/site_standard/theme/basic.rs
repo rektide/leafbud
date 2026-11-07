@@ -20,10 +20,10 @@ use jacquard_derive::IntoStatic;
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::site_standard::theme::color::Rgb;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::site_standard::theme::color::Rgb;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -53,7 +53,7 @@ impl<S: BosStr> LexiconSchema for Basic<S> {
 
 pub mod basic_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -174,10 +174,7 @@ where
     St::Accent: basic_state::IsUnset,
 {
     /// Set the `accent` field (required)
-    pub fn accent(
-        mut self,
-        value: impl Into<Rgb<S>>,
-    ) -> BasicBuilder<basic_state::SetAccent<St>, S> {
+    pub fn accent(mut self, value: impl Into<Rgb<S>>) -> BasicBuilder<basic_state::SetAccent<St>, S> {
         self._fields.0 = Option::Some(value.into());
         BasicBuilder {
             _state: PhantomData,
@@ -193,10 +190,7 @@ where
     St::AccentForeground: basic_state::IsUnset,
 {
     /// Set the `accentForeground` field (required)
-    pub fn accent_foreground(
-        mut self,
-        value: impl Into<Rgb<S>>,
-    ) -> BasicBuilder<basic_state::SetAccentForeground<St>, S> {
+    pub fn accent_foreground(mut self, value: impl Into<Rgb<S>>) -> BasicBuilder<basic_state::SetAccentForeground<St>, S> {
         self._fields.1 = Option::Some(value.into());
         BasicBuilder {
             _state: PhantomData,
@@ -212,10 +206,7 @@ where
     St::Background: basic_state::IsUnset,
 {
     /// Set the `background` field (required)
-    pub fn background(
-        mut self,
-        value: impl Into<Rgb<S>>,
-    ) -> BasicBuilder<basic_state::SetBackground<St>, S> {
+    pub fn background(mut self, value: impl Into<Rgb<S>>) -> BasicBuilder<basic_state::SetBackground<St>, S> {
         self._fields.2 = Option::Some(value.into());
         BasicBuilder {
             _state: PhantomData,
@@ -231,10 +222,7 @@ where
     St::Foreground: basic_state::IsUnset,
 {
     /// Set the `foreground` field (required)
-    pub fn foreground(
-        mut self,
-        value: impl Into<Rgb<S>>,
-    ) -> BasicBuilder<basic_state::SetForeground<St>, S> {
+    pub fn foreground(mut self, value: impl Into<Rgb<S>>) -> BasicBuilder<basic_state::SetForeground<St>, S> {
         self._fields.3 = Option::Some(value.into());
         BasicBuilder {
             _state: PhantomData,
@@ -275,10 +263,10 @@ where
 }
 
 fn lexicon_doc_site_standard_theme_basic() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("site.standard.theme.basic"),
@@ -287,50 +275,40 @@ fn lexicon_doc_site_standard_theme_basic() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("background"),
-                            SmolStr::new_static("foreground"),
-                            SmolStr::new_static("accent"),
-                            SmolStr::new_static("accentForeground")
-                        ],
-                    ),
+                    required: Some(vec![
+                        SmolStr::new_static("background"),
+                        SmolStr::new_static("foreground"),
+                        SmolStr::new_static("accent"),
+                        SmolStr::new_static("accentForeground"),
+                    ]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
                         map.insert(
                             SmolStr::new_static("accent"),
                             LexObjectProperty::Union(LexRefUnion {
-                                refs: vec![
-                                    CowStr::new_static("site.standard.theme.color#rgb")
-                                ],
+                                refs: vec![CowStr::new_static("site.standard.theme.color#rgb")],
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("accentForeground"),
                             LexObjectProperty::Union(LexRefUnion {
-                                refs: vec![
-                                    CowStr::new_static("site.standard.theme.color#rgb")
-                                ],
+                                refs: vec![CowStr::new_static("site.standard.theme.color#rgb")],
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("background"),
                             LexObjectProperty::Union(LexRefUnion {
-                                refs: vec![
-                                    CowStr::new_static("site.standard.theme.color#rgb")
-                                ],
+                                refs: vec![CowStr::new_static("site.standard.theme.color#rgb")],
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("foreground"),
                             LexObjectProperty::Union(LexRefUnion {
-                                refs: vec![
-                                    CowStr::new_static("site.standard.theme.color#rgb")
-                                ],
+                                refs: vec![CowStr::new_static("site.standard.theme.color#rgb")],
                                 ..Default::default()
                             }),
                         );

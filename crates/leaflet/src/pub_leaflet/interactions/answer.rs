@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -24,11 +24,11 @@ use jacquard_derive::{IntoStatic, lexicon};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
 use crate::com_atproto::repo::strong_ref::StrongRef;
 use crate::pub_leaflet::pages::linear_document::LinearDocument;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 /// The author's answer to a pub.leaflet.interactions.question, written in the repo that owns the question's subject document. One record per question.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -111,7 +111,7 @@ impl<S: BosStr> LexiconSchema for Answer<S> {
 
 pub mod answer_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -186,12 +186,7 @@ pub mod answer_state {
 /// Builder for constructing an instance of this type.
 pub struct AnswerBuilder<St: answer_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
-    _fields: (
-        Option<LinearDocument<S>>,
-        Option<Datetime>,
-        Option<AtUri<S>>,
-        Option<StrongRef<S>>,
-    ),
+    _fields: (Option<LinearDocument<S>>, Option<Datetime>, Option<AtUri<S>>, Option<StrongRef<S>>),
     _type: PhantomData<fn() -> S>,
 }
 
@@ -237,10 +232,7 @@ where
     St::Content: answer_state::IsUnset,
 {
     /// Set the `content` field (required)
-    pub fn content(
-        mut self,
-        value: impl Into<LinearDocument<S>>,
-    ) -> AnswerBuilder<answer_state::SetContent<St>, S> {
+    pub fn content(mut self, value: impl Into<LinearDocument<S>>) -> AnswerBuilder<answer_state::SetContent<St>, S> {
         self._fields.0 = Option::Some(value.into());
         AnswerBuilder {
             _state: PhantomData,
@@ -256,10 +248,7 @@ where
     St::CreatedAt: answer_state::IsUnset,
 {
     /// Set the `createdAt` field (required)
-    pub fn created_at(
-        mut self,
-        value: impl Into<Datetime>,
-    ) -> AnswerBuilder<answer_state::SetCreatedAt<St>, S> {
+    pub fn created_at(mut self, value: impl Into<Datetime>) -> AnswerBuilder<answer_state::SetCreatedAt<St>, S> {
         self._fields.1 = Option::Some(value.into());
         AnswerBuilder {
             _state: PhantomData,
@@ -275,10 +264,7 @@ where
     St::Document: answer_state::IsUnset,
 {
     /// Set the `document` field (required)
-    pub fn document(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> AnswerBuilder<answer_state::SetDocument<St>, S> {
+    pub fn document(mut self, value: impl Into<AtUri<S>>) -> AnswerBuilder<answer_state::SetDocument<St>, S> {
         self._fields.2 = Option::Some(value.into());
         AnswerBuilder {
             _state: PhantomData,
@@ -294,10 +280,7 @@ where
     St::Question: answer_state::IsUnset,
 {
     /// Set the `question` field (required)
-    pub fn question(
-        mut self,
-        value: impl Into<StrongRef<S>>,
-    ) -> AnswerBuilder<answer_state::SetQuestion<St>, S> {
+    pub fn question(mut self, value: impl Into<StrongRef<S>>) -> AnswerBuilder<answer_state::SetQuestion<St>, S> {
         self._fields.3 = Option::Some(value.into());
         AnswerBuilder {
             _state: PhantomData,
@@ -338,10 +321,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_interactions_answer() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.interactions.answer"),

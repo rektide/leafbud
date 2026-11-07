@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -23,7 +23,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -54,7 +54,7 @@ impl<S: BosStr> LexiconSchema for StandardSitePublication<S> {
 
 pub mod standard_site_publication_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -85,10 +85,7 @@ pub mod standard_site_publication_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct StandardSitePublicationBuilder<
-    St: standard_site_publication_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct StandardSitePublicationBuilder<St: standard_site_publication_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<S>, Option<bool>, Option<AtUri<S>>),
     _type: PhantomData<fn() -> S>,
@@ -96,20 +93,14 @@ pub struct StandardSitePublicationBuilder<
 
 impl StandardSitePublication<DefaultStr> {
     /// Create a new builder for this type, using the default string type (DefaultStr = SmolStr) if needed
-    pub fn new() -> StandardSitePublicationBuilder<
-        standard_site_publication_state::Empty,
-        DefaultStr,
-    > {
+    pub fn new() -> StandardSitePublicationBuilder<standard_site_publication_state::Empty, DefaultStr> {
         StandardSitePublicationBuilder::new()
     }
 }
 
 impl<S: BosStr> StandardSitePublication<S> {
     /// Create a new builder for this type
-    pub fn builder() -> StandardSitePublicationBuilder<
-        standard_site_publication_state::Empty,
-        S,
-    > {
+    pub fn builder() -> StandardSitePublicationBuilder<standard_site_publication_state::Empty, S> {
         StandardSitePublicationBuilder::builder()
     }
 }
@@ -125,9 +116,7 @@ impl StandardSitePublicationBuilder<standard_site_publication_state::Empty, Defa
     }
 }
 
-impl<
-    S: BosStr,
-> StandardSitePublicationBuilder<standard_site_publication_state::Empty, S> {
+impl<S: BosStr> StandardSitePublicationBuilder<standard_site_publication_state::Empty, S> {
     /// Create a new builder with all fields unset
     pub fn builder() -> Self {
         StandardSitePublicationBuilder {
@@ -138,10 +127,7 @@ impl<
     }
 }
 
-impl<
-    St: standard_site_publication_state::State,
-    S: BosStr,
-> StandardSitePublicationBuilder<St, S> {
+impl<St: standard_site_publication_state::State, S: BosStr> StandardSitePublicationBuilder<St, S> {
     /// Set the `cid` field (optional)
     pub fn cid(mut self, value: impl Into<Option<S>>) -> Self {
         self._fields.0 = value.into();
@@ -154,10 +140,7 @@ impl<
     }
 }
 
-impl<
-    St: standard_site_publication_state::State,
-    S: BosStr,
-> StandardSitePublicationBuilder<St, S> {
+impl<St: standard_site_publication_state::State, S: BosStr> StandardSitePublicationBuilder<St, S> {
     /// Set the `showPublicationTheme` field (optional)
     pub fn show_publication_theme(mut self, value: impl Into<Option<bool>>) -> Self {
         self._fields.1 = value.into();
@@ -176,10 +159,7 @@ where
     St::Uri: standard_site_publication_state::IsUnset,
 {
     /// Set the `uri` field (required)
-    pub fn uri(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> StandardSitePublicationBuilder<standard_site_publication_state::SetUri<St>, S> {
+    pub fn uri(mut self, value: impl Into<AtUri<S>>) -> StandardSitePublicationBuilder<standard_site_publication_state::SetUri<St>, S> {
         self._fields.2 = Option::Some(value.into());
         StandardSitePublicationBuilder {
             _state: PhantomData,
@@ -204,10 +184,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> StandardSitePublication<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> StandardSitePublication<S> {
         StandardSitePublication {
             cid: self._fields.0,
             show_publication_theme: self._fields.1,
@@ -218,10 +195,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_blocks_standardSitePublication() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.standardSitePublication"),
@@ -234,15 +211,10 @@ fn lexicon_doc_pub_leaflet_blocks_standardSitePublication() -> LexiconDoc<'stati
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("cid"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("cid"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map.insert(
                             SmolStr::new_static("showPublicationTheme"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("uri"),

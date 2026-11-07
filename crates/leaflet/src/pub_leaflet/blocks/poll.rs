@@ -20,10 +20,10 @@ use jacquard_derive::IntoStatic;
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::com_atproto::repo::strong_ref::StrongRef;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::com_atproto::repo::strong_ref::StrongRef;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -50,7 +50,7 @@ impl<S: BosStr> LexiconSchema for Poll<S> {
 
 pub mod poll_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -129,10 +129,7 @@ where
     St::PollRef: poll_state::IsUnset,
 {
     /// Set the `pollRef` field (required)
-    pub fn poll_ref(
-        mut self,
-        value: impl Into<StrongRef<S>>,
-    ) -> PollBuilder<poll_state::SetPollRef<St>, S> {
+    pub fn poll_ref(mut self, value: impl Into<StrongRef<S>>) -> PollBuilder<poll_state::SetPollRef<St>, S> {
         self._fields.0 = Option::Some(value.into());
         PollBuilder {
             _state: PhantomData,
@@ -164,10 +161,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_blocks_poll() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.poll"),

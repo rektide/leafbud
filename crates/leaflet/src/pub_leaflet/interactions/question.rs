@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -24,10 +24,10 @@ use jacquard_derive::{IntoStatic, lexicon};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::pub_leaflet::richtext::facet::Facet;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::pub_leaflet::richtext::facet::Facet;
+use serde::{Deserialize, Serialize};
 /// A public question asked of a document's author, shown on the document once the author answers (pub.leaflet.interactions.answer) or accepts it (pub.leaflet.interactions.questionVisibility)
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -146,7 +146,7 @@ impl<S: BosStr> LexiconSchema for Question<S> {
 
 pub mod question_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -205,13 +205,7 @@ pub mod question_state {
 /// Builder for constructing an instance of this type.
 pub struct QuestionBuilder<St: question_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
-    _fields: (
-        Option<S>,
-        Option<Datetime>,
-        Option<Vec<Facet<S>>>,
-        Option<S>,
-        Option<AtUri<S>>,
-    ),
+    _fields: (Option<S>, Option<Datetime>, Option<Vec<Facet<S>>>, Option<S>, Option<AtUri<S>>),
     _type: PhantomData<fn() -> S>,
 }
 
@@ -270,10 +264,7 @@ where
     St::CreatedAt: question_state::IsUnset,
 {
     /// Set the `createdAt` field (required)
-    pub fn created_at(
-        mut self,
-        value: impl Into<Datetime>,
-    ) -> QuestionBuilder<question_state::SetCreatedAt<St>, S> {
+    pub fn created_at(mut self, value: impl Into<Datetime>) -> QuestionBuilder<question_state::SetCreatedAt<St>, S> {
         self._fields.1 = Option::Some(value.into());
         QuestionBuilder {
             _state: PhantomData,
@@ -302,10 +293,7 @@ where
     St::Plaintext: question_state::IsUnset,
 {
     /// Set the `plaintext` field (required)
-    pub fn plaintext(
-        mut self,
-        value: impl Into<S>,
-    ) -> QuestionBuilder<question_state::SetPlaintext<St>, S> {
+    pub fn plaintext(mut self, value: impl Into<S>) -> QuestionBuilder<question_state::SetPlaintext<St>, S> {
         self._fields.3 = Option::Some(value.into());
         QuestionBuilder {
             _state: PhantomData,
@@ -321,10 +309,7 @@ where
     St::Subject: question_state::IsUnset,
 {
     /// Set the `subject` field (required)
-    pub fn subject(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> QuestionBuilder<question_state::SetSubject<St>, S> {
+    pub fn subject(mut self, value: impl Into<AtUri<S>>) -> QuestionBuilder<question_state::SetSubject<St>, S> {
         self._fields.4 = Option::Some(value.into());
         QuestionBuilder {
             _state: PhantomData,
@@ -366,10 +351,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_interactions_question() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.interactions.question"),

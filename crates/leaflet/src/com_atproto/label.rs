@@ -10,22 +10,22 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
 use jacquard_common::deps::bytes::Bytes;
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
 use jacquard_common::deps::smol_str::SmolStr;
-use jacquard_common::types::string::{Did, Cid, Datetime, Language, UriValue};
+use jacquard_common::types::string::{Cid, Datetime, Did, Language, UriValue};
 use jacquard_common::types::value::Data;
 use jacquard_derive::IntoStatic;
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::com_atproto::label;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::com_atproto::label;
+use serde::{Deserialize, Serialize};
 /// Metadata tag on an atproto resource (eg, repo or record).
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -58,7 +58,6 @@ pub struct Label<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LabelValue<S: BosStr = DefaultStr> {
@@ -240,8 +239,7 @@ impl<S: BosStr> Serialize for LabelValueDefinitionBlurs<S> {
     }
 }
 
-impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de>
-for LabelValueDefinitionBlurs<S> {
+impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de> for LabelValueDefinitionBlurs<S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -268,9 +266,7 @@ where
             LabelValueDefinitionBlurs::Content => LabelValueDefinitionBlurs::Content,
             LabelValueDefinitionBlurs::Media => LabelValueDefinitionBlurs::Media,
             LabelValueDefinitionBlurs::None => LabelValueDefinitionBlurs::None,
-            LabelValueDefinitionBlurs::Other(v) => {
-                LabelValueDefinitionBlurs::Other(v.into_static())
-            }
+            LabelValueDefinitionBlurs::Other(v) => LabelValueDefinitionBlurs::Other(v.into_static()),
         }
     }
 }
@@ -326,8 +322,7 @@ impl<S: BosStr> Serialize for LabelValueDefinitionDefaultSetting<S> {
     }
 }
 
-impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de>
-for LabelValueDefinitionDefaultSetting<S> {
+impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de> for LabelValueDefinitionDefaultSetting<S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -351,18 +346,10 @@ where
     type Output = LabelValueDefinitionDefaultSetting<S::Output>;
     fn into_static(self) -> Self::Output {
         match self {
-            LabelValueDefinitionDefaultSetting::Ignore => {
-                LabelValueDefinitionDefaultSetting::Ignore
-            }
-            LabelValueDefinitionDefaultSetting::Warn => {
-                LabelValueDefinitionDefaultSetting::Warn
-            }
-            LabelValueDefinitionDefaultSetting::Hide => {
-                LabelValueDefinitionDefaultSetting::Hide
-            }
-            LabelValueDefinitionDefaultSetting::Other(v) => {
-                LabelValueDefinitionDefaultSetting::Other(v.into_static())
-            }
+            LabelValueDefinitionDefaultSetting::Ignore => LabelValueDefinitionDefaultSetting::Ignore,
+            LabelValueDefinitionDefaultSetting::Warn => LabelValueDefinitionDefaultSetting::Warn,
+            LabelValueDefinitionDefaultSetting::Hide => LabelValueDefinitionDefaultSetting::Hide,
+            LabelValueDefinitionDefaultSetting::Other(v) => LabelValueDefinitionDefaultSetting::Other(v.into_static()),
         }
     }
 }
@@ -418,8 +405,7 @@ impl<S: BosStr> Serialize for LabelValueDefinitionSeverity<S> {
     }
 }
 
-impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de>
-for LabelValueDefinitionSeverity<S> {
+impl<'de, S: Deserialize<'de> + BosStr> Deserialize<'de> for LabelValueDefinitionSeverity<S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -446,9 +432,7 @@ where
             LabelValueDefinitionSeverity::Inform => LabelValueDefinitionSeverity::Inform,
             LabelValueDefinitionSeverity::Alert => LabelValueDefinitionSeverity::Alert,
             LabelValueDefinitionSeverity::None => LabelValueDefinitionSeverity::None,
-            LabelValueDefinitionSeverity::Other(v) => {
-                LabelValueDefinitionSeverity::Other(v.into_static())
-            }
+            LabelValueDefinitionSeverity::Other(v) => LabelValueDefinitionSeverity::Other(v.into_static()),
         }
     }
 }
@@ -671,7 +655,7 @@ impl<S: BosStr> LexiconSchema for SelfLabels<S> {
 
 pub mod label_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -815,10 +799,7 @@ where
     St::Cts: label_state::IsUnset,
 {
     /// Set the `cts` field (required)
-    pub fn cts(
-        mut self,
-        value: impl Into<Datetime>,
-    ) -> LabelBuilder<label_state::SetCts<St>, S> {
+    pub fn cts(mut self, value: impl Into<Datetime>) -> LabelBuilder<label_state::SetCts<St>, S> {
         self._fields.1 = Option::Some(value.into());
         LabelBuilder {
             _state: PhantomData,
@@ -873,10 +854,7 @@ where
     St::Src: label_state::IsUnset,
 {
     /// Set the `src` field (required)
-    pub fn src(
-        mut self,
-        value: impl Into<Did<S>>,
-    ) -> LabelBuilder<label_state::SetSrc<St>, S> {
+    pub fn src(mut self, value: impl Into<Did<S>>) -> LabelBuilder<label_state::SetSrc<St>, S> {
         self._fields.5 = Option::Some(value.into());
         LabelBuilder {
             _state: PhantomData,
@@ -892,10 +870,7 @@ where
     St::Uri: label_state::IsUnset,
 {
     /// Set the `uri` field (required)
-    pub fn uri(
-        mut self,
-        value: impl Into<UriValue<S>>,
-    ) -> LabelBuilder<label_state::SetUri<St>, S> {
+    pub fn uri(mut self, value: impl Into<UriValue<S>>) -> LabelBuilder<label_state::SetUri<St>, S> {
         self._fields.6 = Option::Some(value.into());
         LabelBuilder {
             _state: PhantomData,
@@ -911,10 +886,7 @@ where
     St::Val: label_state::IsUnset,
 {
     /// Set the `val` field (required)
-    pub fn val(
-        mut self,
-        value: impl Into<S>,
-    ) -> LabelBuilder<label_state::SetVal<St>, S> {
+    pub fn val(mut self, value: impl Into<S>) -> LabelBuilder<label_state::SetVal<St>, S> {
         self._fields.7 = Option::Some(value.into());
         LabelBuilder {
             _state: PhantomData,
@@ -978,10 +950,10 @@ where
 }
 
 fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("com.atproto.label.defs"),
@@ -990,28 +962,22 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("label"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Metadata tag on an atproto resource (eg, repo or record).",
-                        ),
-                    ),
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("src"), SmolStr::new_static("uri"),
-                            SmolStr::new_static("val"), SmolStr::new_static("cts")
-                        ],
-                    ),
+                    description: Some(CowStr::new_static("Metadata tag on an atproto resource (eg, repo or record).")),
+                    required: Some(vec![
+                        SmolStr::new_static("src"),
+                        SmolStr::new_static("uri"),
+                        SmolStr::new_static("val"),
+                        SmolStr::new_static("cts"),
+                    ]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
                         map.insert(
                             SmolStr::new_static("cid"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Optionally, CID specifying the specific version of 'uri' resource this label applies to.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static(
+                                    "Optionally, CID specifying the specific version of 'uri' resource this label applies to.",
+                                )),
                                 format: Some(LexStringFormat::Cid),
                                 ..Default::default()
                             }),
@@ -1019,9 +985,7 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("cts"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static("Timestamp when this label was created."),
-                                ),
+                                description: Some(CowStr::new_static("Timestamp when this label was created.")),
                                 format: Some(LexStringFormat::Datetime),
                                 ..Default::default()
                             }),
@@ -1029,33 +993,17 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("exp"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Timestamp at which this label expires (no longer applies).",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static("Timestamp at which this label expires (no longer applies).")),
                                 format: Some(LexStringFormat::Datetime),
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("neg"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
-                        );
-                        map.insert(
-                            SmolStr::new_static("sig"),
-                            LexObjectProperty::Bytes(LexBytes { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("neg"), LexObjectProperty::Boolean(LexBoolean { ..Default::default() }));
+                        map.insert(SmolStr::new_static("sig"), LexObjectProperty::Bytes(LexBytes { ..Default::default() }));
                         map.insert(
                             SmolStr::new_static("src"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "DID of the actor who created this label.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static("DID of the actor who created this label.")),
                                 format: Some(LexStringFormat::Did),
                                 ..Default::default()
                             }),
@@ -1063,11 +1011,9 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("uri"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "AT URI of the record, repository (account), or other resource that this label applies to.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static(
+                                    "AT URI of the record, repository (account), or other resource that this label applies to.",
+                                )),
                                 format: Some(LexStringFormat::Uri),
                                 ..Default::default()
                             }),
@@ -1075,30 +1021,18 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("val"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "The short string name of the value or type of this label.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static("The short string name of the value or type of this label.")),
                                 max_length: Some(128usize),
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("ver"),
-                            LexObjectProperty::Integer(LexInteger {
-                                ..Default::default()
-                            }),
-                        );
+                        map.insert(SmolStr::new_static("ver"), LexObjectProperty::Integer(LexInteger { ..Default::default() }));
                         map
                     },
                     ..Default::default()
                 }),
             );
-            map.insert(
-                SmolStr::new_static("labelValue"),
-                LexUserType::String(LexString { ..Default::default() }),
-            );
+            map.insert(SmolStr::new_static("labelValue"), LexUserType::String(LexString { ..Default::default() }));
             map.insert(
                 SmolStr::new_static("labelValueDefinition"),
                 LexUserType::Object(LexObject {
@@ -1185,28 +1119,21 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("labelValueDefinitionStrings"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Strings which describe the label in the UI, localized into a specific language.",
-                        ),
-                    ),
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("lang"), SmolStr::new_static("name"),
-                            SmolStr::new_static("description")
-                        ],
-                    ),
+                    description: Some(CowStr::new_static(
+                        "Strings which describe the label in the UI, localized into a specific language.",
+                    )),
+                    required: Some(vec![
+                        SmolStr::new_static("lang"),
+                        SmolStr::new_static("name"),
+                        SmolStr::new_static("description"),
+                    ]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
                         map.insert(
                             SmolStr::new_static("description"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "A longer description of what the label means and why it might be applied.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static("A longer description of what the label means and why it might be applied.")),
                                 max_length: Some(100000usize),
                                 max_graphemes: Some(10000usize),
                                 ..Default::default()
@@ -1215,11 +1142,7 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("lang"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "The code of the language these strings are written in.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static("The code of the language these strings are written in.")),
                                 format: Some(LexStringFormat::Language),
                                 ..Default::default()
                             }),
@@ -1227,11 +1150,7 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("name"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "A short human-readable name for the label.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static("A short human-readable name for the label.")),
                                 max_length: Some(640usize),
                                 max_graphemes: Some(64usize),
                                 ..Default::default()
@@ -1274,11 +1193,9 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("selfLabels"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Metadata tags on an atproto record, published by the author within the record.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "Metadata tags on an atproto record, published by the author within the record.",
+                    )),
                     required: Some(vec![SmolStr::new_static("values")]),
                     properties: {
                         #[allow(unused_mut)]
@@ -1307,7 +1224,7 @@ fn lexicon_doc_com_atproto_label_defs() -> LexiconDoc<'static> {
 
 pub mod label_value_definition_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1380,10 +1297,7 @@ pub mod label_value_definition_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct LabelValueDefinitionBuilder<
-    St: label_value_definition_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct LabelValueDefinitionBuilder<St: label_value_definition_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (
         Option<bool>,
@@ -1398,20 +1312,14 @@ pub struct LabelValueDefinitionBuilder<
 
 impl LabelValueDefinition<DefaultStr> {
     /// Create a new builder for this type, using the default string type (DefaultStr = SmolStr) if needed
-    pub fn new() -> LabelValueDefinitionBuilder<
-        label_value_definition_state::Empty,
-        DefaultStr,
-    > {
+    pub fn new() -> LabelValueDefinitionBuilder<label_value_definition_state::Empty, DefaultStr> {
         LabelValueDefinitionBuilder::new()
     }
 }
 
 impl<S: BosStr> LabelValueDefinition<S> {
     /// Create a new builder for this type
-    pub fn builder() -> LabelValueDefinitionBuilder<
-        label_value_definition_state::Empty,
-        S,
-    > {
+    pub fn builder() -> LabelValueDefinitionBuilder<label_value_definition_state::Empty, S> {
         LabelValueDefinitionBuilder::builder()
     }
 }
@@ -1438,10 +1346,7 @@ impl<S: BosStr> LabelValueDefinitionBuilder<label_value_definition_state::Empty,
     }
 }
 
-impl<
-    St: label_value_definition_state::State,
-    S: BosStr,
-> LabelValueDefinitionBuilder<St, S> {
+impl<St: label_value_definition_state::State, S: BosStr> LabelValueDefinitionBuilder<St, S> {
     /// Set the `adultOnly` field (optional)
     pub fn adult_only(mut self, value: impl Into<Option<bool>>) -> Self {
         self._fields.0 = value.into();
@@ -1460,10 +1365,7 @@ where
     St::Blurs: label_value_definition_state::IsUnset,
 {
     /// Set the `blurs` field (required)
-    pub fn blurs(
-        mut self,
-        value: impl Into<LabelValueDefinitionBlurs<S>>,
-    ) -> LabelValueDefinitionBuilder<label_value_definition_state::SetBlurs<St>, S> {
+    pub fn blurs(mut self, value: impl Into<LabelValueDefinitionBlurs<S>>) -> LabelValueDefinitionBuilder<label_value_definition_state::SetBlurs<St>, S> {
         self._fields.1 = Option::Some(value.into());
         LabelValueDefinitionBuilder {
             _state: PhantomData,
@@ -1473,23 +1375,14 @@ where
     }
 }
 
-impl<
-    St: label_value_definition_state::State,
-    S: BosStr,
-> LabelValueDefinitionBuilder<St, S> {
+impl<St: label_value_definition_state::State, S: BosStr> LabelValueDefinitionBuilder<St, S> {
     /// Set the `defaultSetting` field (optional)
-    pub fn default_setting(
-        mut self,
-        value: impl Into<Option<LabelValueDefinitionDefaultSetting<S>>>,
-    ) -> Self {
+    pub fn default_setting(mut self, value: impl Into<Option<LabelValueDefinitionDefaultSetting<S>>>) -> Self {
         self._fields.2 = value.into();
         self
     }
     /// Set the `defaultSetting` field to an Option value (optional)
-    pub fn maybe_default_setting(
-        mut self,
-        value: Option<LabelValueDefinitionDefaultSetting<S>>,
-    ) -> Self {
+    pub fn maybe_default_setting(mut self, value: Option<LabelValueDefinitionDefaultSetting<S>>) -> Self {
         self._fields.2 = value;
         self
     }
@@ -1501,13 +1394,7 @@ where
     St::Identifier: label_value_definition_state::IsUnset,
 {
     /// Set the `identifier` field (required)
-    pub fn identifier(
-        mut self,
-        value: impl Into<S>,
-    ) -> LabelValueDefinitionBuilder<
-        label_value_definition_state::SetIdentifier<St>,
-        S,
-    > {
+    pub fn identifier(mut self, value: impl Into<S>) -> LabelValueDefinitionBuilder<label_value_definition_state::SetIdentifier<St>, S> {
         self._fields.3 = Option::Some(value.into());
         LabelValueDefinitionBuilder {
             _state: PhantomData,
@@ -1576,10 +1463,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> LabelValueDefinition<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> LabelValueDefinition<S> {
         LabelValueDefinition {
             adult_only: self._fields.0,
             blurs: self._fields.1.unwrap(),
@@ -1594,7 +1478,7 @@ where
 
 pub mod label_value_definition_strings_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1651,10 +1535,7 @@ pub mod label_value_definition_strings_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct LabelValueDefinitionStringsBuilder<
-    St: label_value_definition_strings_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct LabelValueDefinitionStringsBuilder<St: label_value_definition_strings_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<S>, Option<Language>, Option<S>),
     _type: PhantomData<fn() -> S>,
@@ -1662,28 +1543,19 @@ pub struct LabelValueDefinitionStringsBuilder<
 
 impl LabelValueDefinitionStrings<DefaultStr> {
     /// Create a new builder for this type, using the default string type (DefaultStr = SmolStr) if needed
-    pub fn new() -> LabelValueDefinitionStringsBuilder<
-        label_value_definition_strings_state::Empty,
-        DefaultStr,
-    > {
+    pub fn new() -> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::Empty, DefaultStr> {
         LabelValueDefinitionStringsBuilder::new()
     }
 }
 
 impl<S: BosStr> LabelValueDefinitionStrings<S> {
     /// Create a new builder for this type
-    pub fn builder() -> LabelValueDefinitionStringsBuilder<
-        label_value_definition_strings_state::Empty,
-        S,
-    > {
+    pub fn builder() -> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::Empty, S> {
         LabelValueDefinitionStringsBuilder::builder()
     }
 }
 
-impl LabelValueDefinitionStringsBuilder<
-    label_value_definition_strings_state::Empty,
-    DefaultStr,
-> {
+impl LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::Empty, DefaultStr> {
     /// Create a new builder with all fields unset, using the default string type, if needed
     pub fn new() -> Self {
         LabelValueDefinitionStringsBuilder {
@@ -1694,9 +1566,7 @@ impl LabelValueDefinitionStringsBuilder<
     }
 }
 
-impl<
-    S: BosStr,
-> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::Empty, S> {
+impl<S: BosStr> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::Empty, S> {
     /// Create a new builder with all fields unset
     pub fn builder() -> Self {
         LabelValueDefinitionStringsBuilder {
@@ -1713,13 +1583,7 @@ where
     St::Description: label_value_definition_strings_state::IsUnset,
 {
     /// Set the `description` field (required)
-    pub fn description(
-        mut self,
-        value: impl Into<S>,
-    ) -> LabelValueDefinitionStringsBuilder<
-        label_value_definition_strings_state::SetDescription<St>,
-        S,
-    > {
+    pub fn description(mut self, value: impl Into<S>) -> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::SetDescription<St>, S> {
         self._fields.0 = Option::Some(value.into());
         LabelValueDefinitionStringsBuilder {
             _state: PhantomData,
@@ -1735,13 +1599,7 @@ where
     St::Lang: label_value_definition_strings_state::IsUnset,
 {
     /// Set the `lang` field (required)
-    pub fn lang(
-        mut self,
-        value: impl Into<Language>,
-    ) -> LabelValueDefinitionStringsBuilder<
-        label_value_definition_strings_state::SetLang<St>,
-        S,
-    > {
+    pub fn lang(mut self, value: impl Into<Language>) -> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::SetLang<St>, S> {
         self._fields.1 = Option::Some(value.into());
         LabelValueDefinitionStringsBuilder {
             _state: PhantomData,
@@ -1757,13 +1615,7 @@ where
     St::Name: label_value_definition_strings_state::IsUnset,
 {
     /// Set the `name` field (required)
-    pub fn name(
-        mut self,
-        value: impl Into<S>,
-    ) -> LabelValueDefinitionStringsBuilder<
-        label_value_definition_strings_state::SetName<St>,
-        S,
-    > {
+    pub fn name(mut self, value: impl Into<S>) -> LabelValueDefinitionStringsBuilder<label_value_definition_strings_state::SetName<St>, S> {
         self._fields.2 = Option::Some(value.into());
         LabelValueDefinitionStringsBuilder {
             _state: PhantomData,
@@ -1790,10 +1642,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> LabelValueDefinitionStrings<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> LabelValueDefinitionStrings<S> {
         LabelValueDefinitionStrings {
             description: self._fields.0.unwrap(),
             lang: self._fields.1.unwrap(),
@@ -1805,7 +1654,7 @@ where
 
 pub mod self_labels_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1884,10 +1733,7 @@ where
     St::Values: self_labels_state::IsUnset,
 {
     /// Set the `values` field (required)
-    pub fn values(
-        mut self,
-        value: impl Into<Vec<label::SelfLabel<S>>>,
-    ) -> SelfLabelsBuilder<self_labels_state::SetValues<St>, S> {
+    pub fn values(mut self, value: impl Into<Vec<label::SelfLabel<S>>>) -> SelfLabelsBuilder<self_labels_state::SetValues<St>, S> {
         self._fields.0 = Option::Some(value.into());
         SelfLabelsBuilder {
             _state: PhantomData,
@@ -1910,10 +1756,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> SelfLabels<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> SelfLabels<S> {
         SelfLabels {
             values: self._fields.0.unwrap(),
             extra_data: Some(extra_data),

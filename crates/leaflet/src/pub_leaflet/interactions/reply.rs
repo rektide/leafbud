@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -26,7 +26,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Submits one of the author's own documents as a reply to another document
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -120,7 +120,7 @@ impl<S: BosStr> LexiconSchema for Reply<S> {
 
 pub mod reply_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -238,10 +238,7 @@ where
     St::CreatedAt: reply_state::IsUnset,
 {
     /// Set the `createdAt` field (required)
-    pub fn created_at(
-        mut self,
-        value: impl Into<Datetime>,
-    ) -> ReplyBuilder<reply_state::SetCreatedAt<St>, S> {
+    pub fn created_at(mut self, value: impl Into<Datetime>) -> ReplyBuilder<reply_state::SetCreatedAt<St>, S> {
         self._fields.1 = Option::Some(value.into());
         ReplyBuilder {
             _state: PhantomData,
@@ -257,10 +254,7 @@ where
     St::Document: reply_state::IsUnset,
 {
     /// Set the `document` field (required)
-    pub fn document(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> ReplyBuilder<reply_state::SetDocument<St>, S> {
+    pub fn document(mut self, value: impl Into<AtUri<S>>) -> ReplyBuilder<reply_state::SetDocument<St>, S> {
         self._fields.2 = Option::Some(value.into());
         ReplyBuilder {
             _state: PhantomData,
@@ -276,10 +270,7 @@ where
     St::Subject: reply_state::IsUnset,
 {
     /// Set the `subject` field (required)
-    pub fn subject(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> ReplyBuilder<reply_state::SetSubject<St>, S> {
+    pub fn subject(mut self, value: impl Into<AtUri<S>>) -> ReplyBuilder<reply_state::SetSubject<St>, S> {
         self._fields.3 = Option::Some(value.into());
         ReplyBuilder {
             _state: PhantomData,
@@ -319,10 +310,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_interactions_reply() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.interactions.reply"),

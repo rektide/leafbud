@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -20,10 +20,10 @@ use jacquard_derive::IntoStatic;
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::pub_leaflet::blocks::drawing;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::pub_leaflet::blocks::drawing;
+use serde::{Deserialize, Serialize};
 /// A filled polygon, painted with the nonzero rule: the region a stroke encloses.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -68,7 +68,6 @@ pub struct Stroke<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -173,7 +172,7 @@ impl<S: BosStr> LexiconSchema for ViewBox<S> {
 
 pub mod fill_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -264,10 +263,7 @@ where
     St::Color: fill_state::IsUnset,
 {
     /// Set the `color` field (required)
-    pub fn color(
-        mut self,
-        value: impl Into<S>,
-    ) -> FillBuilder<fill_state::SetColor<St>, S> {
+    pub fn color(mut self, value: impl Into<S>) -> FillBuilder<fill_state::SetColor<St>, S> {
         self._fields.0 = Option::Some(value.into());
         FillBuilder {
             _state: PhantomData,
@@ -283,10 +279,7 @@ where
     St::Points: fill_state::IsUnset,
 {
     /// Set the `points` field (required)
-    pub fn points(
-        mut self,
-        value: impl Into<Vec<i64>>,
-    ) -> FillBuilder<fill_state::SetPoints<St>, S> {
+    pub fn points(mut self, value: impl Into<Vec<i64>>) -> FillBuilder<fill_state::SetPoints<St>, S> {
         self._fields.1 = Option::Some(value.into());
         FillBuilder {
             _state: PhantomData,
@@ -321,10 +314,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_blocks_drawing() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.drawing"),
@@ -333,39 +326,29 @@ fn lexicon_doc_pub_leaflet_blocks_drawing() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("fill"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "A filled polygon, painted with the nonzero rule: the region a stroke encloses.",
-                        ),
-                    ),
-                    required: Some(
-                        vec![SmolStr::new_static("points"), SmolStr::new_static("color")],
-                    ),
+                    description: Some(CowStr::new_static(
+                        "A filled polygon, painted with the nonzero rule: the region a stroke encloses.",
+                    )),
+                    required: Some(vec![SmolStr::new_static("points"), SmolStr::new_static("color")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
                         map.insert(
                             SmolStr::new_static("color"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "A CSS hex color, or one of the document theme's colors: primary (text), accent, or tertiary (faded text).",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static(
+                                    "A CSS hex color, or one of the document theme's colors: primary (text), accent, or tertiary (faded text).",
+                                )),
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("points"),
                             LexObjectProperty::Array(LexArray {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Flattened vertices as x, y pairs in drawing space. The last joins back to the first.",
-                                    ),
-                                ),
-                                items: LexArrayItem::Integer(LexInteger {
-                                    ..Default::default()
-                                }),
+                                description: Some(CowStr::new_static(
+                                    "Flattened vertices as x, y pairs in drawing space. The last joins back to the first.",
+                                )),
+                                items: LexArrayItem::Integer(LexInteger { ..Default::default() }),
                                 ..Default::default()
                             }),
                         );
@@ -429,50 +412,35 @@ fn lexicon_doc_pub_leaflet_blocks_drawing() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("stroke"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "One pen stroke, drawn in order, rendered as a variable-width outline of its input points (as perfect-freehand does).",
-                        ),
-                    ),
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("points"), SmolStr::new_static("color"),
-                            SmolStr::new_static("size")
-                        ],
-                    ),
+                    description: Some(CowStr::new_static(
+                        "One pen stroke, drawn in order, rendered as a variable-width outline of its input points (as perfect-freehand does).",
+                    )),
+                    required: Some(vec![SmolStr::new_static("points"), SmolStr::new_static("color"), SmolStr::new_static("size")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
                         map.insert(
                             SmolStr::new_static("color"),
                             LexObjectProperty::String(LexString {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "A CSS hex color, or one of the document theme's colors: primary (text), accent, or tertiary (faded text).",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static(
+                                    "A CSS hex color, or one of the document theme's colors: primary (text), accent, or tertiary (faded text).",
+                                )),
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("points"),
                             LexObjectProperty::Array(LexArray {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Flattened input points as x, y, pressure triples: x and y in drawing space, pressure from 0 to 1000.",
-                                    ),
-                                ),
-                                items: LexArrayItem::Integer(LexInteger {
-                                    ..Default::default()
-                                }),
+                                description: Some(CowStr::new_static(
+                                    "Flattened input points as x, y, pressure triples: x and y in drawing space, pressure from 0 to 1000.",
+                                )),
+                                items: LexArrayItem::Integer(LexInteger { ..Default::default() }),
                                 ..Default::default()
                             }),
                         );
                         map.insert(
                             SmolStr::new_static("simulatePressure"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Boolean(LexBoolean { ..Default::default() }),
                         );
                         map.insert(
                             SmolStr::new_static("size"),
@@ -489,12 +457,12 @@ fn lexicon_doc_pub_leaflet_blocks_drawing() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("viewBox"),
                 LexUserType::Object(LexObject {
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("x"), SmolStr::new_static("y"),
-                            SmolStr::new_static("width"), SmolStr::new_static("height")
-                        ],
-                    ),
+                    required: Some(vec![
+                        SmolStr::new_static("x"),
+                        SmolStr::new_static("y"),
+                        SmolStr::new_static("width"),
+                        SmolStr::new_static("height"),
+                    ]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
@@ -512,18 +480,8 @@ fn lexicon_doc_pub_leaflet_blocks_drawing() -> LexiconDoc<'static> {
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("x"),
-                            LexObjectProperty::Integer(LexInteger {
-                                ..Default::default()
-                            }),
-                        );
-                        map.insert(
-                            SmolStr::new_static("y"),
-                            LexObjectProperty::Integer(LexInteger {
-                                ..Default::default()
-                            }),
-                        );
+                        map.insert(SmolStr::new_static("x"), LexObjectProperty::Integer(LexInteger { ..Default::default() }));
+                        map.insert(SmolStr::new_static("y"), LexObjectProperty::Integer(LexInteger { ..Default::default() }));
                         map
                     },
                     ..Default::default()
@@ -537,7 +495,7 @@ fn lexicon_doc_pub_leaflet_blocks_drawing() -> LexiconDoc<'static> {
 
 pub mod drawing_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -582,11 +540,7 @@ pub mod drawing_state {
 /// Builder for constructing an instance of this type.
 pub struct DrawingBuilder<St: drawing_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
-    _fields: (
-        Option<Vec<drawing::Fill<S>>>,
-        Option<Vec<drawing::Stroke<S>>>,
-        Option<drawing::ViewBox<S>>,
-    ),
+    _fields: (Option<Vec<drawing::Fill<S>>>, Option<Vec<drawing::Stroke<S>>>, Option<drawing::ViewBox<S>>),
     _type: PhantomData<fn() -> S>,
 }
 
@@ -645,10 +599,7 @@ where
     St::Strokes: drawing_state::IsUnset,
 {
     /// Set the `strokes` field (required)
-    pub fn strokes(
-        mut self,
-        value: impl Into<Vec<drawing::Stroke<S>>>,
-    ) -> DrawingBuilder<drawing_state::SetStrokes<St>, S> {
+    pub fn strokes(mut self, value: impl Into<Vec<drawing::Stroke<S>>>) -> DrawingBuilder<drawing_state::SetStrokes<St>, S> {
         self._fields.1 = Option::Some(value.into());
         DrawingBuilder {
             _state: PhantomData,
@@ -664,10 +615,7 @@ where
     St::ViewBox: drawing_state::IsUnset,
 {
     /// Set the `viewBox` field (required)
-    pub fn view_box(
-        mut self,
-        value: impl Into<drawing::ViewBox<S>>,
-    ) -> DrawingBuilder<drawing_state::SetViewBox<St>, S> {
+    pub fn view_box(mut self, value: impl Into<drawing::ViewBox<S>>) -> DrawingBuilder<drawing_state::SetViewBox<St>, S> {
         self._fields.2 = Option::Some(value.into());
         DrawingBuilder {
             _state: PhantomData,
@@ -705,7 +653,7 @@ where
 
 pub mod stroke_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -810,10 +758,7 @@ where
     St::Color: stroke_state::IsUnset,
 {
     /// Set the `color` field (required)
-    pub fn color(
-        mut self,
-        value: impl Into<S>,
-    ) -> StrokeBuilder<stroke_state::SetColor<St>, S> {
+    pub fn color(mut self, value: impl Into<S>) -> StrokeBuilder<stroke_state::SetColor<St>, S> {
         self._fields.0 = Option::Some(value.into());
         StrokeBuilder {
             _state: PhantomData,
@@ -829,10 +774,7 @@ where
     St::Points: stroke_state::IsUnset,
 {
     /// Set the `points` field (required)
-    pub fn points(
-        mut self,
-        value: impl Into<Vec<i64>>,
-    ) -> StrokeBuilder<stroke_state::SetPoints<St>, S> {
+    pub fn points(mut self, value: impl Into<Vec<i64>>) -> StrokeBuilder<stroke_state::SetPoints<St>, S> {
         self._fields.1 = Option::Some(value.into());
         StrokeBuilder {
             _state: PhantomData,
@@ -861,10 +803,7 @@ where
     St::Size: stroke_state::IsUnset,
 {
     /// Set the `size` field (required)
-    pub fn size(
-        mut self,
-        value: impl Into<i64>,
-    ) -> StrokeBuilder<stroke_state::SetSize<St>, S> {
+    pub fn size(mut self, value: impl Into<i64>) -> StrokeBuilder<stroke_state::SetSize<St>, S> {
         self._fields.3 = Option::Some(value.into());
         StrokeBuilder {
             _state: PhantomData,
@@ -905,7 +844,7 @@ where
 
 pub mod view_box_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1026,10 +965,7 @@ where
     St::Height: view_box_state::IsUnset,
 {
     /// Set the `height` field (required)
-    pub fn height(
-        mut self,
-        value: impl Into<i64>,
-    ) -> ViewBoxBuilder<view_box_state::SetHeight<St>, S> {
+    pub fn height(mut self, value: impl Into<i64>) -> ViewBoxBuilder<view_box_state::SetHeight<St>, S> {
         self._fields.0 = Option::Some(value.into());
         ViewBoxBuilder {
             _state: PhantomData,
@@ -1045,10 +981,7 @@ where
     St::Width: view_box_state::IsUnset,
 {
     /// Set the `width` field (required)
-    pub fn width(
-        mut self,
-        value: impl Into<i64>,
-    ) -> ViewBoxBuilder<view_box_state::SetWidth<St>, S> {
+    pub fn width(mut self, value: impl Into<i64>) -> ViewBoxBuilder<view_box_state::SetWidth<St>, S> {
         self._fields.1 = Option::Some(value.into());
         ViewBoxBuilder {
             _state: PhantomData,
@@ -1064,10 +997,7 @@ where
     St::X: view_box_state::IsUnset,
 {
     /// Set the `x` field (required)
-    pub fn x(
-        mut self,
-        value: impl Into<i64>,
-    ) -> ViewBoxBuilder<view_box_state::SetX<St>, S> {
+    pub fn x(mut self, value: impl Into<i64>) -> ViewBoxBuilder<view_box_state::SetX<St>, S> {
         self._fields.2 = Option::Some(value.into());
         ViewBoxBuilder {
             _state: PhantomData,
@@ -1083,10 +1013,7 @@ where
     St::Y: view_box_state::IsUnset,
 {
     /// Set the `y` field (required)
-    pub fn y(
-        mut self,
-        value: impl Into<i64>,
-    ) -> ViewBoxBuilder<view_box_state::SetY<St>, S> {
+    pub fn y(mut self, value: impl Into<i64>) -> ViewBoxBuilder<view_box_state::SetY<St>, S> {
         self._fields.3 = Option::Some(value.into());
         ViewBoxBuilder {
             _state: PhantomData,

@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -24,12 +24,12 @@ use jacquard_derive::{IntoStatic, lexicon};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use crate::pub_leaflet::comment;
 use crate::pub_leaflet::pages::linear_document::Quote;
 use crate::pub_leaflet::richtext::facet::Facet;
-use crate::pub_leaflet::comment;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -75,7 +75,6 @@ pub struct CommentGetRecordOutput<S: BosStr = DefaultStr> {
     pub uri: AtUri<S>,
     pub value: Comment<S>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -165,7 +164,7 @@ impl<S: BosStr> LexiconSchema for ReplyRef<S> {
 
 pub mod linear_document_quote_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -208,10 +207,7 @@ pub mod linear_document_quote_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct LinearDocumentQuoteBuilder<
-    St: linear_document_quote_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct LinearDocumentQuoteBuilder<St: linear_document_quote_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<AtUri<S>>, Option<Quote<S>>),
     _type: PhantomData<fn() -> S>,
@@ -219,20 +215,14 @@ pub struct LinearDocumentQuoteBuilder<
 
 impl LinearDocumentQuote<DefaultStr> {
     /// Create a new builder for this type, using the default string type (DefaultStr = SmolStr) if needed
-    pub fn new() -> LinearDocumentQuoteBuilder<
-        linear_document_quote_state::Empty,
-        DefaultStr,
-    > {
+    pub fn new() -> LinearDocumentQuoteBuilder<linear_document_quote_state::Empty, DefaultStr> {
         LinearDocumentQuoteBuilder::new()
     }
 }
 
 impl<S: BosStr> LinearDocumentQuote<S> {
     /// Create a new builder for this type
-    pub fn builder() -> LinearDocumentQuoteBuilder<
-        linear_document_quote_state::Empty,
-        S,
-    > {
+    pub fn builder() -> LinearDocumentQuoteBuilder<linear_document_quote_state::Empty, S> {
         LinearDocumentQuoteBuilder::builder()
     }
 }
@@ -265,10 +255,7 @@ where
     St::Document: linear_document_quote_state::IsUnset,
 {
     /// Set the `document` field (required)
-    pub fn document(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> LinearDocumentQuoteBuilder<linear_document_quote_state::SetDocument<St>, S> {
+    pub fn document(mut self, value: impl Into<AtUri<S>>) -> LinearDocumentQuoteBuilder<linear_document_quote_state::SetDocument<St>, S> {
         self._fields.0 = Option::Some(value.into());
         LinearDocumentQuoteBuilder {
             _state: PhantomData,
@@ -284,10 +271,7 @@ where
     St::Quote: linear_document_quote_state::IsUnset,
 {
     /// Set the `quote` field (required)
-    pub fn quote(
-        mut self,
-        value: impl Into<Quote<S>>,
-    ) -> LinearDocumentQuoteBuilder<linear_document_quote_state::SetQuote<St>, S> {
+    pub fn quote(mut self, value: impl Into<Quote<S>>) -> LinearDocumentQuoteBuilder<linear_document_quote_state::SetQuote<St>, S> {
         self._fields.1 = Option::Some(value.into());
         LinearDocumentQuoteBuilder {
             _state: PhantomData,
@@ -312,10 +296,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> LinearDocumentQuote<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> LinearDocumentQuote<S> {
         LinearDocumentQuote {
             document: self._fields.0.unwrap(),
             quote: self._fields.1.unwrap(),
@@ -325,10 +306,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_comment() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.comment"),
@@ -337,11 +318,7 @@ fn lexicon_doc_pub_leaflet_comment() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("linearDocumentQuote"),
                 LexUserType::Object(LexObject {
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("document"), SmolStr::new_static("quote")
-                        ],
-                    ),
+                    required: Some(vec![SmolStr::new_static("document"), SmolStr::new_static("quote")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
@@ -355,9 +332,7 @@ fn lexicon_doc_pub_leaflet_comment() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("quote"),
                             LexObjectProperty::Ref(LexRef {
-                                r#ref: CowStr::new_static(
-                                    "pub.leaflet.pages.linearDocument#quote",
-                                ),
+                                r#ref: CowStr::new_static("pub.leaflet.pages.linearDocument#quote"),
                                 ..Default::default()
                             }),
                         );
@@ -372,13 +347,11 @@ fn lexicon_doc_pub_leaflet_comment() -> LexiconDoc<'static> {
                     description: Some(CowStr::new_static("Record containing a comment")),
                     key: Some(CowStr::new_static("tid")),
                     record: LexRecordRecord::Object(LexObject {
-                        required: Some(
-                            vec![
-                                SmolStr::new_static("subject"),
-                                SmolStr::new_static("plaintext"),
-                                SmolStr::new_static("createdAt")
-                            ],
-                        ),
+                        required: Some(vec![
+                            SmolStr::new_static("subject"),
+                            SmolStr::new_static("plaintext"),
+                            SmolStr::new_static("createdAt"),
+                        ]),
                         properties: {
                             #[allow(unused_mut)]
                             let mut map = BTreeMap::new();
@@ -406,18 +379,8 @@ fn lexicon_doc_pub_leaflet_comment() -> LexiconDoc<'static> {
                                     ..Default::default()
                                 }),
                             );
-                            map.insert(
-                                SmolStr::new_static("onPage"),
-                                LexObjectProperty::String(LexString {
-                                    ..Default::default()
-                                }),
-                            );
-                            map.insert(
-                                SmolStr::new_static("plaintext"),
-                                LexObjectProperty::String(LexString {
-                                    ..Default::default()
-                                }),
-                            );
+                            map.insert(SmolStr::new_static("onPage"), LexObjectProperty::String(LexString { ..Default::default() }));
+                            map.insert(SmolStr::new_static("plaintext"), LexObjectProperty::String(LexString { ..Default::default() }));
                             map.insert(
                                 SmolStr::new_static("reply"),
                                 LexObjectProperty::Ref(LexRef {
@@ -466,7 +429,7 @@ fn lexicon_doc_pub_leaflet_comment() -> LexiconDoc<'static> {
 
 pub mod comment_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -575,18 +538,12 @@ impl<S: BosStr> CommentBuilder<comment_state::Empty, S> {
 
 impl<St: comment_state::State, S: BosStr> CommentBuilder<St, S> {
     /// Set the `attachment` field (optional)
-    pub fn attachment(
-        mut self,
-        value: impl Into<Option<comment::LinearDocumentQuote<S>>>,
-    ) -> Self {
+    pub fn attachment(mut self, value: impl Into<Option<comment::LinearDocumentQuote<S>>>) -> Self {
         self._fields.0 = value.into();
         self
     }
     /// Set the `attachment` field to an Option value (optional)
-    pub fn maybe_attachment(
-        mut self,
-        value: Option<comment::LinearDocumentQuote<S>>,
-    ) -> Self {
+    pub fn maybe_attachment(mut self, value: Option<comment::LinearDocumentQuote<S>>) -> Self {
         self._fields.0 = value;
         self
     }
@@ -598,10 +555,7 @@ where
     St::CreatedAt: comment_state::IsUnset,
 {
     /// Set the `createdAt` field (required)
-    pub fn created_at(
-        mut self,
-        value: impl Into<Datetime>,
-    ) -> CommentBuilder<comment_state::SetCreatedAt<St>, S> {
+    pub fn created_at(mut self, value: impl Into<Datetime>) -> CommentBuilder<comment_state::SetCreatedAt<St>, S> {
         self._fields.1 = Option::Some(value.into());
         CommentBuilder {
             _state: PhantomData,
@@ -643,10 +597,7 @@ where
     St::Plaintext: comment_state::IsUnset,
 {
     /// Set the `plaintext` field (required)
-    pub fn plaintext(
-        mut self,
-        value: impl Into<S>,
-    ) -> CommentBuilder<comment_state::SetPlaintext<St>, S> {
+    pub fn plaintext(mut self, value: impl Into<S>) -> CommentBuilder<comment_state::SetPlaintext<St>, S> {
         self._fields.4 = Option::Some(value.into());
         CommentBuilder {
             _state: PhantomData,
@@ -675,10 +626,7 @@ where
     St::Subject: comment_state::IsUnset,
 {
     /// Set the `subject` field (required)
-    pub fn subject(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> CommentBuilder<comment_state::SetSubject<St>, S> {
+    pub fn subject(mut self, value: impl Into<AtUri<S>>) -> CommentBuilder<comment_state::SetSubject<St>, S> {
         self._fields.6 = Option::Some(value.into());
         CommentBuilder {
             _state: PhantomData,
@@ -725,7 +673,7 @@ where
 
 pub mod reply_ref_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -804,10 +752,7 @@ where
     St::Parent: reply_ref_state::IsUnset,
 {
     /// Set the `parent` field (required)
-    pub fn parent(
-        mut self,
-        value: impl Into<AtUri<S>>,
-    ) -> ReplyRefBuilder<reply_ref_state::SetParent<St>, S> {
+    pub fn parent(mut self, value: impl Into<AtUri<S>>) -> ReplyRefBuilder<reply_ref_state::SetParent<St>, S> {
         self._fields.0 = Option::Some(value.into());
         ReplyRefBuilder {
             _state: PhantomData,

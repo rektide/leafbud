@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -21,12 +21,12 @@ use jacquard_derive::{IntoStatic, open_union};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use crate::pub_leaflet::richtext::facet;
 use crate::pub_leaflet::theme::color::Rgb;
 use crate::pub_leaflet::theme::color::Rgba;
-use crate::pub_leaflet::richtext::facet;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 /// Facet feature for mentioning an AT URI.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -102,7 +102,6 @@ pub struct Highlight<S: BosStr = DefaultStr> {
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
 
-
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(tag = "$type", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -153,7 +152,6 @@ pub struct Facet<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -418,7 +416,7 @@ impl<S: BosStr> LexiconSchema for Underline<S> {
 
 pub mod at_mention_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -497,10 +495,7 @@ where
     St::AtUri: at_mention_state::IsUnset,
 {
     /// Set the `atURI` field (required)
-    pub fn at_uri(
-        mut self,
-        value: impl Into<UriValue<S>>,
-    ) -> AtMentionBuilder<at_mention_state::SetAtUri<St>, S> {
+    pub fn at_uri(mut self, value: impl Into<UriValue<S>>) -> AtMentionBuilder<at_mention_state::SetAtUri<St>, S> {
         self._fields.0 = Option::Some(value.into());
         AtMentionBuilder {
             _state: PhantomData,
@@ -537,10 +532,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> AtMention<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> AtMention<S> {
         AtMention {
             at_uri: self._fields.0.unwrap(),
             href: self._fields.1,
@@ -550,10 +542,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.richtext.facet"),
@@ -562,9 +554,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("atMention"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for mentioning an AT URI."),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for mentioning an AT URI.")),
                     required: Some(vec![SmolStr::new_static("atURI")]),
                     properties: {
                         #[allow(unused_mut)]
@@ -640,9 +630,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("code"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for inline code."),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for inline code.")),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
@@ -655,9 +643,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("didMention"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for mentioning a did."),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for mentioning a did.")),
                     required: Some(vec![SmolStr::new_static("did")]),
                     properties: {
                         #[allow(unused_mut)]
@@ -677,15 +663,8 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("footnote"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for a footnote reference"),
-                    ),
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("footnoteId"),
-                            SmolStr::new_static("contentPlaintext")
-                        ],
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for a footnote reference")),
+                    required: Some(vec![SmolStr::new_static("footnoteId"), SmolStr::new_static("contentPlaintext")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
@@ -703,10 +682,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
                             SmolStr::new_static("contentPlaintext"),
                             LexObjectProperty::String(LexString { ..Default::default() }),
                         );
-                        map.insert(
-                            SmolStr::new_static("footnoteId"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("footnoteId"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map
                     },
                     ..Default::default()
@@ -715,9 +691,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("highlight"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for highlighted text."),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for highlighted text.")),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
@@ -727,7 +701,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
                             LexObjectProperty::Union(LexRefUnion {
                                 refs: vec![
                                     CowStr::new_static("pub.leaflet.theme.color#rgba"),
-                                    CowStr::new_static("pub.leaflet.theme.color#rgb")
+                                    CowStr::new_static("pub.leaflet.theme.color#rgb"),
                                 ],
                                 ..Default::default()
                             }),
@@ -740,19 +714,12 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("id"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Facet feature for an identifier. Used for linking to a segment",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for an identifier. Used for linking to a segment")),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("id"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("id"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map
                     },
                     ..Default::default()
@@ -761,9 +728,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("italic"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for italic text"),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for italic text")),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
@@ -776,19 +741,14 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("link"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL.",
+                    )),
                     required: Some(vec![SmolStr::new_static("uri")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("uri"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("uri"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map
                     },
                     ..Default::default()
@@ -797,16 +757,8 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Annotation of a sub-string within rich text.",
-                        ),
-                    ),
-                    required: Some(
-                        vec![
-                            SmolStr::new_static("index"), SmolStr::new_static("features")
-                        ],
-                    ),
+                    description: Some(CowStr::new_static("Annotation of a sub-string within rich text.")),
+                    required: Some(vec![SmolStr::new_static("index"), SmolStr::new_static("features")]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
@@ -822,9 +774,10 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
                                         CowStr::new_static("#highlight"),
                                         CowStr::new_static("#underline"),
                                         CowStr::new_static("#strikethrough"),
-                                        CowStr::new_static("#id"), CowStr::new_static("#bold"),
+                                        CowStr::new_static("#id"),
+                                        CowStr::new_static("#bold"),
                                         CowStr::new_static("#italic"),
-                                        CowStr::new_static("#footnote")
+                                        CowStr::new_static("#footnote"),
                                     ],
                                     ..Default::default()
                                 }),
@@ -846,9 +799,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("strikethrough"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for strikethrough markup"),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for strikethrough markup")),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
@@ -861,9 +812,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("underline"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static("Facet feature for underline markup"),
-                    ),
+                    description: Some(CowStr::new_static("Facet feature for underline markup")),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
@@ -881,7 +830,7 @@ fn lexicon_doc_pub_leaflet_richtext_facet() -> LexiconDoc<'static> {
 
 pub mod byte_slice_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -972,10 +921,7 @@ where
     St::ByteEnd: byte_slice_state::IsUnset,
 {
     /// Set the `byteEnd` field (required)
-    pub fn byte_end(
-        mut self,
-        value: impl Into<i64>,
-    ) -> ByteSliceBuilder<byte_slice_state::SetByteEnd<St>, S> {
+    pub fn byte_end(mut self, value: impl Into<i64>) -> ByteSliceBuilder<byte_slice_state::SetByteEnd<St>, S> {
         self._fields.0 = Option::Some(value.into());
         ByteSliceBuilder {
             _state: PhantomData,
@@ -991,10 +937,7 @@ where
     St::ByteStart: byte_slice_state::IsUnset,
 {
     /// Set the `byteStart` field (required)
-    pub fn byte_start(
-        mut self,
-        value: impl Into<i64>,
-    ) -> ByteSliceBuilder<byte_slice_state::SetByteStart<St>, S> {
+    pub fn byte_start(mut self, value: impl Into<i64>) -> ByteSliceBuilder<byte_slice_state::SetByteStart<St>, S> {
         self._fields.1 = Option::Some(value.into());
         ByteSliceBuilder {
             _state: PhantomData,
@@ -1019,10 +962,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> ByteSlice<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> ByteSlice<S> {
         ByteSlice {
             byte_end: self._fields.0.unwrap(),
             byte_start: self._fields.1.unwrap(),
@@ -1033,7 +973,7 @@ where
 
 pub mod did_mention_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1112,10 +1052,7 @@ where
     St::Did: did_mention_state::IsUnset,
 {
     /// Set the `did` field (required)
-    pub fn did(
-        mut self,
-        value: impl Into<Did<S>>,
-    ) -> DidMentionBuilder<did_mention_state::SetDid<St>, S> {
+    pub fn did(mut self, value: impl Into<Did<S>>) -> DidMentionBuilder<did_mention_state::SetDid<St>, S> {
         self._fields.0 = Option::Some(value.into());
         DidMentionBuilder {
             _state: PhantomData,
@@ -1138,10 +1075,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> DidMention<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> DidMention<S> {
         DidMention {
             did: self._fields.0.unwrap(),
             extra_data: Some(extra_data),
@@ -1151,7 +1085,7 @@ where
 
 pub mod facet_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -1242,10 +1176,7 @@ where
     St::Features: facet_state::IsUnset,
 {
     /// Set the `features` field (required)
-    pub fn features(
-        mut self,
-        value: impl Into<Vec<FacetFeaturesItem<S>>>,
-    ) -> FacetBuilder<facet_state::SetFeatures<St>, S> {
+    pub fn features(mut self, value: impl Into<Vec<FacetFeaturesItem<S>>>) -> FacetBuilder<facet_state::SetFeatures<St>, S> {
         self._fields.0 = Option::Some(value.into());
         FacetBuilder {
             _state: PhantomData,
@@ -1261,10 +1192,7 @@ where
     St::Index: facet_state::IsUnset,
 {
     /// Set the `index` field (required)
-    pub fn index(
-        mut self,
-        value: impl Into<facet::ByteSlice<S>>,
-    ) -> FacetBuilder<facet_state::SetIndex<St>, S> {
+    pub fn index(mut self, value: impl Into<facet::ByteSlice<S>>) -> FacetBuilder<facet_state::SetIndex<St>, S> {
         self._fields.1 = Option::Some(value.into());
         FacetBuilder {
             _state: PhantomData,

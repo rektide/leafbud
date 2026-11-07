@@ -23,7 +23,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -66,19 +66,16 @@ impl<S: BosStr> LexiconSchema for BackgroundImage<S> {
             {
                 let mime = value.blob().mime_type.as_str();
                 let accepted: &[&str] = &["image/*"];
-                let matched = accepted
-                    .iter()
-                    .any(|pattern| {
-                        if *pattern == "*/*" {
-                            true
-                        } else if pattern.ends_with("/*") {
-                            let prefix = &pattern[..pattern.len() - 2];
-                            mime.starts_with(prefix)
-                                && mime.as_bytes().get(prefix.len()) == Some(&b'/')
-                        } else {
-                            mime == *pattern
-                        }
-                    });
+                let matched = accepted.iter().any(|pattern| {
+                    if *pattern == "*/*" {
+                        true
+                    } else if pattern.ends_with("/*") {
+                        let prefix = &pattern[..pattern.len() - 2];
+                        mime.starts_with(prefix) && mime.as_bytes().get(prefix.len()) == Some(&b'/')
+                    } else {
+                        mime == *pattern
+                    }
+                });
                 if !matched {
                     return Err(ConstraintError::BlobMimeTypeNotAccepted {
                         path: ValidationPath::from_field("image"),
@@ -94,7 +91,7 @@ impl<S: BosStr> LexiconSchema for BackgroundImage<S> {
 
 pub mod background_image_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -125,10 +122,7 @@ pub mod background_image_state {
 }
 
 /// Builder for constructing an instance of this type.
-pub struct BackgroundImageBuilder<
-    St: background_image_state::State,
-    S: BosStr = DefaultStr,
-> {
+pub struct BackgroundImageBuilder<St: background_image_state::State, S: BosStr = DefaultStr> {
     _state: PhantomData<fn() -> St>,
     _fields: (Option<BlobRef<S>>, Option<bool>, Option<i64>),
     _type: PhantomData<fn() -> S>,
@@ -176,10 +170,7 @@ where
     St::Image: background_image_state::IsUnset,
 {
     /// Set the `image` field (required)
-    pub fn image(
-        mut self,
-        value: impl Into<BlobRef<S>>,
-    ) -> BackgroundImageBuilder<background_image_state::SetImage<St>, S> {
+    pub fn image(mut self, value: impl Into<BlobRef<S>>) -> BackgroundImageBuilder<background_image_state::SetImage<St>, S> {
         self._fields.0 = Option::Some(value.into());
         BackgroundImageBuilder {
             _state: PhantomData,
@@ -230,10 +221,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> BackgroundImage<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> BackgroundImage<S> {
         BackgroundImage {
             image: self._fields.0.unwrap(),
             repeat: self._fields.1,
@@ -244,10 +232,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_theme_backgroundImage() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.theme.backgroundImage"),
@@ -260,22 +248,9 @@ fn lexicon_doc_pub_leaflet_theme_backgroundImage() -> LexiconDoc<'static> {
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("image"),
-                            LexObjectProperty::Blob(LexBlob { ..Default::default() }),
-                        );
-                        map.insert(
-                            SmolStr::new_static("repeat"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
-                        );
-                        map.insert(
-                            SmolStr::new_static("width"),
-                            LexObjectProperty::Integer(LexInteger {
-                                ..Default::default()
-                            }),
-                        );
+                        map.insert(SmolStr::new_static("image"), LexObjectProperty::Blob(LexBlob { ..Default::default() }));
+                        map.insert(SmolStr::new_static("repeat"), LexObjectProperty::Boolean(LexBoolean { ..Default::default() }));
+                        map.insert(SmolStr::new_static("width"), LexObjectProperty::Integer(LexInteger { ..Default::default() }));
                         map
                     },
                     ..Default::default()

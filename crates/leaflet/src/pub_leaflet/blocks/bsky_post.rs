@@ -10,7 +10,7 @@ use alloc::collections::BTreeMap;
 
 #[allow(unused_imports)]
 use core::marker::PhantomData;
-use jacquard_common::{CowStr, BosStr, DefaultStr, FromStaticStr};
+use jacquard_common::{BosStr, CowStr, DefaultStr, FromStaticStr};
 
 #[allow(unused_imports)]
 use jacquard_common::deps::codegen::unicode_segmentation::UnicodeSegmentation;
@@ -20,10 +20,10 @@ use jacquard_derive::IntoStatic;
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
+use crate::com_atproto::repo::strong_ref::StrongRef;
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
-use crate::com_atproto::repo::strong_ref::StrongRef;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -36,7 +36,6 @@ pub struct BskyPost<S: BosStr = DefaultStr> {
     #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BskyPostView<S: BosStr = DefaultStr> {
@@ -132,7 +131,7 @@ impl<S: BosStr> LexiconSchema for BskyPost<S> {
 
 pub mod bsky_post_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -224,10 +223,7 @@ where
     St::PostRef: bsky_post_state::IsUnset,
 {
     /// Set the `postRef` field (required)
-    pub fn post_ref(
-        mut self,
-        value: impl Into<StrongRef<S>>,
-    ) -> BskyPostBuilder<bsky_post_state::SetPostRef<St>, S> {
+    pub fn post_ref(mut self, value: impl Into<StrongRef<S>>) -> BskyPostBuilder<bsky_post_state::SetPostRef<St>, S> {
         self._fields.1 = Option::Some(value.into());
         BskyPostBuilder {
             _state: PhantomData,
@@ -276,10 +272,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_blocks_bskyPost() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.bskyPost"),
@@ -292,10 +288,7 @@ fn lexicon_doc_pub_leaflet_blocks_bskyPost() -> LexiconDoc<'static> {
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("clientHost"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("clientHost"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map.insert(
                             SmolStr::new_static("postRef"),
                             LexObjectProperty::Ref(LexRef {
@@ -303,10 +296,7 @@ fn lexicon_doc_pub_leaflet_blocks_bskyPost() -> LexiconDoc<'static> {
                                 ..Default::default()
                             }),
                         );
-                        map.insert(
-                            SmolStr::new_static("view"),
-                            LexObjectProperty::String(LexString { ..Default::default() }),
-                        );
+                        map.insert(SmolStr::new_static("view"), LexObjectProperty::String(LexString { ..Default::default() }));
                         map
                     },
                     ..Default::default()

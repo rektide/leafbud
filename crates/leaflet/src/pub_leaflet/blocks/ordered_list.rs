@@ -20,14 +20,14 @@ use jacquard_derive::{IntoStatic, open_union};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
 use crate::pub_leaflet::blocks::header::Header;
 use crate::pub_leaflet::blocks::image::Image;
+use crate::pub_leaflet::blocks::ordered_list;
 use crate::pub_leaflet::blocks::text::Text;
 use crate::pub_leaflet::blocks::unordered_list::UnorderedList;
-use crate::pub_leaflet::blocks::ordered_list;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -46,7 +46,6 @@ pub struct ListItem<S: BosStr = DefaultStr> {
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
 
-
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(tag = "$type", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -58,7 +57,6 @@ pub enum ListItemContent<S: BosStr = DefaultStr> {
     #[serde(rename = "pub.leaflet.blocks.image")]
     Image(Box<Image<S>>),
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(rename_all = "camelCase", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -103,7 +101,7 @@ impl<S: BosStr> LexiconSchema for OrderedList<S> {
 
 pub mod list_item_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -196,18 +194,12 @@ impl<St: list_item_state::State, S: BosStr> ListItemBuilder<St, S> {
 
 impl<St: list_item_state::State, S: BosStr> ListItemBuilder<St, S> {
     /// Set the `children` field (optional)
-    pub fn children(
-        mut self,
-        value: impl Into<Option<Vec<ordered_list::ListItem<S>>>>,
-    ) -> Self {
+    pub fn children(mut self, value: impl Into<Option<Vec<ordered_list::ListItem<S>>>>) -> Self {
         self._fields.1 = value.into();
         self
     }
     /// Set the `children` field to an Option value (optional)
-    pub fn maybe_children(
-        mut self,
-        value: Option<Vec<ordered_list::ListItem<S>>>,
-    ) -> Self {
+    pub fn maybe_children(mut self, value: Option<Vec<ordered_list::ListItem<S>>>) -> Self {
         self._fields.1 = value;
         self
     }
@@ -219,10 +211,7 @@ where
     St::Content: list_item_state::IsUnset,
 {
     /// Set the `content` field (required)
-    pub fn content(
-        mut self,
-        value: impl Into<ListItemContent<S>>,
-    ) -> ListItemBuilder<list_item_state::SetContent<St>, S> {
+    pub fn content(mut self, value: impl Into<ListItemContent<S>>) -> ListItemBuilder<list_item_state::SetContent<St>, S> {
         self._fields.2 = Option::Some(value.into());
         ListItemBuilder {
             _state: PhantomData,
@@ -234,18 +223,12 @@ where
 
 impl<St: list_item_state::State, S: BosStr> ListItemBuilder<St, S> {
     /// Set the `unorderedListChildren` field (optional)
-    pub fn unordered_list_children(
-        mut self,
-        value: impl Into<Option<UnorderedList<S>>>,
-    ) -> Self {
+    pub fn unordered_list_children(mut self, value: impl Into<Option<UnorderedList<S>>>) -> Self {
         self._fields.3 = value.into();
         self
     }
     /// Set the `unorderedListChildren` field to an Option value (optional)
-    pub fn maybe_unordered_list_children(
-        mut self,
-        value: Option<UnorderedList<S>>,
-    ) -> Self {
+    pub fn maybe_unordered_list_children(mut self, value: Option<UnorderedList<S>>) -> Self {
         self._fields.3 = value;
         self
     }
@@ -279,10 +262,10 @@ where
 }
 
 fn lexicon_doc_pub_leaflet_blocks_orderedList() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.orderedList"),
@@ -295,20 +278,13 @@ fn lexicon_doc_pub_leaflet_blocks_orderedList() -> LexiconDoc<'static> {
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("checked"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
-                        );
+                        map.insert(SmolStr::new_static("checked"), LexObjectProperty::Boolean(LexBoolean { ..Default::default() }));
                         map.insert(
                             SmolStr::new_static("children"),
                             LexObjectProperty::Array(LexArray {
-                                description: Some(
-                                    CowStr::new_static(
-                                        "Nested ordered list items. Mutually exclusive with unorderedListChildren; if both are present, children takes precedence.",
-                                    ),
-                                ),
+                                description: Some(CowStr::new_static(
+                                    "Nested ordered list items. Mutually exclusive with unorderedListChildren; if both are present, children takes precedence.",
+                                )),
                                 items: LexArrayItem::Ref(LexRef {
                                     r#ref: CowStr::new_static("#listItem"),
                                     ..Default::default()
@@ -322,7 +298,7 @@ fn lexicon_doc_pub_leaflet_blocks_orderedList() -> LexiconDoc<'static> {
                                 refs: vec![
                                     CowStr::new_static("pub.leaflet.blocks.text"),
                                     CowStr::new_static("pub.leaflet.blocks.header"),
-                                    CowStr::new_static("pub.leaflet.blocks.image")
+                                    CowStr::new_static("pub.leaflet.blocks.image"),
                                 ],
                                 ..Default::default()
                             }),
@@ -330,9 +306,7 @@ fn lexicon_doc_pub_leaflet_blocks_orderedList() -> LexiconDoc<'static> {
                         map.insert(
                             SmolStr::new_static("unorderedListChildren"),
                             LexObjectProperty::Ref(LexRef {
-                                r#ref: CowStr::new_static(
-                                    "pub.leaflet.blocks.unorderedList",
-                                ),
+                                r#ref: CowStr::new_static("pub.leaflet.blocks.unorderedList"),
                                 ..Default::default()
                             }),
                         );
@@ -360,9 +334,7 @@ fn lexicon_doc_pub_leaflet_blocks_orderedList() -> LexiconDoc<'static> {
                         );
                         map.insert(
                             SmolStr::new_static("startIndex"),
-                            LexObjectProperty::Integer(LexInteger {
-                                ..Default::default()
-                            }),
+                            LexObjectProperty::Integer(LexInteger { ..Default::default() }),
                         );
                         map
                     },
@@ -377,7 +349,7 @@ fn lexicon_doc_pub_leaflet_blocks_orderedList() -> LexiconDoc<'static> {
 
 pub mod ordered_list_state {
 
-    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    pub use crate::builder_types::{IsSet, IsUnset, Set, Unset};
     #[allow(unused)]
     use ::core::marker::PhantomData;
     mod sealed {
@@ -456,10 +428,7 @@ where
     St::Children: ordered_list_state::IsUnset,
 {
     /// Set the `children` field (required)
-    pub fn children(
-        mut self,
-        value: impl Into<Vec<ordered_list::ListItem<S>>>,
-    ) -> OrderedListBuilder<ordered_list_state::SetChildren<St>, S> {
+    pub fn children(mut self, value: impl Into<Vec<ordered_list::ListItem<S>>>) -> OrderedListBuilder<ordered_list_state::SetChildren<St>, S> {
         self._fields.0 = Option::Some(value.into());
         OrderedListBuilder {
             _state: PhantomData,
@@ -496,10 +465,7 @@ where
         }
     }
     /// Build the final struct with custom extra_data.
-    pub fn build_with_data(
-        self,
-        extra_data: BTreeMap<SmolStr, Data<S>>,
-    ) -> OrderedList<S> {
+    pub fn build_with_data(self, extra_data: BTreeMap<SmolStr, Data<S>>) -> OrderedList<S> {
         OrderedList {
             children: self._fields.0.unwrap(),
             start_index: self._fields.1,

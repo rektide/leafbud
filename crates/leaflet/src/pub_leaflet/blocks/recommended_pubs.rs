@@ -19,7 +19,7 @@ use jacquard_lexicon::schema::LexiconSchema;
 
 #[allow(unused_imports)]
 use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// The publications this publication recommends, resolved at render time from its recommendations rather than stored on the block.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Default)]
@@ -48,10 +48,10 @@ impl<S: BosStr> LexiconSchema for RecommendedPubs<S> {
 }
 
 fn lexicon_doc_pub_leaflet_blocks_recommendedPubs() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.blocks.recommendedPubs"),
@@ -60,21 +60,14 @@ fn lexicon_doc_pub_leaflet_blocks_recommendedPubs() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "The publications this publication recommends, resolved at render time from its recommendations rather than stored on the block.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "The publications this publication recommends, resolved at render time from its recommendations rather than stored on the block.",
+                    )),
                     required: Some(vec![]),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
-                        map.insert(
-                            SmolStr::new_static("compact"),
-                            LexObjectProperty::Boolean(LexBoolean {
-                                ..Default::default()
-                            }),
-                        );
+                        map.insert(SmolStr::new_static("compact"), LexObjectProperty::Boolean(LexBoolean { ..Default::default() }));
                         map
                     },
                     ..Default::default()

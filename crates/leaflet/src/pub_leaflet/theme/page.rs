@@ -17,11 +17,11 @@ use jacquard_derive::{IntoStatic, open_union};
 use jacquard_lexicon::lexicon::LexiconDoc;
 use jacquard_lexicon::schema::LexiconSchema;
 
-#[allow(unused_imports)]
-use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
-use serde::{Serialize, Deserialize};
 use crate::pub_leaflet::theme::color::Rgb;
 use crate::pub_leaflet::theme::color::Rgba;
+#[allow(unused_imports)]
+use jacquard_lexicon::validation::{ConstraintError, ValidationPath};
+use serde::{Deserialize, Serialize};
 /// Colors a single page overrides. Each absent color is inherited from the document's or publication's theme.
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic, Default)]
@@ -39,7 +39,6 @@ pub struct Page<S: BosStr = DefaultStr> {
     pub extra_data: Option<BTreeMap<SmolStr, Data<S>>>,
 }
 
-
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(tag = "$type", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -49,7 +48,6 @@ pub enum PageAccentBackground<S: BosStr = DefaultStr> {
     #[serde(rename = "pub.leaflet.theme.color#rgb")]
     ColorRgb(Box<Rgb<S>>),
 }
-
 
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -61,7 +59,6 @@ pub enum PageAccentText<S: BosStr = DefaultStr> {
     ColorRgb(Box<Rgb<S>>),
 }
 
-
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
 #[serde(tag = "$type", bound(deserialize = "S: Deserialize<'de> + BosStr"))]
@@ -71,7 +68,6 @@ pub enum PagePageBackground<S: BosStr = DefaultStr> {
     #[serde(rename = "pub.leaflet.theme.color#rgb")]
     ColorRgb(Box<Rgb<S>>),
 }
-
 
 #[open_union]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, IntoStatic)]
@@ -99,10 +95,10 @@ impl<S: BosStr> LexiconSchema for Page<S> {
 }
 
 fn lexicon_doc_pub_leaflet_theme_page() -> LexiconDoc<'static> {
+    use alloc::collections::BTreeMap;
     #[allow(unused_imports)]
     use jacquard_common::{CowStr, deps::smol_str::SmolStr, types::blob::MimeType};
     use jacquard_lexicon::lexicon::*;
-    use alloc::collections::BTreeMap;
     LexiconDoc {
         lexicon: Lexicon::Lexicon1,
         id: CowStr::new_static("pub.leaflet.theme.page"),
@@ -111,11 +107,9 @@ fn lexicon_doc_pub_leaflet_theme_page() -> LexiconDoc<'static> {
             map.insert(
                 SmolStr::new_static("main"),
                 LexUserType::Object(LexObject {
-                    description: Some(
-                        CowStr::new_static(
-                            "Colors a single page overrides. Each absent color is inherited from the document's or publication's theme.",
-                        ),
-                    ),
+                    description: Some(CowStr::new_static(
+                        "Colors a single page overrides. Each absent color is inherited from the document's or publication's theme.",
+                    )),
                     properties: {
                         #[allow(unused_mut)]
                         let mut map = BTreeMap::new();
@@ -124,7 +118,7 @@ fn lexicon_doc_pub_leaflet_theme_page() -> LexiconDoc<'static> {
                             LexObjectProperty::Union(LexRefUnion {
                                 refs: vec![
                                     CowStr::new_static("pub.leaflet.theme.color#rgba"),
-                                    CowStr::new_static("pub.leaflet.theme.color#rgb")
+                                    CowStr::new_static("pub.leaflet.theme.color#rgb"),
                                 ],
                                 ..Default::default()
                             }),
@@ -134,7 +128,7 @@ fn lexicon_doc_pub_leaflet_theme_page() -> LexiconDoc<'static> {
                             LexObjectProperty::Union(LexRefUnion {
                                 refs: vec![
                                     CowStr::new_static("pub.leaflet.theme.color#rgba"),
-                                    CowStr::new_static("pub.leaflet.theme.color#rgb")
+                                    CowStr::new_static("pub.leaflet.theme.color#rgb"),
                                 ],
                                 ..Default::default()
                             }),
@@ -144,7 +138,7 @@ fn lexicon_doc_pub_leaflet_theme_page() -> LexiconDoc<'static> {
                             LexObjectProperty::Union(LexRefUnion {
                                 refs: vec![
                                     CowStr::new_static("pub.leaflet.theme.color#rgba"),
-                                    CowStr::new_static("pub.leaflet.theme.color#rgb")
+                                    CowStr::new_static("pub.leaflet.theme.color#rgb"),
                                 ],
                                 ..Default::default()
                             }),
@@ -154,7 +148,7 @@ fn lexicon_doc_pub_leaflet_theme_page() -> LexiconDoc<'static> {
                             LexObjectProperty::Union(LexRefUnion {
                                 refs: vec![
                                     CowStr::new_static("pub.leaflet.theme.color#rgba"),
-                                    CowStr::new_static("pub.leaflet.theme.color#rgb")
+                                    CowStr::new_static("pub.leaflet.theme.color#rgb"),
                                 ],
                                 ..Default::default()
                             }),
