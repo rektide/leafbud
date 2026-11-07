@@ -74,7 +74,8 @@ impl<'a> Reader<'a> {
         let mut mult: u64 = 1;
         loop {
             let byte = self.u8()?;
-            n = n.checked_add(u64::from(byte & 0x7f).checked_mul(mult).ok_or_else(|| self.err("varuint overflow"))?)
+            n = n
+                .checked_add(u64::from(byte & 0x7f).checked_mul(mult).ok_or_else(|| self.err("varuint overflow"))?)
                 .ok_or_else(|| self.err("varuint overflow"))?;
             if byte < 0x80 {
                 return Ok(n);
@@ -93,7 +94,8 @@ impl<'a> Reader<'a> {
         let mut b = b0;
         while b & 0x80 != 0 {
             b = self.u8()?;
-            n = n.checked_add(i64::from(b & 0x7f).checked_mul(mult).ok_or_else(|| self.err("varint overflow"))?)
+            n = n
+                .checked_add(i64::from(b & 0x7f).checked_mul(mult).ok_or_else(|| self.err("varint overflow"))?)
                 .ok_or_else(|| self.err("varint overflow"))?;
             mult = mult.checked_mul(128).ok_or_else(|| self.err("varint overflow"))?;
         }
@@ -172,7 +174,10 @@ impl<'a> Reader<'a> {
     }
 
     fn err(&self, message: impl Into<String>) -> DecodeError {
-        DecodeError { position: self.pos, message: message.into() }
+        DecodeError {
+            position: self.pos,
+            message: message.into(),
+        }
     }
 }
 
@@ -313,7 +318,15 @@ pub fn decode_update(bytes: &[u8]) -> Result<Update> {
             };
             let parent_sub = (info & 0x20 != 0).then(|| r.varstring()).transpose()?;
             let content = read_content(&mut r, ref_)?;
-            let item = Item { id: Id { client, clock }, info, origin, right_origin, parent, parent_sub, content };
+            let item = Item {
+                id: Id { client, clock },
+                info,
+                origin,
+                right_origin,
+                parent,
+                parent_sub,
+                content,
+            };
             clock += item.content.clock_len();
             items.push(item);
         }
@@ -336,7 +349,10 @@ pub fn decode_update(bytes: &[u8]) -> Result<Update> {
 }
 
 fn read_id(r: &mut Reader) -> Result<Id> {
-    Ok(Id { client: r.varuint()?, clock: r.varuint()? })
+    Ok(Id {
+        client: r.varuint()?,
+        clock: r.varuint()?,
+    })
 }
 
 fn read_content(r: &mut Reader, ref_: u8) -> Result<Content> {
@@ -406,13 +422,22 @@ impl Integrated {
     /// for cross-client dependencies — the same retry shape yjs applies
     /// out-of-order structs with).
     pub fn integrate(update: &Update) -> Self {
-        let mut doc = Integrated { items: Vec::new(), starts: HashMap::new(), by_clock: HashMap::new() };
+        let mut doc = Integrated {
+            items: Vec::new(),
+            starts: HashMap::new(),
+            by_clock: HashMap::new(),
+        };
         for client in &update.clients {
             let clock_map = doc.by_clock.entry(client.client).or_default();
             for item in &client.items {
                 let idx = doc.items.len() as u32;
                 clock_map.insert(item.id.clock, idx);
-                doc.items.push(ItemExt { item: item.clone(), left: None, right: None, deleted: false });
+                doc.items.push(ItemExt {
+                    item: item.clone(),
+                    left: None,
+                    right: None,
+                    deleted: false,
+                });
             }
         }
         // Wire order; an item integrates once its origin/rightOrigin
@@ -507,9 +532,15 @@ impl Integrated {
         let right_idx = self.items.len() as u32;
         let right = ItemExt {
             item: Item {
-                id: Id { client: item.id.client, clock: at_clock },
+                id: Id {
+                    client: item.id.client,
+                    clock: at_clock,
+                },
                 info: item.info,
-                origin: Some(Id { client: item.id.client, clock: at_clock - 1 }),
+                origin: Some(Id {
+                    client: item.id.client,
+                    clock: at_clock - 1,
+                }),
                 right_origin: item.right_origin,
                 parent: item.parent.clone(),
                 parent_sub: item.parent_sub.clone(),
@@ -561,18 +592,19 @@ impl Integrated {
 
         // Resolve the parent from a neighbour when the wire omitted it.
         if self.items[idx as usize].item.parent.is_none() {
-            let parent = left
-                .or(right)
-                .and_then(|n| self.items[n as usize].item.parent.clone());
+            let parent = left.or(right).and_then(|n| self.items[n as usize].item.parent.clone());
             self.items[idx as usize].item.parent = parent;
         }
         let Some(parent) = self.items[idx as usize].item.parent.clone() else {
             return; // orphan: no parent on the wire and none resolvable
         };
-        let key = (match parent {
-            Parent::Named(n) => TypeKey::Named(n),
-            Parent::Id(id) => TypeKey::Id(id),
-        }, item.parent_sub.clone());
+        let key = (
+            match parent {
+                Parent::Named(n) => TypeKey::Named(n),
+                Parent::Id(id) => TypeKey::Id(id),
+            },
+            item.parent_sub.clone(),
+        );
 
         // Conflict scan (Item.integrate): walk right from the left
         // neighbour (or the list start) past items that must stay before us.
@@ -632,7 +664,10 @@ impl Integrated {
     /// first so tombstones align with future clean splits.
     fn mark_deleted(&mut self, start: Id, len: u64) {
         let Some(first) = self.resolve_clean_start(start) else { return };
-        let Some(last) = self.resolve_clean_end(Id { client: start.client, clock: start.clock + len.saturating_sub(1) }) else {
+        let Some(last) = self.resolve_clean_end(Id {
+            client: start.client,
+            clock: start.clock + len.saturating_sub(1),
+        }) else {
             return;
         };
         let mut current = Some(first);
@@ -710,9 +745,10 @@ pub struct DecodedText {
 
 /// Decode a base64 `block/text` value end-to-end.
 pub fn decode_block_text(value: &str) -> std::result::Result<DecodedText, DecodeError> {
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(value.trim())
-        .map_err(|e| DecodeError { position: 0, message: format!("invalid base64: {e}") })?;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(value.trim()).map_err(|e| DecodeError {
+        position: 0,
+        message: format!("invalid base64: {e}"),
+    })?;
     decode_block_text_bytes(&bytes)
 }
 
@@ -720,14 +756,20 @@ pub fn decode_block_text(value: &str) -> std::result::Result<DecodedText, Decode
 pub fn decode_block_text_bytes(bytes: &[u8]) -> std::result::Result<DecodedText, DecodeError> {
     let update = decode_update(bytes)?;
     if update.clients.iter().all(|c| c.items.is_empty()) && update.delete_set.is_empty() {
-        return Err(DecodeError { position: 0, message: "empty update".to_string() });
+        return Err(DecodeError {
+            position: 0,
+            message: "empty update".to_string(),
+        });
     }
     let doc = Integrated::integrate(&update);
-    let mut out = DecodedText::default();
-    out.schema_version = doc
+    let schema_version = doc
         .map_value(&TypeKey::Named("meta".into()), "schemaVersion")
         .and_then(content_any_first)
         .and_then(|v| if let AnyValue::Int(i) = v { Some(*i) } else { None });
+    let mut out = DecodedText {
+        schema_version,
+        ..DecodedText::default()
+    };
 
     let paragraphs: Vec<u32> = doc
         .children(&TypeKey::Named("prosemirror".into()))
@@ -748,7 +790,11 @@ pub fn decode_block_text_bytes(bytes: &[u8]) -> std::result::Result<DecodedText,
         plaintext.push_str(&text);
         offset += text.len();
         if !marks.is_empty() {
-            out.facets.push(FacetRun { byte_start: start, byte_end: offset, marks });
+            out.facets.push(FacetRun {
+                byte_start: start,
+                byte_end: offset,
+                marks,
+            });
         }
     }
     out.plaintext = plaintext;
@@ -776,6 +822,10 @@ fn render_element(doc: &Integrated, item_idx: u32, runs: &mut Vec<(String, Vec<M
             Content::Type { type_ref, .. } if *type_ref == type_refs::XML_ELEMENT => {
                 render_inline_element(doc, idx, runs, notes);
             }
+            // Wire-level tombstones (ContentDeleted/Gc): list members that
+            // hold positions but no content — skipped silently, exactly
+            // like yjs's delta walk.
+            Content::Deleted { .. } | Content::Gc { .. } => {}
             other => notes.push(format!("unexpected {} in element position", content_name(other))),
         }
     }
@@ -798,10 +848,7 @@ fn render_inline_element(doc: &Integrated, idx: u32, runs: &mut Vec<(String, Vec
         }
         "didMention" | "atMention" => {
             let key = TypeKey::Id(item.id);
-            let text = doc
-                .map_value(&key, "text")
-                .and_then(map_content_string)
-                .unwrap_or_default();
+            let text = doc.map_value(&key, "text").and_then(map_content_string).unwrap_or_default();
             runs.push((text, Vec::new()));
             notes.push(format!("{name} facet deferred"));
         }
@@ -849,6 +896,8 @@ fn render_xml_text(doc: &Integrated, idx: u32, runs: &mut Vec<(String, Vec<Mark>
             Content::Type { .. } => {
                 render_xml_text(doc, child, runs, notes);
             }
+            // Wire-level tombstones: skip silently (see render_element).
+            Content::Deleted { .. } | Content::Gc { .. } => {}
             Content::Embed(_) => notes.push("embedded content deferred".to_string()),
             other => notes.push(format!("unexpected {} in text position", content_name(other))),
         }
@@ -881,10 +930,8 @@ fn active_marks(active: &BTreeMap<String, AnyValue>, notes: &mut Vec<String>) ->
     if active.contains_key("em") {
         marks.push(Mark::Italic);
     }
-    if let Some(link) = active.get("link") {
-        if let Some(href) = link.member("href").and_then(AnyValue::as_str) {
-            marks.push(Mark::Link(href.to_string()));
-        }
+    if let Some(href) = active.get("link").and_then(|link| link.member("href")).and_then(AnyValue::as_str) {
+        marks.push(Mark::Link(href.to_string()));
     }
     marks
 }
@@ -923,7 +970,10 @@ mod tests {
     const SAMPLE2_HEX: &str = "0105cdf8acd1010007010b70726f73656d6972726f7203097061726167726170680700cdf8acd10100060400cdf8acd101011553796e7468657469632073616d706c65207465787481cdf8acd10116082801046d6574610d736368656d6156657273696f6e017d0101cdf8acd101011708";
 
     fn bytes_of(hex_str: &str) -> Vec<u8> {
-        (0..hex_str.len()).step_by(2).map(|i| u8::from_str_radix(&hex_str[i..i + 2], 16).unwrap()).collect()
+        (0..hex_str.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hex_str[i..i + 2], 16).unwrap())
+            .collect()
     }
 
     // ── struct decode parity with yjs_decode.py ──────────────────────────
@@ -941,7 +991,10 @@ mod tests {
         assert_eq!(client.items[0].parent, Some(Parent::Named("prosemirror".into())));
         assert_eq!(
             client.items[0].content,
-            Content::Type { type_ref: 3, name: Some("paragraph".into()) }
+            Content::Type {
+                type_ref: 3,
+                name: Some("paragraph".into())
+            }
         );
         assert_eq!((clock(1), info(1)), (1, 0x07));
         assert_eq!(client.items[1].parent, Some(Parent::Id(Id { client: 979896792, clock: 0 })));
@@ -1025,7 +1078,10 @@ mod tests {
     #[test]
     fn empty_paragraph_doc_renders_empty() {
         // createYjsText("") shape: 2 structs, no string item.
-        let empty = [0x01, 0x02, 0x2a, 0x00, 0x07, 0x01, 0x0b, b'p', b'r', b'o', b's', b'e', b'm', b'i', b'r', b'r', b'o', b'r', 0x03, 0x09, b'p', b'a', b'r', b'a', b'g', b'r', b'a', b'p', b'h', 0x07, 0x00, 0x2a, 0x00, 0x06, 0x00];
+        let empty = [
+            0x01, 0x02, 0x2a, 0x00, 0x07, 0x01, 0x0b, b'p', b'r', b'o', b's', b'e', b'm', b'i', b'r', b'r', b'o', b'r', 0x03, 0x09, b'p', b'a', b'r', b'a',
+            b'g', b'r', b'a', b'p', b'h', 0x07, 0x00, 0x2a, 0x00, 0x06, 0x00,
+        ];
         let decoded = decode_block_text_bytes(&empty).unwrap();
         assert_eq!(decoded.plaintext, "");
         assert_eq!(decoded.paragraph_count, 1);
@@ -1299,8 +1355,16 @@ mod tests {
         assert_eq!(
             decoded.facets,
             vec![
-                FacetRun { byte_start: 3, byte_end: 8, marks: vec![Mark::Bold] },
-                FacetRun { byte_start: 8, byte_end: 12, marks: vec![Mark::Bold, Mark::Link("https://x.example".into())] },
+                FacetRun {
+                    byte_start: 3,
+                    byte_end: 8,
+                    marks: vec![Mark::Bold]
+                },
+                FacetRun {
+                    byte_start: 8,
+                    byte_end: 12,
+                    marks: vec![Mark::Bold, Mark::Link("https://x.example".into())]
+                },
             ]
         );
         // Byte-slicing round-trips each marked span.
@@ -1374,6 +1438,59 @@ mod tests {
         let decoded = decode_block_text_bytes(&bytes).unwrap();
         assert_eq!(decoded.plaintext, "one");
         assert_eq!(decoded.paragraph_count, 2);
+    }
+
+    /// A wire-level tombstone (ContentDeleted struct) inside an XmlText
+    /// with NO delete-set range: skipped silently (live-draft shape — the
+    /// server's merged values carry structural tombstones).
+    #[test]
+    fn wire_level_tombstones_skip_silently() {
+        let mut bytes: Vec<u8> = Vec::new();
+        let varuint = |bytes: &mut Vec<u8>, mut n: u64| {
+            while n > 0x7f {
+                bytes.push((n & 0x7f) as u8 | 0x80);
+                n >>= 7;
+            }
+            bytes.push(n as u8);
+        };
+        let varstring = |bytes: &mut Vec<u8>, s: &str| {
+            varuint(bytes, s.len() as u64);
+            bytes.extend_from_slice(s.as_bytes());
+        };
+        let client: u64 = 17;
+        // para(0), xmltext(1), "AB"(2..3), Deleted{len:2}(4..5, origin
+        // ID(c,3)), "C"(6, origin ID(c,5)).
+        bytes.push(1);
+        bytes.push(5);
+        varuint(&mut bytes, client);
+        varuint(&mut bytes, 0);
+        bytes.push(0x07);
+        bytes.push(1);
+        varstring(&mut bytes, "prosemirror");
+        varuint(&mut bytes, 3);
+        varstring(&mut bytes, "paragraph");
+        bytes.push(0x07);
+        bytes.push(0);
+        varuint(&mut bytes, client);
+        varuint(&mut bytes, 0);
+        varuint(&mut bytes, 6);
+        bytes.push(0x04); // "AB", first item of the XmlText: parentInfo
+        bytes.push(0);
+        varuint(&mut bytes, client);
+        varuint(&mut bytes, 1);
+        varstring(&mut bytes, "AB");
+        bytes.push(0x81); // origin + ContentDeleted(2)
+        varuint(&mut bytes, client);
+        varuint(&mut bytes, 3);
+        varuint(&mut bytes, 2);
+        bytes.push(0x84); // "C" after the tombstone
+        varuint(&mut bytes, client);
+        varuint(&mut bytes, 5);
+        varstring(&mut bytes, "C");
+        bytes.push(0); // empty delete set
+        let decoded = decode_block_text_bytes(&bytes).unwrap();
+        assert_eq!(decoded.plaintext, "ABC", "tombstone holds its position but renders nothing");
+        assert!(decoded.notes.is_empty(), "no warn for structural tombstones: {:?}", decoded.notes);
     }
 
     #[test]
