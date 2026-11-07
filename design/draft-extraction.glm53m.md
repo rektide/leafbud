@@ -355,3 +355,29 @@ default posture, matching `publish run`).
   through springleaf.
 - `b5ec6d` provenance (why empty blocks carry it) — irrelevant beyond the
   tolerance rule, noted for completeness.
+
+## Outcomes (2026-11-07, after the 5a build)
+
+Shipped as `springleaf drafts export` (the doc's "extract" name did not
+survive the build). Divergences and findings, accepted:
+
+- **embedded-canvas → skip+warn**: its target is a canvas page, which v0
+  defers; the convert-with-recursion listing overstated it.
+- **orderedList `startIndex` always present** (Leaflet parity: `listStart || 1`).
+- **Heading levels** outside 1..=6 clamp with a warn rather than emitting a
+  lexicon-invalid record.
+- **Mention/footnote plaintext retained** (facets still deferred) — the doc
+  was silent on their text contribution; `YJSFragmentToString` parity kept.
+- **`experiments/02` fixture prose** says the yjs encoder emits 40 bytes;
+  the committed fixture is 63 — stale text, left unedited (other authors'
+  evidence files).
+- **Known gap for 5b**: `publish run` rejects the standalone HTTPS `site`
+  form (its publication fetch assumes an at-uri) — exported standalone
+  records are valid but cannot flow through `publish run` until 5b adds the
+  standalone path.
+- Decoder parity: field-for-field vs the python reference on shared
+  fixtures; integration-order semantics proven (middle insert, concurrent
+  tail appends, delete splits); one real 163-byte corrupt value fails
+  identically in Rust, python, and yjs itself — tolerance path exercised
+  live. The gated live-pull acceptance gate (§gates item 4) was exercised
+  read-only: draft `019f0b10…` exported clean.
