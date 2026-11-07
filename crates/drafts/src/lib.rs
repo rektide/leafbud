@@ -746,7 +746,11 @@ impl LeafletClient {
         let response = self.http.post(&url).json(&serde_json::json!({ "token_id": token_id })).send().await?;
         let status = response.status();
         let body = response.text().await?;
-        parse_rpc_data("get_leaflet_data", status.as_u16(), &body)
+        parse_rpc_data("get_leaflet_data", status.as_u16(), &body).map_err(|err| match err {
+            // The envelope's error body need not echo the id; we know it.
+            Error::UnknownDraft(_) => Error::UnknownDraft(token_id.to_string()),
+            other => other,
+        })
     }
 
     /// `get_leaflet_data` typed for rendering.
