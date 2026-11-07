@@ -33,21 +33,17 @@
 //! messages (see its `Debug` impl), and authenticated calls take the
 //! session explicitly. Public reads ([`XrpcClient::list_records`],
 //! [`XrpcClient::list_all_records`], [`XrpcClient::get_record`]) need no
-//! session at all.
+//! session at all. Writes are the same shape:
+//! [`XrpcClient::put_record`] (upsert — `putRecord`, not `createRecord`,
+//! per the design doc) and [`XrpcClient::upload_blob`] (raw
+//! Content-Type body).
 //!
-//! # Stage 4 (not built here)
-//!
-//! Writes arrive in stage 4, on this client, with the same shape:
-//!
-//! - `put_record(session, repo, collection, rkey, record)` —
-//!   `com.atproto.repo.putRecord` (upsert; `putRecord`, not `createRecord`,
-//!   per the design doc), returning `{ uri, cid }`;
-//! - `upload_blob(session, bytes, mime_type)` —
-//!   `com.atproto.repo.uploadBlob` with a raw Content-Type body;
-//! - session persistence with 0600 permissions under springleaf's own
-//!   config (jacquard's `FileAuthStore` lacks 0600 hardening — we own it).
-//!
-//! They are intentionally absent: no stub bodies, no dead code.
+//! Persistence lives in [`session`]: a [`session::SessionStore`] at
+//! `$XDG_CONFIG_HOME/springleaf/session.json` (file 0600, parent 0700 —
+//! jacquard's `FileAuthStore` lacks this hardening, so springleaf owns
+//! it) and [`session::resume_or_create_session`] — reuse while the
+//! access JWT is live, refresh at the issuing PDS, else `createSession`
+//! with the app password.
 //!
 //! Token/secret hygiene: nothing in this crate logs or embeds the app
 //! password, `accessJwt`, or `refreshJwt`. Transport errors surface only
@@ -60,10 +56,14 @@ use thiserror::Error;
 
 pub mod dns;
 pub mod identity;
+pub mod session;
+#[cfg(test)]
+pub mod testserver;
 pub mod xrpc;
 
 pub use identity::{Did, Handle, ResolvedIdentity, Resolver};
-pub use xrpc::{ListRecordsPage, Record, Session, XrpcClient};
+pub use session::{PersistedSession, SessionStore, resume_or_create_session};
+pub use xrpc::{ListRecordsPage, PutRecordOutput, Record, Session, XrpcClient};
 
 /// Errors across the crate. Secrets never appear in any variant.
 #[derive(Debug, Error)]
@@ -80,6 +80,8 @@ pub enum Error {
     Identity { input: String, reason: String },
     #[error("{0}")]
     BadInput(String),
+    #[error("session store: {0}")]
+    Session(String),
 }
 
 /// Required NSID shape check (`a.b.c` dotted identifiers), enough to reject
@@ -92,6 +94,19 @@ pub fn validate_nsid(s: &str) -> Result<(), Error> {
         Ok(())
     } else {
         Err(Error::BadInput(format!("invalid NSID {s:?}")))
+    }
+}
+
+/// Record-key shape (atproto rkey syntax: `[a-zA-Z0-9._:~-]`, 1–512) —
+/// enough to reject path separators and nonsense before the wire.
+static RKEY_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9._:~-]{1,512}$").expect("rkey regex"));
+
+/// Validate a record key.
+pub fn validate_rkey(s: &str) -> Result<(), Error> {
+    if RKEY_RE.is_match(s) {
+        Ok(())
+    } else {
+        Err(Error::BadInput(format!("invalid record key {s:?}")))
     }
 }
 
