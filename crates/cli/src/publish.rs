@@ -297,9 +297,15 @@ pub(crate) async fn execute_publish(ws: &Workspace, source: &Path, slug: &str, r
     })
 }
 
-/// The did a record is put under: the `site` field's at-uri authority.
+/// The did a record is put under: the `site` field's at-uri authority —
+/// or, for standalone records, the DID embedded in the
+/// `https://leaflet.pub/p/{did}` site form (`drafts export` writes it
+/// for drafts with no publication linkage).
 fn record_site_did(record: &Value) -> Result<String> {
     let site = record.get("site").and_then(Value::as_str).context("record has no `site` field")?;
+    if let Some(did) = springleaf_leaflet::standalone_site_did(site) {
+        return Ok(did);
+    }
     let uri = springleaf_atproto::AtUri::parse(site).with_context(|| format!("parsing site at-uri {site:?}"))?;
     Ok(uri.authority)
 }
@@ -373,7 +379,8 @@ pub(crate) async fn publish_run_cmd(
 }
 
 /// Fetch publication info for URL derivation, degrading to "no url"
-/// (fallback derivation) when the public read fails.
+/// (fallback derivation) when the public read fails. Standalone HTTPS
+/// sites skip this entirely — there is no publication record to fetch.
 async fn fetch_pub_info(site: &str) -> Option<PublicationInfo> {
     let uri = springleaf_atproto::AtUri::parse(site).ok()?;
     let identity = springleaf_atproto::Resolver::new().resolve(&uri.authority).await.ok()?;
@@ -721,5 +728,97 @@ mod tests {
         assert!(crate::publish::validate_record_file(&missing, Path::new("x.json")).is_err());
         let bad_type = json!({"$type": "com.example.other", "title": "t"});
         assert!(crate::publish::validate_record_file(&bad_type, Path::new("x.json")).is_err());
+    }
+
+    // ── standalone site records (the 5a gap) ─────────────────────────────
+
+    /// A record whose `site` is the standalone HTTPS form — what
+    /// `drafts export` writes for drafts with no publication linkage.
+    fn standalone_record(ws: &Workspace) -> std::path::PathBuf {
+        let (_path, mut record) = draft_record(ws);
+        record["site"] = json!("https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso");
+        let path = ws.drafts_dir().join("standalone-probe.json");
+        std::fs::write(&path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
+        path
+    }
+
+    /// Standalone records flow through `publish run` end to end: the put
+    /// target repo is the DID embedded in the site URL, the derived URL
+    /// is the `/p/{did}/{rkey}` form, and the execution path (with the
+    /// injected transport) puts + moves + writes the sidecar like any
+    /// publication-linked record.
+    #[tokio::test]
+    async fn run_accepts_standalone_site_records() {
+        let (_tmp, ws) = workspace();
+        let path = standalone_record(&ws);
+
+        // Dry-run: exit 2, target + /p/ URL printed, no transport opened.
+        let called = Arc::new(AtomicBool::new(false));
+        let called_for_connect = called.clone();
+        let connect: ConnectFn = Box::new(move |expected| {
+            let called = called_for_connect.clone();
+            Box::pin(async move {
+                called.store(true, Ordering::SeqCst);
+                Ok(Connected {
+                    did: expected,
+                    put: Box::new(|_, _| Box::pin(async { bail!("refusal path must not put") })),
+                })
+            })
+        });
+        let code = publish_run_cmd("standalone-probe", Some(ws.root.clone()), false, false, None, Some(connect))
+            .await
+            .unwrap();
+        assert_eq!(code, 2, "standalone dry-run refuses with exit 2 like the linked form");
+        assert!(!called.load(Ordering::SeqCst), "the transport must not even be opened");
+        assert!(ws.drafts_dir().join("standalone-probe.json").exists(), "dry-run leaves the draft in place");
+
+        // Execute through the injected transport: put under the site's did.
+        let connect: ConnectFn = Box::new(|expected| {
+            assert_eq!(expected, DID, "the target repo comes from the site URL's DID");
+            Box::pin(async {
+                Ok(Connected {
+                    did: expected,
+                    put: FakePut::new(&["bafyreistandalone"]).into_put_fn(),
+                })
+            })
+        });
+        let code = publish_run_cmd("standalone-probe", Some(ws.root.clone()), true, true, None, Some(connect))
+            .await
+            .unwrap();
+        assert_eq!(code, 0);
+        assert!(ws.posted_dir().join("standalone-probe.json").exists());
+        let sidecar: crate::workspace::Sidecar =
+            serde_json::from_str(&std::fs::read_to_string(Sidecar::path_for(&ws.posted_dir(), "standalone-probe")).unwrap()).unwrap();
+        assert_eq!(sidecar.publication, "https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso");
+        assert_eq!(sidecar.uri, format!("at://{DID}/site.standard.document/standalone-probe"));
+        // And the pre-existing at-uri form still resolves untouched.
+        let code = publish_run_cmd(
+            "springleaf-protocol-probe",
+            Some(ws.root.clone()),
+            false,
+            false,
+            Some(PublicationInfo {
+                name: None,
+                url: Some("https://technautical.leaflet.pub".into()),
+            }),
+            None::<ConnectFn>,
+        )
+        .await
+        .unwrap();
+        assert_eq!(code, 2, "the linked at-uri form keeps refusing in dry-run");
+    }
+
+    /// The standalone dry-run prints the /p/ URL derivation (checked via
+    /// the shared helper rather than stdout capture).
+    #[test]
+    fn standalone_url_derives_the_p_form() {
+        let site = "https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso";
+        assert_eq!(
+            derive_document_url(site, None, "standalone-probe").unwrap(),
+            "https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso/standalone-probe"
+        );
+        assert_eq!(record_site_did(&json!({"site": site})).unwrap(), "did:plc:zjbq26wybii5ojoypkso2mso");
+        assert_eq!(record_site_did(&json!({"site": PUBLICATION})).unwrap(), DID);
+        assert!(record_site_did(&json!({"site": "https://example.com/p/did:plc:x"})).is_err());
     }
 }

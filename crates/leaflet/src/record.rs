@@ -263,9 +263,21 @@ pub fn validate_document_record(record: &serde_json::Value) -> Result<(), Valida
     document.validate().map_err(|e| ValidationError::Constraints(e.to_string()))
 }
 
+/// A standalone `site` value: the HTTPS form Leaflet writes for drafts
+/// with no publication linkage, `https://leaflet.pub/p/{did}`
+/// (`publishLeaflet.ts:418-419`). Returns the embedded DID.
+pub fn standalone_site_did(site: &str) -> Option<String> {
+    let rest = site.strip_prefix("https://leaflet.pub/p/")?;
+    let did = rest.trim_end_matches('/');
+    (did.starts_with("did:") && !did.is_empty() && !did.contains('/')).then(|| did.to_string())
+}
+
 /// Derive the human-facing URL for a document rkey (experiment 03 §6):
 /// the publication's own `url` field (custom domain) + `/{rkey}`, else the
 /// `https://leaflet.pub/lish/{did}/{pubRkey}/{rkey}` deep permalink.
+/// A standalone site value derives `{site}/{rkey}` — the
+/// `/p/{did}/{rkey}` published-post route (Leaflet `getDocumentURL`: no
+/// publication ⇒ base = doc.site + path).
 ///
 /// (social-cli builds the domain form with the slug and the lish form
 /// with the rkey; here `rkey` serves both — it equals the slug under the
@@ -273,6 +285,9 @@ pub fn validate_document_record(record: &serde_json::Value) -> Result<(), Valida
 pub fn derive_document_url(publication_at_uri: &str, publication_url: Option<&str>, rkey: &str) -> Result<String, BuildError> {
     if let Some(url) = publication_url.filter(|u| !u.is_empty()) {
         return Ok(format!("{}/{}", url.trim_end_matches('/'), rkey));
+    }
+    if standalone_site_did(publication_at_uri).is_some() {
+        return Ok(format!("{}/{}", publication_at_uri.trim_end_matches('/'), rkey));
     }
     let uri = AtUri::parse(publication_at_uri).map_err(|e| BuildError::BadPublication(publication_at_uri.to_string(), e.to_string()))?;
     Ok(format!("https://leaflet.pub/lish/{}/{}/{}", uri.authority, uri.rkey, rkey))
@@ -332,6 +347,32 @@ mod tests {
             derive_document_url(PUBLICATION, None, "springleaf-protocol-probe").unwrap(),
             "https://leaflet.pub/lish/did:plc:zjbq26wybii5ojoypkso2mso/3molsbwkh522o/springleaf-protocol-probe"
         );
+    }
+
+    /// Standalone `site` values (drafts with no publication linkage):
+    /// `https://leaflet.pub/p/{did}` — the URL is `{site}/{rkey}` (the
+    /// `/p/{did}/{rkey}` published-post route; `getDocumentURL` uses the
+    /// site as the base when no publication exists).
+    #[test]
+    fn url_derivation_standalone_site_form() {
+        let site = "https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso";
+        assert_eq!(standalone_site_did(site), Some("did:plc:zjbq26wybii5ojoypkso2mso".to_string()));
+        assert_eq!(
+            derive_document_url(site, None, "my-post").unwrap(),
+            "https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso/my-post"
+        );
+        // Trailing slash on the site is trimmed, did recovered either way.
+        assert_eq!(standalone_site_did(&format!("{site}/")).as_deref(), Some("did:plc:zjbq26wybii5ojoypkso2mso"));
+        assert_eq!(
+            derive_document_url(&format!("{site}/"), None, "x").unwrap(),
+            "https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso/x"
+        );
+        // Near-misses stay non-standalone: wrong host, extra path
+        // segments, non-DID payload.
+        assert_eq!(standalone_site_did("https://example.com/p/did:plc:x"), None);
+        assert_eq!(standalone_site_did("https://leaflet.pub/p/did:plc:x/sub"), None);
+        assert_eq!(standalone_site_did("https://leaflet.pub/p/handle.example"), None);
+        assert_eq!(standalone_site_did("http://leaflet.pub/p/did:plc:x"), None);
     }
 
     #[test]

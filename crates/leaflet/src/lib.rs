@@ -62,5 +62,5 @@ pub use markdown::{MarkdownError, convert_markdown};
 pub use publication::{PublicationError, PublicationInfo, publication_for_record};
 pub use record::{
     BuildError, BuildOptions, BuiltRecord, Frontmatter, ValidationError, build_record, derive_document_url, parse_frontmatter, reinject_type_discriminators,
-    slugify, validate_document_record,
+    slugify, standalone_site_did, validate_document_record,
 };
