@@ -2,6 +2,7 @@
 
 Offline Rust ↔ real Yjs/y-prosemirror prototype. Production crates are untouched.
 Results and limits: [REPORT.md](REPORT.md).
+Proposed full adapter: [Yrs conversion design](../../design/yrs-conversion0.gpt6a.md).
 
 ## Run
 

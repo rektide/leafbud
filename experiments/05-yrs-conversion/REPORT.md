@@ -32,6 +32,8 @@ sources:
     title: "Executable assertions, fixture generator and tiny fact-graph scenario"
   - resource: /experiments/05-yrs-conversion/src/lib.rs
     title: "Experimental Rust projection and incremental editor"
+  - resource: /design/yrs-conversion0.gpt6a.md
+    title: "Subsequent design from this experiment: complete adapter boundaries and outstanding representation/identity gates"
 ---
 
 # Yrs conversion experiment
@@ -71,10 +73,10 @@ and `small-client` are not enabled. The Git dependency fixes the exact inspected
 source, including surrogate-split behavior, without editing the archive.
 `Cargo.lock` and `pnpm-lock.yaml` pin transitive resolution.
 
-Commands from this experiment directory:
+Final dependency selection and checks run from this experiment directory:
 
 ```sh
-pnpm install --frozen-lockfile
+pnpm add --save-exact yjs@13.6.15 y-prosemirror@1.2.5 prosemirror-model@1.25.0
 pnpm fixtures
 cargo nextest run --locked
 pnpm test
@@ -87,7 +89,18 @@ Recorded results: **2/2 Rust tests passed** (nextest run
 Clippy passed with warnings denied. The rich-text edit emitted a **226-byte
 delta**, versus **469-byte full state** in this run. Bytes are diagnostic, not
 a contractual compression target or byte-identical serialization requirement.
-Formatting and Markdown checks are recorded in the session/commit receipts.
+`cargo fmt --check` passed. From the springleaf root, these checks also passed:
+
+```sh
+cargo run --quiet --manifest-path /home/rektide/src/rekon/tool/rust/Cargo.toml -- check --okf design/yrs-conversion0.gpt6a.md experiments/05-yrs-conversion/REPORT.md
+cargo run --quiet --manifest-path /home/rektide/src/rekon/tool/rust/Cargo.toml -- check experiments/05-yrs-conversion/README.md
+git diff --check
+```
+
+The combined knowledge check reported 2 documents, 53 links and 28 sources;
+the README check reported 1 document and 2 links. The prototype/code/fixtures
+stage was committed as `e2b22fb6`; the subsequent design stage adds the reciprocal
+connections and these check receipts.
 
 For clean checkout setup follow [README.md](README.md). Fixture generation is
 deliberate; ordinary tests regenerate in memory and compare with the committed
@@ -213,3 +226,7 @@ reordering; malformed-input hardening; and actual deployment verification.
 The experiment supports replacing the hand-written CRDT machinery once those
 adapter-specific obligations are implemented. It does not justify permanently
 warning-and-skipping any currently supported Leaflet block type.
+
+The [resulting design](../../design/yrs-conversion0.gpt6a.md) specifies that
+adapter and distinguishes this executed proof from the structural, resource and
+working-body representation work still required.
