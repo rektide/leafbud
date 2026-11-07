@@ -1,0 +1,139 @@
+{
+  "_comment": "SYNTHETIC fixture: shape of get_leaflet_data for a draft LINKED TO A PUBLICATION (leaflets_in_publications non-empty, documents() join carries the published site.standard.document record). All ids/dids/content fabricated; blocks trimmed. Key structure matches live probe 2026-11-07.",
+  "result": {
+    "data": {
+      "id": "01999000-0000-7aaa-8000-000000000011",
+      "root_entity": "01999000-0000-7aaa-8000-000000000012",
+      "title": null,
+      "description": null,
+      "blocked_by_admin": null,
+      "permission_token_rights": [
+        {
+          "token": "01999000-0000-7aaa-8000-000000000011",
+          "entity_set": "01999000-0000-7aaa-8000-000000000013",
+          "read": true,
+          "write": true,
+          "create_token": true,
+          "change_entity_set": true,
+          "created_at": "2026-02-03T04:05:06.789012+00:00",
+          "entity_sets": {
+            "permission_tokens": [
+              {
+                "id": "01999000-0000-7aaa-8000-000000000011",
+                "root_entity": "01999000-0000-7aaa-8000-000000000012",
+                "permission_token_rights": [
+                  {
+                    "entity_set": "01999000-0000-7aaa-8000-000000000013",
+                    "read": true,
+                    "write": true,
+                    "create_token": true,
+                    "change_entity_set": true
+                  }
+                ],
+                "leaflets_in_publications": [
+                  {
+                    "leaflet": "01999000-0000-7aaa-8000-000000000011",
+                    "publication": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/pub.leaflet.publication/3kz7examplepub",
+                    "title": "Example linked draft",
+                    "description": "A synthetic description for the fixture.",
+                    "tags": ["synthetic", "fixture"],
+                    "doc": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/site.standard.document/3kz7exampledoc",
+                    "cover_image": null,
+                    "archived": null,
+                    "reply_to": null,
+                    "email_only": false,
+                    "preferences": null,
+                    "documents": {
+                      "uri": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/site.standard.document/3kz7exampledoc",
+                      "identity_did": "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa",
+                      "indexed": true,
+                      "sort_date": "2026-02-03T05:06:07.123456+00:00",
+                      "indexed_at": "2026-02-03T05:06:08.123456+00:00",
+                      "bsky_like_count": 12,
+                      "recommend_count": 2,
+                      "data": {
+                        "$type": "site.standard.document",
+                        "site": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/pub.leaflet.publication/3kz7examplepub",
+                        "title": "Example linked draft",
+                        "description": "A synthetic description for the fixture.",
+                        "path": "example-linked",
+                        "tags": ["synthetic", "fixture"],
+                        "publishedAt": "2026-02-03T05:06:07.123456Z",
+                        "contributors": [{ "did": "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa" }],
+                        "content": {
+                          "$type": "pub.leaflet.content",
+                          "pages": [
+                            {
+                              "id": "01999000-0000-7aaa-8000-000000000014",
+                              "$type": "pub.leaflet.page",
+                              "blocks": [
+                                {
+                                  "$type": "pub.leaflet.block.heading",
+                                  "block": {
+                                    "$type": "pub.leaflet.textblock",
+                                    "plaintext": "Example heading text",
+                                    "style": { "$type": "pub.leaflet.style", "heading": 1 }
+                                  }
+                                },
+                                {
+                                  "$type": "pub.leaflet.block.paragraph",
+                                  "block": {
+                                    "$type": "pub.leaflet.textblock",
+                                    "plaintext": "Example paragraph body copy for the fixture."
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "coverImage": {
+                          "$type": "blob",
+                          "ref": { "$link": "bafyreib0000000000000000000000000000000000000000000000000000" },
+                          "mimeType": "image/jpeg",
+                          "size": 335856
+                        },
+                        "bskyPostRef": {
+                          "cid": "bafyrei2222222222222222222222222222222222222222222222222222",
+                          "uri": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/app.bsky.feed.post/3kz7examplepost",
+                          "commit": {
+                            "cid": "bafyrei3333333333333333333333333333333333333333333333333333",
+                            "rev": "3kz7examplerev"
+                          },
+                          "validationStatus": "valid"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "leaflets_to_documents": [],
+                "publications": []
+              }
+            ]
+          }
+        }
+      ],
+      "leaflets_in_publications": [
+        {
+          "leaflet": "01999000-0000-7aaa-8000-000000000011",
+          "publication": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/pub.leaflet.publication/3kz7examplepub",
+          "title": "Example linked draft",
+          "description": "A synthetic description for the fixture.",
+          "tags": ["synthetic", "fixture"],
+          "doc": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/site.standard.document/3kz7exampledoc",
+          "cover_image": null,
+          "archived": null,
+          "reply_to": null,
+          "email_only": false,
+          "preferences": null,
+          "documents": { "uri": "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/site.standard.document/3kz7exampledoc", "data": { "$type": "site.standard.document", "title": "Example linked draft" } }
+        }
+      ],
+      "leaflets_to_documents": [],
+      "publications": [],
+      "custom_domain_routes": [],
+      "publication_scheduled_posts": null,
+      "reply_drafts": null
+    },
+    "error": null
+  }
+}

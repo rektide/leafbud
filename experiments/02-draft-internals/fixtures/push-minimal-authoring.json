@@ -1,0 +1,84 @@
+{
+  "_comment": "SYNTHETIC fixture: the exact PushRequestV1 envelope POST /api/rpc/push expects, carrying the minimal mutation batch that authors 'an h1 title + one text block' into an EXISTING draft leaflet (read from pull/getFactsForRoots first). Written for the report only — NOT sent (read-only experiment). Caller-generated ids are required: every cardinality-many fact needs a client-chosen id (mutations.ts assertFact comment), and every new entity id + permission_set come from the caller. Mutations: [addBlock(h1) x1, assertFact(block/text) x1, addBlock(text) x1, assertFact(block/text) x1, updateLeafletMetadata x1]. timestamp is ms epoch. clientID/group are arbitrary stable strings the client manages; ids must be monotonically increasing per clientID.",
+  "request": {
+    "pushRequest": {
+      "pushVersion": 1,
+      "schemaVersion": "",
+      "profileID": "00000000-0000-0000-0000-000000000000",
+      "clientGroupID": "springleaf-author-group-1",
+      "mutations": [
+        {
+          "id": 1,
+          "name": "addBlock",
+          "clientID": "springleaf-client-1",
+          "timestamp": 1794000000000,
+          "args": {
+            "parent": "01999000-0000-7aaa-8000-000000000003",
+            "permission_set": "01999000-0000-7aaa-8000-000000000013",
+            "factID": "01999000-0000-7aaa-8000-000000000031",
+            "type": "heading",
+            "newEntityID": "01999000-0000-7aaa-8000-000000000032",
+            "position": "a0"
+          }
+        },
+        {
+          "id": 2,
+          "name": "assertFact",
+          "clientID": "springleaf-client-1",
+          "timestamp": 1794000000001,
+          "args": {
+            "entity": "01999000-0000-7aaa-8000-000000000032",
+            "attribute": "block/heading-level",
+            "data": { "type": "number", "value": 1 }
+          }
+        },
+        {
+          "id": 3,
+          "name": "assertFact",
+          "clientID": "springleaf-client-1",
+          "timestamp": 1794000000002,
+          "args": {
+            "entity": "01999000-0000-7aaa-8000-000000000032",
+            "attribute": "block/text",
+            "data": { "type": "text", "value": "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwEPU3ludGhldGljIHRpdGxlAA==" }
+          }
+        },
+        {
+          "id": 4,
+          "name": "addBlock",
+          "clientID": "springleaf-client-1",
+          "timestamp": 1794000000003,
+          "args": {
+            "parent": "01999000-0000-7aaa-8000-000000000003",
+            "permission_set": "01999000-0000-7aaa-8000-000000000013",
+            "factID": "01999000-0000-7aaa-8000-000000000033",
+            "type": "text",
+            "newEntityID": "01999000-0000-7aaa-8000-000000000034",
+            "position": "a1"
+          }
+        },
+        {
+          "id": 5,
+          "name": "assertFact",
+          "clientID": "springleaf-client-1",
+          "timestamp": 1794000000004,
+          "args": {
+            "entity": "01999000-0000-7aaa-8000-000000000034",
+            "attribute": "block/text",
+            "data": { "type": "text", "value": "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwETU3ludGhldGljIGJvZHkgY29weQA=" }
+          }
+        },
+        {
+          "id": 6,
+          "name": "updateLeafletMetadata",
+          "clientID": "springleaf-client-1",
+          "timestamp": 1794000000005,
+          "args": { "title": "Synthetic title" }
+        }
+      ]
+    },
+    "rootEntity": "01999000-0000-7aaa-8000-000000000002",
+    "token": { "id": "01999000-0000-7aaa-8000-000000000001" }
+  },
+  "response": { "result": null }
+}

@@ -1,0 +1,119 @@
+{
+  "_comment": "SYNTHETIC fixture: shape of POST /api/rpc/getFactsForRoots {roots:[...]} for one minimal doc draft (h1 seed + one text block + one heading-with-text). Mirrors src/utils/createLeaflet.ts seed facts; ids fabricated. Row fields: root_id, id, entity, attribute, data, created_at, updated_at, version, author_did. The RPC hardcodes max_depth=3 and groups rows by root_id.",
+  "result": {
+    "facts": {
+      "01999000-0000-7aaa-8000-000000000002": [
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000021",
+          "entity": "01999000-0000-7aaa-8000-000000000002",
+          "attribute": "root/page",
+          "data": { "type": "ordered-reference", "value": "01999000-0000-7aaa-8000-000000000003", "position": "a0" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000022",
+          "entity": "01999000-0000-7aaa-8000-000000000002",
+          "attribute": "theme/page-leaflet-watermark",
+          "data": { "type": "boolean", "value": true },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000023",
+          "entity": "01999000-0000-7aaa-8000-000000000003",
+          "attribute": "page/type",
+          "data": { "type": "page-type-union", "value": "doc" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000024",
+          "entity": "01999000-0000-7aaa-8000-000000000003",
+          "attribute": "card/block",
+          "data": { "type": "ordered-reference", "value": "01999000-0000-7aaa-8000-000000000004", "position": "a0" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000025",
+          "entity": "01999000-0000-7aaa-8000-000000000004",
+          "attribute": "block/type",
+          "data": { "type": "block-type-union", "value": "heading" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000026",
+          "entity": "01999000-0000-7aaa-8000-000000000004",
+          "attribute": "block/heading-level",
+          "data": { "type": "number", "value": 1 },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000027",
+          "entity": "01999000-0000-7aaa-8000-000000000004",
+          "attribute": "block/text",
+          "data": { "type": "text", "value": "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwEPU3ludGhldGljIHRpdGxlAA==" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000028",
+          "entity": "01999000-0000-7aaa-8000-000000000003",
+          "attribute": "card/block",
+          "data": { "type": "ordered-reference", "value": "01999000-0000-7aaa-8000-000000000005", "position": "a1" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-000000000029",
+          "entity": "01999000-0000-7aaa-8000-000000000005",
+          "attribute": "block/type",
+          "data": { "type": "block-type-union", "value": "text" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        },
+        {
+          "root_id": "01999000-0000-7aaa-8000-000000000002",
+          "id": "01999000-0000-7aaa-8000-00000000002a",
+          "entity": "01999000-0000-7aaa-8000-000000000005",
+          "attribute": "block/text",
+          "data": { "type": "text", "value": "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwETU3ludGhldGljIGJvZHkgY29weQA=" },
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "version": 0,
+          "author_did": null
+        }
+      ]
+    }
+  }
+}

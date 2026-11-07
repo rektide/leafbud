@@ -1,0 +1,57 @@
+{
+  "_comment": "SYNTHETIC fixture pair for POST /api/rpc/pull. Request body: {pullRequest: PullRequestV1, token_id}. cookie=null gets the legacy FULL-SNAPSHOT response (cvr.ts buildPullResponse): patch=[clear, put initialized, <fact rows keyed by fact id>, extras]. Real response observed 2026-11-07 has this exact shape; ids fabricated. lastMutationIDChanges comes from the replicache_clients rows for this clientGroupID (fresh group -> {}). The fact values are the DB row + computed indexes (src/replicache/utils.ts FactWithIndexes).",
+  "request": {
+    "pullRequest": {
+      "pullVersion": 1,
+      "schemaVersion": "",
+      "profileID": "00000000-0000-0000-0000-000000000000",
+      "cookie": null,
+      "clientGroupID": "springleaf-probe-example"
+    },
+    "token_id": "01999000-0000-7aaa-8000-000000000001"
+  },
+  "response": {
+    "cookie": { "order": 1794009930586, "cvrID": "e3decbd8-b203-4d32-8173-615b4f787fed" },
+    "lastMutationIDChanges": {},
+    "patch": [
+      { "op": "clear" },
+      { "op": "put", "key": "initialized", "value": true },
+      {
+        "op": "put",
+        "key": "01999000-0000-7aaa-8000-000000000021",
+        "value": {
+          "id": "01999000-0000-7aaa-8000-000000000021",
+          "data": { "type": "ordered-reference", "value": "01999000-0000-7aaa-8000-000000000003", "position": "a0" },
+          "entity": "01999000-0000-7aaa-8000-000000000002",
+          "version": 0,
+          "attribute": "root/page",
+          "author_did": null,
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "indexes": {
+            "eav": "01999000-0000-7aaa-8000-000000000002-root/page-01999000-0000-7aaa-8000-000000000021",
+            "vae": "01999000-0000-7aaa-8000-000000000003-root/page"
+          }
+        }
+      },
+      {
+        "op": "put",
+        "key": "01999000-0000-7aaa-8000-000000000022",
+        "value": {
+          "id": "01999000-0000-7aaa-8000-000000000022",
+          "data": { "type": "boolean", "value": true },
+          "entity": "01999000-0000-7aaa-8000-000000000002",
+          "version": 0,
+          "attribute": "theme/page-leaflet-watermark",
+          "author_did": null,
+          "created_at": "2026-01-02T03:04:05.678901",
+          "updated_at": null,
+          "indexes": {
+            "eav": "01999000-0000-7aaa-8000-000000000002-theme/page-leaflet-watermark-01999000-0000-7aaa-8000-000000000022"
+          }
+        }
+      },
+      { "op": "put", "key": "draft_contributors", "value": [] }
+    ]
+  }
+}

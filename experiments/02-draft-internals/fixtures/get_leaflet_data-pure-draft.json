@@ -1,0 +1,50 @@
+{
+  "_comment": "SYNTHETIC fixture: shape of POST /api/rpc/get_leaflet_data for a PURE DRAFT (no publication linkage). All ids/handles/content fabricated. Real responses have the same key structure. Built from leaflet @600c7b5f app/api/rpc/[command]/get_leaflet_data.ts + live probe 2026-11-07.",
+  "result": {
+    "data": {
+      "id": "01999000-0000-7aaa-8000-000000000001",
+      "root_entity": "01999000-0000-7aaa-8000-000000000002",
+      "title": null,
+      "description": null,
+      "blocked_by_admin": null,
+      "permission_token_rights": [
+        {
+          "token": "01999000-0000-7aaa-8000-000000000001",
+          "entity_set": "01999000-0000-7aaa-8000-000000000003",
+          "read": true,
+          "write": true,
+          "create_token": true,
+          "change_entity_set": true,
+          "created_at": "2026-01-02T03:04:05.678901+00:00",
+          "entity_sets": {
+            "permission_tokens": [
+              {
+                "id": "01999000-0000-7aaa-8000-000000000001",
+                "root_entity": "01999000-0000-7aaa-8000-000000000002",
+                "permission_token_rights": [
+                  {
+                    "entity_set": "01999000-0000-7aaa-8000-000000000003",
+                    "read": true,
+                    "write": true,
+                    "create_token": true,
+                    "change_entity_set": true
+                  }
+                ],
+                "leaflets_in_publications": [],
+                "leaflets_to_documents": [],
+                "publications": []
+              }
+            ]
+          }
+        }
+      ],
+      "leaflets_in_publications": [],
+      "leaflets_to_documents": [],
+      "publications": [],
+      "custom_domain_routes": [],
+      "publication_scheduled_posts": null,
+      "reply_drafts": null
+    },
+    "error": null
+  }
+}
