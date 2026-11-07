@@ -83,6 +83,19 @@ fn jsx_json_props_are_prose_not_structured_components() {
 }
 
 #[test]
+fn identity_only_mode_cannot_disambiguate_json_component_prose_but_strict_refuses_it() {
+    let source = "<Poll options={[\"A\"]} />\n{#looks-like-prose}\n";
+    let attributes = parse(source, Mode::Attributes);
+    assert!(attributes.diagnostics.is_empty());
+    assert_eq!(attributes.blocks[0].key.as_deref(), Some("looks-like-prose"));
+    assert_eq!(attributes.blocks[0].kind(), "Paragraph");
+    // Diagnostic-bearing output is inspectable partial data, NOT safe compiled output.
+    let strict = parse(source, Mode::Strict);
+    assert!(!strict.diagnostics.is_empty());
+    assert_eq!(strict.blocks[0].key.as_deref(), Some("looks-like-prose"));
+}
+
+#[test]
 fn html_shaped_component_and_inline_component_are_raw_html() {
     let source = "<Poll key=\"topic\" />\n\nText <Image src=\"x\" />.\n";
     let result = parse(source, Mode::Plain);
