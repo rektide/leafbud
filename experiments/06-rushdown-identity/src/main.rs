@@ -6,7 +6,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mode = match args.next().as_deref() {
         Some("attributes") => Mode::Attributes,
         Some("plain") => Mode::Plain,
-        _ => return Err("usage: rushdown-identity-experiment <attributes|plain> FILE".into()),
+        Some("comments") => Mode::Comments,
+        Some("both") => Mode::Both,
+        _ => return Err("usage: rushdown-identity-experiment <attributes|comments|both|plain> FILE".into()),
     };
     let path = args.next().ok_or("missing input file")?;
     if args.next().is_some() {

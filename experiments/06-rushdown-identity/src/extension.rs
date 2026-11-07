@@ -7,6 +7,8 @@ enum Placement {
     HeadingSuffix,
     ParagraphTail,
     OrphanTail,
+    BeforeBlock,
+    MisplacedDirective,
 }
 
 /// Temporary real AST nodes, not a preprocessing substitution.
@@ -19,10 +21,9 @@ struct Marker {
 
 impl NodeKind for Marker {
     fn typ(&self) -> NodeType {
-        if self.placement != Placement::OrphanTail {
-            NodeType::Inline
-        } else {
-            NodeType::LeafBlock
+        match self.placement {
+            Placement::OrphanTail | Placement::BeforeBlock => NodeType::LeafBlock,
+            _ => NodeType::Inline,
         }
     }
 
@@ -54,10 +55,23 @@ fn attribute(text: &str) -> Result<String, String> {
         .ok_or_else(|| "expected {#NAME}, NAME matching [A-Za-z][A-Za-z0-9_.-]*".into())
 }
 
-#[derive(Debug)]
-struct TailParser;
+fn directive_candidate(text: &str) -> bool {
+    text.starts_with("{/* springleaf:")
+}
 
-impl BlockParser for TailParser {
+fn directive(text: &str) -> Result<String, String> {
+    let key = text
+        .strip_prefix("{/* springleaf:key ")
+        .and_then(|s| s.strip_suffix(" */}"))
+        .filter(|s| valid_key(s));
+    key.map(str::to_owned)
+        .ok_or_else(|| "expected exact standalone {/* springleaf:key NAME */}, NAME matching [A-Za-z][A-Za-z0-9_.-]*".into())
+}
+
+#[derive(Debug)]
+struct LineMarkerParser(Mode);
+
+impl BlockParser for LineMarkerParser {
     fn trigger(&self) -> &[u8] {
         b"{"
     }
@@ -66,13 +80,17 @@ impl BlockParser for TailParser {
         let (line, segment) = reader.peek_line_bytes()?;
         let offset = ctx.block_offset()?;
         let text = std::str::from_utf8(&line[offset..]).ok()?.trim_end();
-        if !text.starts_with("{#") {
+        let (placement, key) = if self.0.attributes() && text.starts_with("{#") {
+            (Placement::OrphanTail, attribute(text))
+        } else if self.0.comments() && directive_candidate(text) {
+            (Placement::BeforeBlock, directive(text))
+        } else {
             return None;
-        }
+        };
         let start = segment.start() + offset - segment.padding();
         let marker = Marker {
-            placement: Placement::OrphanTail,
-            key: attribute(text),
+            placement,
+            key,
             span: Span {
                 start,
                 end: start + text.len(),
@@ -96,14 +114,14 @@ impl BlockParser for TailParser {
 // Avoid confusion between our diagnostic state and Rushdown's parser flags.
 use rushdown::parser::State as StateFlags;
 
-impl From<TailParser> for AnyBlockParser {
-    fn from(parser: TailParser) -> Self {
+impl From<LineMarkerParser> for AnyBlockParser {
+    fn from(parser: LineMarkerParser) -> Self {
         Self::Extension(Box::new(parser))
     }
 }
 
 #[derive(Debug)]
-struct SuffixParser;
+struct SuffixParser(Mode);
 
 impl InlineParser for SuffixParser {
     fn trigger(&self) -> &[u8] {
@@ -111,13 +129,29 @@ impl InlineParser for SuffixParser {
     }
 
     fn parse(&self, arena: &mut Arena, parent: NodeRef, reader: &mut text::BlockReader, _: &mut Context) -> Option<NodeRef> {
+        let (line, segment) = reader.peek_line_bytes()?;
+        let text = std::str::from_utf8(&line).ok()?.trim_end();
+        if self.0.comments() && reader.line_offset() == 0 && directive_candidate(text) {
+            let start = segment.start();
+            let node = arena.new_node(Marker {
+                placement: Placement::MisplacedDirective,
+                key: Err("preceding directive must start a block; insert a blank line after preceding prose".into()),
+                span: Span {
+                    start,
+                    end: start + text.len(),
+                },
+            });
+            reader.advance(text.len());
+            return Some(node);
+        }
+        if !self.0.attributes() {
+            return None;
+        }
         let placement = match arena[parent].kind_data() {
             KindData::Heading(_) => Placement::HeadingSuffix,
             KindData::Paragraph(_) if reader.line_offset() == 0 => Placement::ParagraphTail,
             _ => return None,
         };
-        let (line, segment) = reader.peek_line_bytes()?;
-        let text = std::str::from_utf8(&line).ok()?.trim_end();
         if !text.starts_with("{#") {
             return None;
         }
@@ -236,6 +270,18 @@ impl AstTransformer for BindKeys {
                     .parent()
                     .filter(|&parent| matches!(arena[parent].kind_data(), KindData::Paragraph(_))),
                 Placement::OrphanTail => None,
+                Placement::MisplacedDirective => None,
+                Placement::BeforeBlock => arena[node].next_sibling().filter(|&next| {
+                    matches!(
+                        arena[next].kind_data(),
+                        KindData::Paragraph(_)
+                            | KindData::Heading(_)
+                            | KindData::List(_)
+                            | KindData::Blockquote(_)
+                            | KindData::CodeBlock(_)
+                            | KindData::ThematicBreak(_)
+                    )
+                }),
             };
             if let Some(target) = target {
                 candidates.push(Assignment { target, key, span: mark.span });
@@ -243,7 +289,11 @@ impl AstTransformer for BindKeys {
                 diagnostic(
                     &mut state,
                     "unbound-key",
-                    "trailing attribute requires the immediately preceding paragraph in the same container, without a blank line",
+                    if mark.placement == Placement::BeforeBlock {
+                        "preceding directive needs the immediate next supported sibling in its own container; it cannot skip markers, HTML/components, reference definitions, or a container boundary"
+                    } else {
+                        "trailing attribute requires the immediately preceding paragraph in the same container, without a blank line"
+                    },
                     mark.span,
                 );
             }
@@ -279,7 +329,7 @@ impl AstTransformer for BindKeys {
         }
         for node in nodes {
             if let Some(mark) = marker(arena, node) {
-                if mark.placement != Placement::OrphanTail
+                if matches!(mark.placement, Placement::HeadingSuffix | Placement::ParagraphTail)
                     && let Some(previous) = arena[node].previous_sibling()
                     && let KindData::Text(text) = arena[previous].kind_data_mut()
                 {
@@ -306,9 +356,9 @@ impl From<BindKeys> for AnyAstTransformer {
 
 pub(crate) fn identity(mode: Mode, state: Rc<RefCell<State>>) -> impl ParserExtension {
     parser_extension(move |parser| {
-        if mode == Mode::Attributes {
-            parser.add_block_parser(|| TailParser, NoParserOptions, PRIORITY_PARAGRAPH - 10);
-            parser.add_inline_parser(|| SuffixParser, NoParserOptions, PRIORITY_EMPHASIS + 10);
+        if mode != Mode::Plain {
+            parser.add_block_parser(move || LineMarkerParser(mode), NoParserOptions, PRIORITY_PARAGRAPH - 10);
+            parser.add_inline_parser(move || SuffixParser(mode), NoParserOptions, PRIORITY_EMPHASIS + 10);
             parser.add_ast_transformer(move || BindKeys(state), NoParserOptions, 100);
         }
     })

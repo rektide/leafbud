@@ -9,12 +9,16 @@ From this directory:
 ```sh
 cargo run --locked --offline -- attributes fixtures/attributes.md
 cargo run --locked --offline -- plain fixtures/attributes.md
+cargo run --locked --offline -- comments fixtures/comments.md
+cargo run --locked --offline -- both fixtures/combined.md
 cargo nextest run --locked --offline
 ```
 
 Fetch dependencies once with `cargo fetch --locked` if the local Cargo cache is
 empty. `attributes` enables optional author keys; `plain` demonstrates baseline
-CommonMark interpretation. The executable prints a transient JSON projection
+CommonMark interpretation. `comments` enables the narrow comment directive;
+`both` enables both spellings with collisions rejected (neither wins).
+The executable prints a transient JSON projection
 (block kind, optional key, annotation byte span, available parser positions,
 inline tree, children) and HTML for inspection. Diagnostics produce exit code 2.
 There is no saved partner document or source rewriter.
@@ -46,3 +50,28 @@ The published dependency is pinned exactly to `rushdown = "=0.18.0"`, matching
 [`yuin/rushdown` revision e5eb4e4](https://github.com/yuin/rushdown/tree/e5eb4e4446541ea0ed53111c1b37e779283ff57c).
 Extension constructors, `InlineParser`, `BlockParser`, temporary `KindData::Extension`
 nodes and `AstTransformer` do the work; no fork or upstream patch is required.
+
+## Phase B: preceding literal directives
+
+```mdx
+{/* springleaf:key introduction */}
+## Introduction
+
+{/* springleaf:key central-argument */}
+This is ordinary Markdown with **formatting**.
+```
+
+Without the extension, Rushdown treats that MDX-shaped comment as visible prose.
+The extension recognizes this exact single-line directive, **not general MDX**.
+It binds the immediate next block sibling in the same container. Blank lines
+between directive and target are allowed; a blank line is required before the
+directive when preceding text is an open paragraph. The directive never skips
+other directives, HTML/components or link-reference definitions to find prose.
+An annotation before a list keys the list; `- {/* springleaf:key first */}`
+followed by indented prose keys the paragraph **inside** that item, not the item.
+
+Comments can also key a quote, fence or thematic break. An empty item/quote
+annotation cannot escape its container. Both modes protect escaped braces,
+fenced/indented/inline code (including multiline inline code). Each mode reserves
+only its own syntax. Malformed reserved directives diagnose; unrelated comments
+and expressions remain normal CommonMark input, not executable code.

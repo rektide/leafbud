@@ -13,6 +13,18 @@ pub use projection::{Block, Inline, SourceSegment};
 pub enum Mode {
     Plain,
     Attributes,
+    Comments,
+    Both,
+}
+
+impl Mode {
+    fn attributes(self) -> bool {
+        matches!(self, Self::Attributes | Self::Both)
+    }
+
+    fn comments(self) -> bool {
+        matches!(self, Self::Comments | Self::Both)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
