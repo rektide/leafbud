@@ -55,7 +55,11 @@ fn plain_comment_keys_are_not_compiler_metadata_unless_we_lower_them() {
     let source = "{/* springleaf:key intro */}\n## Introduction\n";
     let stock_js = stock(source).unwrap();
     let staged_js = staged(source).unwrap();
-    assert!(stock_js.contains("springleaf:key intro"));
+    // Initial assumption that compiler output preserves the comment FAILED.
+    // Stock codegen discards the text and leaves an empty JSX expression.
+    assert!(!stock_js.contains("springleaf:key intro"));
+    assert!(stock_js.contains("<>{}"));
+    assert!(!staged_js.contains("<>{}"));
     assert!(!staged_js.contains("springleaf:key intro"));
 }
 
@@ -89,7 +93,10 @@ fn multiline_code_loss_is_identical_to_07_and_not_fixed_by_compiler() {
     assert_eq!(reachable(&plain, 0).iter().filter(|&&id| kind(&plain, id) == M::InlineCode).count(), 2);
     assert!(!reachable(&mdx, 0).iter().any(|&id| kind(&mdx, id) == M::InlineCode));
     let js = stock(source).unwrap();
-    assert!(js.contains("springleaf:key accidental"));
+    assert!(!js.contains("springleaf:key accidental"));
+    assert!(js.contains("Code `first"));
+    assert!(js.contains("last`."));
+    assert!(!js.contains("code: \"code\""));
     assert!(staged(source).is_err());
 }
 
@@ -142,6 +149,27 @@ fn compiler_tab_normalization_moves_error_offsets_relative_to_original() {
     let a = get(direct);
     let b = get(compiled);
     assert_eq!(b.offset, a.offset + 3);
+}
+
+#[test]
+fn compiler_tab_normalization_changes_literal_fenced_code_payload() {
+    let source = "```text\n\tliteral\n```\n";
+    let (arena, errors) = satteri_pulldown_cmark::parse(source, MDX_OPTIONS);
+    assert!(errors.is_empty());
+    let via_arena = compile(&convert(&arena));
+    let via_source = stock(source).unwrap();
+    assert!(via_arena.contains("\\tliteral") || via_arena.contains("\tliteral"), "{via_arena:?}");
+    assert!(via_source.contains("    literal"));
+    assert_ne!(via_arena, via_source);
+    // expand_tabs() runs before Markdown parsing, even on fenced payload lines.
+}
+
+#[test]
+fn default_codegen_compiles_away_jsx_but_still_does_not_execute_it() {
+    let js = satteri_mdxjs::compile("<Poll options={[\"Gardens\", \"Maps\"]} />\n", &Default::default(), MDX_OPTIONS).unwrap();
+    assert!(js.contains("react/jsx-runtime"));
+    assert!(!js.contains("<Poll"));
+    assert!(js.contains("Gardens"));
 }
 
 #[test]
