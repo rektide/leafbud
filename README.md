@@ -5,12 +5,16 @@ Check auth, list your leaflets (drafts) and their internals, list
 publications, build and publish posts as canonical ATProto records, and
 sync what has been posted.
 
-Status: **stage 4** — `auth status`, `drafts list`/`show`, `pubs list`
-(read-only, live-verified), `publish build` (offline-safe), `publish run`
-(writes; the live putRecord is still operator-gated — see
-[Publishing for real](#publishing-for-real)), and `sync` (report-only by
-default; `--pull` adopts remote records locally). The architecture,
-protocol map, and staged plan live in
+Status: **stage 5** — `auth status`, `drafts list`/`show`/`export`
+(read-only, live-verified), `pubs list`, `publish build` (offline-safe),
+`publish run` (writes; the live putRecord is still operator-gated — see
+[Publishing for real](#publishing-for-real-operator-gated)), `sync` (report-only by
+default), and the extraction ⇄ authoring pair complete:
+`drafts export` pulls a draft into a canonical record, and
+`drafts author` builds (and, operator-gated, pushes) the reverse
+mutation batch — see
+[Authoring into leaflet drafts](#authoring-into-leaflet-drafts-operator-gated).
+The architecture, protocol map, and staged plan live in
 [`design/springleaf.glm53m.md`](design/springleaf.glm53m.md); the
 on-disk record format is specified by
 [`design/records-canonical.glm53m.md`](design/records-canonical.glm53m.md)
@@ -35,7 +39,8 @@ crates/
              markdown→blocks converter + record builder + slug/URL rules
              + publication-record lookup + record validation
   drafts/    springleaf-drafts: cookie-authed web surface — /home RSC parse,
-             get_leaflet_data RPC, v1 output schema
+             get_leaflet_data/pull/push RPCs, yjs text codec + fractional
+             keygen, extraction ⇄ authoring converters, v1 output schema
   cli/       springleaf: the binary (clap commands, token resolution, output)
 design/      architecture + canonical record format
 experiments/ protocol probes and evidence (tracked, load-bearing)
@@ -53,8 +58,9 @@ cargo run -p springleaf -- publish build post.md --publication <at-uri>
 Checks: `cargo fmt`, `cargo clippy --workspace --all-targets`,
 `cargo nextest run`. Unit tests are offline, against the committed
 synthetic fixtures under `experiments/` (wire tests use a hand-rolled
-loopback HTTP responder; publish/sync flows inject a canned put
-transport). No test executes a write against any real PDS.
+loopback HTTP responder; publish/sync/authoring flows inject canned
+write transports). No test executes a write against any real PDS or
+draft.
 
 ## Commands
 
@@ -62,6 +68,13 @@ transport). No test executes a write against any real PDS.
 springleaf auth status                     # GET /home, report did/handle or anonymous
 springleaf drafts list [--json] [--fetch]  # leaflet table (or v1 JSON schema)
 springleaf drafts show <token-id> [--json] # one leaflet via get_leaflet_data
+springleaf drafts export <token-id> [--root DIR] [--slug S] [--overwrite]
+                                           #   read-only pull → canonical record
+                                           #   in drafts/<slug>.json
+springleaf drafts author <token-id> --from <slug-or-file> [--root DIR]
+                                           #   record → push mutation batch
+                                           #   (prints it, exit 2); --yes pushes
+                                           #   into the draft (operator-gated)
 springleaf pubs list [--json] [--handle H] # publications via listRecords (public)
 springleaf publish build <file.md> [--publication <at-uri>] [--root DIR]
                                            #   build record -> drafts/<slug>.json
@@ -88,9 +101,25 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   via `listRecords`. The record decoder tries the jacquard-generated
   types first and falls back to raw field extraction (third-party
   publications are not guaranteed lexicon-clean).
+- `drafts export` (read-only): one `pull` + `get_leaflet_data` per run,
+  writes the pure canonical record to `drafts/<slug>.json`. Exported
+  records with no publication linkage carry the standalone
+  `site: https://leaflet.pub/p/{did}` form — `publish run` accepts both
+  site forms (the standalone URL derives as
+  `https://leaflet.pub/p/{did}/{rkey}`).
+- `drafts author` is the reverse direction: it validates the record,
+  resolves the target draft (`get_leaflet_data` for the root entity +
+  write right + entity set, one read-only `pull` for the start page,
+  existing block count, and append seeds), then builds the push batch —
+  `addBlock` + `assertFact` per block with caller-minted uuid v7 ids,
+  fractional append positions from the draft's last key, yjs-encoded
+  text (byte-parity with the committed encoder reference), the
+  `updateLeafletMetadata` title tail. Poll blocks resolve their option
+  texts from the pollRef's PDS record (a public read); image/gallery/
+  drawing/embedded-canvas blocks warn and skip (v0).
 - Exit codes: `0` ok, `1` operational error (anonymous `auth status`
-  counts), `2` usage error or an intentional refusal (`publish run` /
-  `sync --force` without `--yes`).
+  counts), `2` usage error or an intentional refusal (`publish run`,
+  `sync --force`, and `drafts author` without `--yes`).
 
 ## Workspace: drafts/ and posted/
 
@@ -151,6 +180,43 @@ messages — including at `-v`/debug verbosity. `--base-url` (or
 `$LEAFLET_BASE_URL`) selects a different leaflet instance; default
 `https://leaflet.pub`.
 
+## Authoring into leaflet drafts (operator-gated)
+
+`drafts author --yes` is a **write against leaflet.pub** (a Replicache
+push through `POST /api/rpc/push`). No live push has been executed from
+this codebase — the flow is mock-verified end to end, and the live step
+is deliberately gated, exactly like `publish run`:
+
+1. **Pick a throwaway draft** (create one in the web UI; push cannot
+   mint drafts — that is a server-action-only path per
+   `experiments/02-draft-internals/REPORT.md` §3). Grab its token id
+   from `springleaf drafts list`.
+2. **Dry-run** (default, always safe — read-only RPCs only):
+   `springleaf drafts author <token-id> --from <slug-or-file>`
+   prints the exact mutation batch — one line per mutation (name,
+   entity ids, positions), the block summary, and the warn list — and
+   exits 2 without touching the transport. A non-empty target draft is
+   loudly warned: **authoring appends after existing blocks; nothing is
+   replaced or removed** (overwriting is a deliberate v0 non-goal).
+3. **Review** the batch: block types, the yjs text sizes, the appended
+   positions, and any warns (skipped blocks name their reason).
+4. **Execute**: re-run with `--yes`. The push runs under a fresh
+   clientID with mutation ids from 1 (replay-safe: the server skips
+   `id <= lastMutationID`), so a retry of the same run is idempotent —
+   but a second `--yes` invocation of the same record *appends the
+   content again* under its new ids.
+5. **Verify**: `springleaf drafts export <token-id> --slug <check-slug>`
+   re-pulls the draft and writes its canonical record; diff it against
+   the source record (entity ids and positions differ — compare titles,
+   block sequence, text, and facets).
+
+Known v0 edges: `\n` inside authored text encodes as a literal newline
+(decodes back identically; the editor may render it differently than an
+authored hard break); bskyPost blocks carry a minimal
+`{post:{uri,cid}}` thread blob (the editor's rich render may be
+degraded); text alignment facts are not authored; the record
+`questions`/`reply` `key` is draft-local and not re-minted.
+
 ## Publishing for real (operator-gated)
 
 No write has been executed against any PDS from this codebase. The live
@@ -187,6 +253,10 @@ canonical-format design doc.
 - The homepage list may be paginated at the server (30 observed, cap
   unverified); `href_payload_mismatch` in the list output alarms on any
   drift between the DOM card hrefs and the payload rows.
+- `drafts author` never destroys: it appends blocks after the target
+  draft's last position and subpages after its last `root/page` key.
+  Replacing draft content would take `removeBlock`/`retractFact`
+  sequences — a deliberate later step, not v0.
 - Published-URL derivation knows `site.standard.*` at-uris; a linkage to
   a legacy `pub.leaflet.publication` yields an empty `published_url`
   under the v1 rule (seen in experiments/02 fixtures; `pubs list` now
