@@ -1,5 +1,7 @@
 # Sätteri author-key experiment
 
+[Assessment, exact source pins, test receipts and adoption caveats](REPORT.md).
+
 Isolated offline Rust evidence, using `bruits/satteri`'s published parser/arena
 crates. No production integration, Leaflet requests, source rewriting, or saved
 JSON companion. The high-level `satteri` crate only offers HTML/JS output; this
