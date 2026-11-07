@@ -20,6 +20,7 @@ use springleaf_drafts::{DEFAULT_BASE_URL, Error as DraftsError, LeafletClient, L
 use std::fmt::Write as _;
 use uuid::Uuid;
 
+mod author;
 mod export;
 mod publish;
 mod sync;
@@ -119,6 +120,29 @@ enum DraftsCommand {
         #[arg(long)]
         overwrite: bool,
         /// Emit the v1 JSON schema (slug/path/blocks/warns)
+        #[arg(long)]
+        json: bool,
+    },
+    /// Author a canonical record into an EXISTING editor draft via a
+    /// Replicache push — the reverse half of
+    /// design/draft-extraction.glm53m.md. Dry-run by default (prints
+    /// the mutation batch, exit 2); --yes executes the push.
+    Author {
+        /// Permission token id (uuid) of the target draft
+        token_id: Uuid,
+        /// The record to author: a drafts/<slug>.json / posted/<slug>.json
+        /// slug or an existing record file path
+        #[arg(long, value_name = "SLUG-OR-FILE")]
+        from: String,
+        /// Workspace root (default: `workspace` from the XDG config
+        /// springleaf.toml, else cwd)
+        #[arg(long, value_name = "DIR")]
+        root: Option<std::path::PathBuf>,
+        /// Execute the push (required; without it the command only
+        /// prints the exact mutation batch and exits 2)
+        #[arg(long)]
+        yes: bool,
+        /// Emit the v1 JSON schema (target/batch/warns/pushed)
         #[arg(long)]
         json: bool,
     },
@@ -296,6 +320,16 @@ async fn run(cli: Cli) -> Result<i32> {
                             json,
                         },
                 }) => export::drafts_export_cmd(&client, &token_id.to_string(), root, slug, overwrite, json).await,
+                Command::Drafts(DraftsArgs {
+                    cmd:
+                        DraftsCommand::Author {
+                            token_id,
+                            from,
+                            root,
+                            yes,
+                            json,
+                        },
+                }) => author::drafts_author_cmd(&client, &token_id.to_string(), &from, root, yes, json, None).await,
                 _ => unreachable!("pubs/publish/sync dispatched above"),
             }
         }

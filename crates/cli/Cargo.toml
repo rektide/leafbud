@@ -16,5 +16,5 @@ springleaf-drafts.workspace = true
 springleaf-leaflet.workspace = true
 tokio.workspace = true
 tracing-subscriber.workspace = true
-uuid.workspace = true
+uuid = { workspace = true, features = ["v7"] }
 

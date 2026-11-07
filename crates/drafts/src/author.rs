@@ -819,6 +819,73 @@ impl AuthorOptions {
     }
 }
 
+// ── target resolution (from a read-only pull) ───────────────────────────────
+
+use crate::facts::{FactData, FactRow, ScanIndex};
+
+/// What a pull says about the draft being authored into.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TargetDraft {
+    /// The start page entity (first `root/page` by position).
+    pub page_entity: String,
+    /// Its current `card/block` count.
+    pub block_count: usize,
+    /// Its current last block position, when any.
+    pub last_block_position: Option<String>,
+    /// The draft's last `root/page` position, when any.
+    pub last_page_position: Option<String>,
+    /// How many `root/page` facts exist (>1 warns: publication nav).
+    pub root_page_count: usize,
+}
+
+/// Resolve the authoring target from a pulled fact graph — the same
+/// start-page rule extraction uses (first `root/page` by position, fact
+/// id tiebreak).
+pub fn resolve_target(root_entity: &str, facts: &[FactRow]) -> Result<TargetDraft, Error> {
+    let scan = ScanIndex::from_facts(facts.to_vec());
+    let mut root_pages: Vec<(String, String, String)> = scan
+        .eav(root_entity, "root/page")
+        .iter()
+        .filter_map(|fact| match &fact.data {
+            FactData::OrderedReference { value, position } => Some((fact.id.clone(), position.clone(), value.clone())),
+            _ => None,
+        })
+        .collect();
+    if root_pages.is_empty() {
+        return Err(Error::Structure(format!(
+            "draft root {root_entity} has no root/page fact — cannot resolve the start page"
+        )));
+    }
+    crate::fractional::sort_by_position(&mut root_pages);
+    let page_entity = root_pages[0].2.clone();
+    let last_page_position = root_pages
+        .iter()
+        .map(|(_, position, _)| position.clone())
+        .max_by(|a, b| crate::fractional::compare_keys(a, b));
+
+    let mut blocks: Vec<(String, String, String)> = scan
+        .eav(&page_entity, "card/block")
+        .iter()
+        .filter_map(|fact| match &fact.data {
+            FactData::OrderedReference { value, position } => Some((fact.id.clone(), position.clone(), value.clone())),
+            _ => None,
+        })
+        .collect();
+    crate::fractional::sort_by_position(&mut blocks);
+    let block_count = blocks.len();
+    let last_block_position = blocks
+        .iter()
+        .map(|(_, position, _)| position.clone())
+        .max_by(|a, b| crate::fractional::compare_keys(a, b));
+    Ok(TargetDraft {
+        page_entity,
+        block_count,
+        last_block_position,
+        last_page_position,
+        root_page_count: root_pages.len(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1185,6 +1252,33 @@ mod tests {
         let authored = author(&record, &options, &mut *ids).unwrap();
         assert_eq!(authored.blocks_skipped, 1);
         assert!(authored.warns[0].reason.contains("not resolved"), "{:?}", authored.warns[0]);
+    }
+
+    /// Target resolution against the export fixture's pulled fact graph:
+    /// start page, existing block count, last positions.
+    #[test]
+    fn resolve_target_reads_the_pulled_draft_shape() {
+        let fixture: Value = serde_json::from_str(exp02_fixture!("export-pull-doc.json")).unwrap();
+        let snapshot = crate::pull::parse_pull_snapshot(&fixture["response"].to_string()).unwrap();
+        let target = resolve_target("01999000-0000-7aaa-8000-000000000002", &snapshot.facts).unwrap();
+        assert_eq!(target.page_entity, "01999000-0000-7aaa-8000-000000000003");
+        assert_eq!(target.block_count, 2, "the fixture draft holds an h1 and a text block");
+        assert_eq!(target.last_block_position.as_deref(), Some("a1"));
+        assert_eq!(target.last_page_position.as_deref(), Some("a0"));
+        assert_eq!(target.root_page_count, 1);
+        // An empty page resolves with no positions; a root without pages
+        // is a structural refusal.
+        let empty_facts = vec![crate::facts::FactRow {
+            id: "f1".into(),
+            entity: "root-9".into(),
+            attribute: "root/page".into(),
+            data: crate::facts::FactData::parse(&json!({"type": "ordered-reference", "value": "page-9", "position": "a0"})),
+        }];
+        let empty = resolve_target("root-9", &empty_facts).unwrap();
+        assert_eq!(empty.page_entity, "page-9");
+        assert_eq!(empty.block_count, 0);
+        assert_eq!(empty.last_block_position, None);
+        assert!(matches!(resolve_target("no-such-root", &snapshot.facts), Err(Error::Structure(_))));
     }
 
     /// Structural refusals: no pages array, empty pages, invalid facet
