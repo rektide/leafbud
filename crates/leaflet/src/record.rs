@@ -246,6 +246,22 @@ fn reinject_type_discriminators(record: &mut serde_json::Value) {
     }
 }
 
+/// Validate record JSON through the generated lexicon type: decode +
+/// constraint checks (the pre-put gate for `publish run`).
+#[derive(Debug, thiserror::Error)]
+pub enum ValidationError {
+    #[error("record does not decode as a site.standard.document: {0}")]
+    Decode(String),
+    #[error("record fails site.standard.document lexicon validation: {0}")]
+    Constraints(String),
+}
+
+pub fn validate_document_record(record: &serde_json::Value) -> Result<(), ValidationError> {
+    let document: Document<DefaultStr> = serde_json::from_value(record.clone()).map_err(|e| ValidationError::Decode(e.to_string()))?;
+    use jacquard_lexicon::schema::LexiconSchema;
+    document.validate().map_err(|e| ValidationError::Constraints(e.to_string()))
+}
+
 /// Derive the human-facing URL for a document rkey (experiment 03 §6):
 /// the publication's own `url` field (custom domain) + `/{rkey}`, else the
 /// `https://leaflet.pub/lish/{did}/{pubRkey}/{rkey}` deep permalink.

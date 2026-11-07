@@ -60,4 +60,7 @@ pub use jacquard_common::DefaultStr;
 
 pub use markdown::{MarkdownError, convert_markdown};
 pub use publication::{PublicationError, PublicationInfo, publication_for_record};
-pub use record::{BuildError, BuildOptions, BuiltRecord, Frontmatter, build_record, derive_document_url, parse_frontmatter, slugify};
+pub use record::{
+    BuildError, BuildOptions, BuiltRecord, Frontmatter, ValidationError, build_record, derive_document_url, parse_frontmatter, slugify,
+    validate_document_record,
+};
