@@ -100,6 +100,14 @@ direction). The reverse (canonical record → new leaflet editor draft) would
 need the Replicache push surface scoped by `experiments/02-draft-internals/`.
 Both are later stages; neither changes the canonical format.
 
+**2026-11-07 update:** both directions are now designed in
+[`design/draft-extraction.glm53m.md`](draft-extraction.glm53m.md) —
+extraction (26/30 block types linear-mappable, facet recovery incl.
+byte-offset math), reverse authoring into existing drafts (6-mutation
+template + Rust Yjs port ~1.7–2.2k LOC), and the new-draft gap resolution:
+v0 authors into user-created drafts; v1 harvests `GET /new`'s 307
+Location header for a fresh token id (one gated write probe).
+
 ## Open items
 
 - `springleaf.toml` shape and whether publication default belongs there
