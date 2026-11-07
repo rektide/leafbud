@@ -1,0 +1,83 @@
+{
+  "provenance": {
+    "yjs": "13.6.15",
+    "yProsemirror": "1.2.5",
+    "leaflet": "600c7b5f1f7b31b66fb626c293cc104312a12caf",
+    "kind": "synthetic; frozen samples from experiment 02 (Yjs 13.6.18), editor-rich generated with versions above; no live capture"
+  },
+  "samples": [
+    {
+      "name": "frozen-plain",
+      "update": "AQPYk6DTAwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDYk6DTAwAGBADYk6DTAwELSGVsbG8gd29ybGQA",
+      "expected": {
+        "plaintext": "Hello world",
+        "facets": []
+      }
+    },
+    {
+      "name": "frozen-tombstone",
+      "update": "AQXN+KzRAQAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDN+KzRAQAGBADN+KzRAQEVU3ludGhldGljIHNhbXBsZSB0ZXh0gc34rNEBFggoAQRtZXRhDXNjaGVtYVZlcnNpb24BfQEBzfis0QEBFwg=",
+      "expected": {
+        "plaintext": "Synthetic sample text",
+        "facets": []
+      }
+    },
+    {
+      "name": "editor-rich",
+      "update": "ARbpBwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDpBwAGBADpBwEDQcOphukHAwZzdHJvbmcCe32E6QcEBPCfmICG6QcGBnN0cm9uZwRudWxshukHBwZzdHJvbmcCe32G6QcIAmVtAnt9hOkHCQNlzIGG6QcLBnN0cm9uZwRudWxshukHDAJlbQRudWxshukHDQRsaW5rI3siaHJlZiI6Imh0dHBzOi8vZXhhbXBsZS50ZXN0L29sZCJ9hOkHDgUgbGlua4bpBxMEbGluawRudWxsh+kHAQMKaGFyZF9icmVha4fpBxUGBgDpBxYJdW5kZXJsaW5lAnt9hukHFwdjb21tZW50IXsiY29tbWVudElEIjoic3ludGhldGljLWNvbW1lbnQifYTpBxgEdGFpbIbpBxwJdW5kZXJsaW5lBG51bGyG6QcdB2NvbW1lbnQEbnVsbCgBBG1ldGENc2NoZW1hVmVyc2lvbgF9AQA=",
+      "expected": {
+        "plaintext": "Aé😀é link\ntail",
+        "facets": [
+          {
+            "index": {
+              "byteStart": 3,
+              "byteEnd": 7
+            },
+            "features": [
+              {
+                "$type": "pub.leaflet.richtext.facet#bold"
+              }
+            ]
+          },
+          {
+            "index": {
+              "byteStart": 7,
+              "byteEnd": 10
+            },
+            "features": [
+              {
+                "$type": "pub.leaflet.richtext.facet#bold"
+              },
+              {
+                "$type": "pub.leaflet.richtext.facet#italic"
+              }
+            ]
+          },
+          {
+            "index": {
+              "byteStart": 10,
+              "byteEnd": 15
+            },
+            "features": [
+              {
+                "$type": "pub.leaflet.richtext.facet#link",
+                "uri": "https://example.test/old"
+              }
+            ]
+          },
+          {
+            "index": {
+              "byteStart": 16,
+              "byteEnd": 20
+            },
+            "features": [
+              {
+                "$type": "pub.leaflet.richtext.facet#underline"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

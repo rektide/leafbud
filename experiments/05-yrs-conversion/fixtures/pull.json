@@ -1,0 +1,89 @@
+{
+  "root": "01999000-0000-7000-8000-000000000001",
+  "patch": [
+    {
+      "op": "clear"
+    },
+    {
+      "op": "put",
+      "key": "01999000-0000-7000-8000-000000000011",
+      "value": {
+        "id": "01999000-0000-7000-8000-000000000011",
+        "entity": "01999000-0000-7000-8000-000000000001",
+        "attribute": "root/page",
+        "data": {
+          "type": "ordered-reference",
+          "value": "01999000-0000-7000-8000-000000000002",
+          "position": "a0"
+        }
+      }
+    },
+    {
+      "op": "put",
+      "key": "01999000-0000-7000-8000-000000000012",
+      "value": {
+        "id": "01999000-0000-7000-8000-000000000012",
+        "entity": "01999000-0000-7000-8000-000000000002",
+        "attribute": "page/type",
+        "data": {
+          "type": "page-type-union",
+          "value": "doc"
+        }
+      }
+    },
+    {
+      "op": "put",
+      "key": "01999000-0000-7000-8000-000000000013",
+      "value": {
+        "id": "01999000-0000-7000-8000-000000000013",
+        "entity": "01999000-0000-7000-8000-000000000002",
+        "attribute": "card/block",
+        "data": {
+          "type": "ordered-reference",
+          "value": "01999000-0000-7000-8000-000000000003",
+          "position": "a0"
+        }
+      }
+    },
+    {
+      "op": "put",
+      "key": "01999000-0000-7000-8000-000000000014",
+      "value": {
+        "id": "01999000-0000-7000-8000-000000000014",
+        "entity": "01999000-0000-7000-8000-000000000003",
+        "attribute": "block/type",
+        "data": {
+          "type": "block-type-union",
+          "value": "text"
+        }
+      }
+    },
+    {
+      "op": "put",
+      "key": "01999000-0000-7000-8000-000000000015",
+      "value": {
+        "id": "01999000-0000-7000-8000-000000000015",
+        "entity": "01999000-0000-7000-8000-000000000003",
+        "attribute": "block/text",
+        "data": {
+          "type": "text",
+          "value": "ARbpBwAHAQtwcm9zZW1pcnJvcgMJcGFyYWdyYXBoBwDpBwAGBADpBwEDQcOphukHAwZzdHJvbmcCe32E6QcEBPCfmICG6QcGBnN0cm9uZwRudWxshukHBwZzdHJvbmcCe32G6QcIAmVtAnt9hOkHCQNlzIGG6QcLBnN0cm9uZwRudWxshukHDAJlbQRudWxshukHDQRsaW5rI3siaHJlZiI6Imh0dHBzOi8vZXhhbXBsZS50ZXN0L29sZCJ9hOkHDgUgbGlua4bpBxMEbGluawRudWxsh+kHAQMKaGFyZF9icmVha4fpBxUGBgDpBxYJdW5kZXJsaW5lAnt9hukHFwdjb21tZW50IXsiY29tbWVudElEIjoic3ludGhldGljLWNvbW1lbnQifYTpBxgEdGFpbIbpBxwJdW5kZXJsaW5lBG51bGyG6QcdB2NvbW1lbnQEbnVsbCgBBG1ldGENc2NoZW1hVmVyc2lvbgF9AQA="
+        }
+      }
+    },
+    {
+      "op": "put",
+      "key": "01999000-0000-7000-8000-000000000016",
+      "value": {
+        "id": "01999000-0000-7000-8000-000000000016",
+        "entity": "01999000-0000-7000-8000-000000000003",
+        "attribute": "block/comment",
+        "data": {
+          "type": "ordered-reference",
+          "value": "synthetic-comment",
+          "position": "a0"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "springleaf-yrs-conversion-experiment",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "cargo build --locked && node reference.mjs",
+    "fixtures": "node reference.mjs --write-fixtures"
+  },
+  "dependencies": {
+    "prosemirror-model": "1.25.0",
+    "y-prosemirror": "1.2.5",
+    "yjs": "13.6.15"
+  }
+}
