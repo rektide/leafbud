@@ -8,13 +8,14 @@
 //!   leaflet lexicon checkout. The generated tree is committed — the
 //!   committed code IS the pin. Regeneration procedure, source SHA, and
 //!   runtime dependency pins: [`LEAFLET-PIN.md`] in the crate root.
-//! - **Hand-written code** (`markdown`, `record`): the markdown→blocks
-//!   converter at social-cli's v0 subset (paragraphs, ATX headings,
-//!   link/bold/italic/code facets with UTF-8 **byte** offsets), the
-//!   frontmatter → `site.standard.document` record builder with the
-//!   `path == "/" + rkey` invariant, and the published-URL derivation
-//!   rules (`{pubDomain}/{slug}`, else the `/lish/{did}/{pubRkey}/{rkey}`
-//!   fallback). Proven by `experiments/03-post-builder/`.
+//! - **Hand-written code** (`markdown`, `record`, `publication`): the
+//!   markdown→blocks converter at social-cli's v0 subset (paragraphs, ATX
+//!   headings, link/bold/italic/code facets with UTF-8 **byte** offsets),
+//!   the frontmatter → `site.standard.document` record builder with the
+//!   `path == "/" + rkey` invariant, the published-URL derivation rules
+//!   (`{pubDomain}/{slug}`, else the `/lish/{did}/{pubRkey}/{rkey}`
+//!   fallback), and publication-record lookup for those URL derivations.
+//!   Proven by `experiments/03-post-builder/`.
 //!
 //! One wire-shape adaptation sits at the boundary (see `record`): jacquard
 //! collapses single-variant lexicon unions to the bare struct, so the
@@ -50,6 +51,7 @@ pub mod builder_types;
 // ── Hand-written layers ────────────────────────────────────────────────────
 
 pub mod markdown;
+pub mod publication;
 pub mod record;
 
 /// The generated types' default string backing, re-exported so callers
@@ -57,4 +59,5 @@ pub mod record;
 pub use jacquard_common::DefaultStr;
 
 pub use markdown::{MarkdownError, convert_markdown};
+pub use publication::{PublicationError, PublicationInfo, publication_for_record};
 pub use record::{BuildError, BuildOptions, BuiltRecord, Frontmatter, build_record, derive_document_url, parse_frontmatter, slugify};

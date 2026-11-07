@@ -21,3 +21,6 @@ serde_json = { workspace = true }
 springleaf-atproto = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v7"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
