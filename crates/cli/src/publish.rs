@@ -735,7 +735,7 @@ mod tests {
     /// A record whose `site` is the standalone HTTPS form — what
     /// `drafts export` writes for drafts with no publication linkage.
     fn standalone_record(ws: &Workspace) -> std::path::PathBuf {
-        let (_path, mut record) = draft_record(ws);
+        let (_draft_path, mut record) = draft_record(ws);
         record["site"] = json!("https://leaflet.pub/p/did:plc:zjbq26wybii5ojoypkso2mso");
         let path = ws.drafts_dir().join("standalone-probe.json");
         std::fs::write(&path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
