@@ -72,3 +72,14 @@ fn components_are_real_jsx_nodes_with_ordered_attributes_and_children() {
     assert_eq!(canvas.attributes.len(), 1);
     assert!(matches!(canvas.children[0], Node::MdxJsxFlowElement(_)));
 }
+
+#[test]
+fn native_mdx_flow_comments_interrupt_apparent_multiline_code() {
+    let tree = stock("Code `first\n{/* springleaf:key accidental */}\nlast`.\n").unwrap();
+    let children = tree.children().unwrap();
+    assert_eq!(children.len(), 3);
+    assert!(matches!(children[0], Node::Paragraph(_)));
+    assert!(matches!(children[1], Node::MdxFlowExpression(_)));
+    assert!(matches!(children[2], Node::Paragraph(_)));
+    assert!(!children[0].children().unwrap().iter().any(|n| matches!(n, Node::InlineCode(_))));
+}

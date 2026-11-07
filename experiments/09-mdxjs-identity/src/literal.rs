@@ -1,0 +1,65 @@
+//! JSON-only property grammar. This is not JavaScript evaluation or an AST allowlist.
+use serde::{
+    Deserialize, Deserializer,
+    de::{self, MapAccess, SeqAccess, Visitor},
+};
+use serde_json::{Map, Number, Value};
+use std::fmt;
+
+struct Literal(Value);
+
+impl<'de> Deserialize<'de> for Literal {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct JsonVisitor;
+        impl<'de> Visitor<'de> for JsonVisitor {
+            type Value = Literal;
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a JSON literal with unique object keys")
+            }
+            fn visit_bool<E: de::Error>(self, value: bool) -> Result<Literal, E> {
+                Ok(Literal(Value::Bool(value)))
+            }
+            fn visit_i64<E: de::Error>(self, value: i64) -> Result<Literal, E> {
+                Ok(Literal(Value::Number(value.into())))
+            }
+            fn visit_u64<E: de::Error>(self, value: u64) -> Result<Literal, E> {
+                Ok(Literal(Value::Number(value.into())))
+            }
+            fn visit_f64<E: de::Error>(self, value: f64) -> Result<Literal, E> {
+                Number::from_f64(value)
+                    .map(|n| Literal(Value::Number(n)))
+                    .ok_or_else(|| E::custom("non-finite number"))
+            }
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Literal, E> {
+                Ok(Literal(Value::String(value.into())))
+            }
+            fn visit_unit<E: de::Error>(self) -> Result<Literal, E> {
+                Ok(Literal(Value::Null))
+            }
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Literal, A::Error> {
+                let mut values = Vec::new();
+                while let Some(Literal(value)) = seq.next_element()? {
+                    values.push(value);
+                }
+                Ok(Literal(Value::Array(values)))
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Literal, A::Error> {
+                let mut values = Map::new();
+                while let Some((key, Literal(value))) = map.next_entry::<String, Literal>()? {
+                    if values.insert(key.clone(), value).is_some() {
+                        return Err(de::Error::custom(format!("duplicate object key: {key}")));
+                    }
+                }
+                Ok(Literal(Value::Object(values)))
+            }
+        }
+        deserializer.deserialize_any(JsonVisitor)
+    }
+}
+
+pub fn parse(value: &str) -> Result<Value, serde_json::Error> {
+    let mut deserializer = serde_json::Deserializer::from_str(value);
+    let Literal(value) = Literal::deserialize(&mut deserializer)?;
+    deserializer.end()?;
+    Ok(value)
+}
