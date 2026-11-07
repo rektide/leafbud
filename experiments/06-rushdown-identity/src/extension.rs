@@ -155,6 +155,11 @@ impl InlineParser for SuffixParser {
         if !text.starts_with("{#") {
             return None;
         }
+        // In a heading, a completed attribute-shaped substring followed by
+        // other inline syntax is literal (e.g. a link label or emphasis).
+        if placement == Placement::HeadingSuffix && text.contains('}') && !text.ends_with('}') {
+            return None;
+        }
         // Suffix requires separating whitespace, not `word{#key}`.
         let start = segment.start();
         if placement == Placement::HeadingSuffix && (start == 0 || !reader.source().as_bytes()[start - 1].is_ascii_whitespace()) {
@@ -339,7 +344,11 @@ impl AstTransformer for BindKeys {
                     } else {
                         TextQualifier::empty()
                     };
-                    *text = Text::with_qualifiers(value, qualifiers);
+                    if let Some(index) = text.index() {
+                        *text = Text::with_qualifiers(text::Index::new(index.start(), index.start() + value.len()), qualifiers);
+                    } else {
+                        *text = Text::with_qualifiers(value, qualifiers);
+                    }
                 }
                 node.delete(arena);
             }

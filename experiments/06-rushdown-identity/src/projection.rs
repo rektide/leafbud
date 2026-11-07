@@ -24,11 +24,14 @@ impl From<&text::Segment> for SourceSegment {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Inline {
     pub kind: String,
+    /// Rushdown text leaves retain Markdown escapes/entities; not decoded prose.
     pub text: Option<String>,
     pub destination: Option<String>,
     pub soft_break: bool,
     pub hard_break: bool,
     pub start: Option<usize>,
+    /// Only exposed where Rushdown retains a Text index, not fabricated for containers.
+    pub text_span: Option<Span>,
     pub children: Vec<Inline>,
 }
 
@@ -40,6 +43,8 @@ pub struct Block {
     pub start: Option<usize>,
     /// Parser payload segments, NOT full concrete-syntax block extents.
     pub content_segments: Vec<SourceSegment>,
+    /// Inspection flattening of the inline tree (soft wrap -> space).
+    /// Escapes/entities in raw Text leaves still need semantic decoding downstream.
     pub content: String,
     pub inlines: Vec<Inline>,
     pub children: Vec<Block>,
@@ -65,6 +70,13 @@ fn inline(arena: &Arena, node: NodeRef, source: &str) -> Inline {
         soft_break: matches!(data, KindData::Text(t) if t.has_qualifiers(TextQualifier::SOFT_LINE_BREAK)),
         hard_break: matches!(data, KindData::Text(t) if t.has_qualifiers(TextQualifier::HARD_LINE_BREAK)),
         start: arena[node].pos(),
+        text_span: match data {
+            KindData::Text(text) => text.index().map(|i| Span {
+                start: i.start(),
+                end: i.stop(),
+            }),
+            _ => None,
+        },
         children: arena[node].children(arena).map(|child| inline(arena, child, source)).collect(),
     }
 }
@@ -89,8 +101,14 @@ fn plain(inlines: &[Inline]) -> String {
 pub(crate) fn block(arena: &Arena, node: NodeRef, source: &str, assignments: &[Assignment]) -> Block {
     let data = arena[node].kind_data();
     let assignment = assignments.iter().find(|a| a.target == node);
-    let segments = match arena[node].type_data() {
-        TypeData::Block(block) => block.source().iter().map(SourceSegment::from).collect(),
+    let lines = match data {
+        KindData::CodeBlock(code) => Some(code.value()),
+        KindData::HtmlBlock(html) => Some(html.value()),
+        _ => None,
+    };
+    let segments = match (lines, arena[node].type_data()) {
+        (Some(text::Lines::Segments(segments)), _) => segments.iter().map(SourceSegment::from).collect(),
+        (None, TypeData::Block(block)) => block.source().iter().map(SourceSegment::from).collect(),
         _ => Vec::new(),
     };
     let mut children = Vec::new();

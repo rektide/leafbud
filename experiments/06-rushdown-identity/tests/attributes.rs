@@ -104,6 +104,38 @@ fn attribute_in_middle_is_an_error_not_silent_prose() {
 }
 
 #[test]
+fn attribute_shaped_text_in_heading_link_label_or_emphasis_is_literal() {
+    let result = good("## [Label {#literal}](https://example.com)\n\n## **{#literal}**\n\n## Text {#literal} trailing text\n");
+    assert!(keyed(&result.blocks).is_empty());
+    assert!(result.html.contains("<a href=\"https://example.com\">Label {#literal}</a>"));
+    assert!(result.html.contains("<strong>{#literal}</strong>"));
+}
+
+#[test]
+fn nested_containers_require_explicit_annotation_prefixes() {
+    let result = good("> > ## Nested {#heading}\n> >\n> > Paragraph.\n> > {#paragraph}\n\n- Parent.\n  - Child.\n    {#child}\n");
+    assert_eq!(
+        keyed(&result.blocks),
+        [
+            ("Heading", "heading", "Nested"),
+            ("Paragraph", "paragraph", "Paragraph."),
+            ("Paragraph", "child", "Child.")
+        ]
+    );
+}
+
+#[test]
+fn eof_without_newline_and_reserved_id_grammar() {
+    for source in ["## Heading {#a_B.c-2}", "Paragraph.\n{#a_B.c-2}"] {
+        let result = good(source);
+        assert_eq!(keyed(&result.blocks)[0].1, "a_B.c-2");
+    }
+    for source in ["## Heading {#é}\n", "Paragraph.\n{#}\n", "## Heading {#unterminated\n"] {
+        assert_eq!(parse(source, Mode::Attributes).diagnostics[0].code, "malformed-key");
+    }
+}
+
+#[test]
 fn duplicate_and_malformed_diagnose() {
     for (source, codes) in [
         ("## One {#same}\n\nTwo.\n{#same}\n", vec!["duplicate-key", "duplicate-key"]),
