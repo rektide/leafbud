@@ -119,8 +119,8 @@ tool, a photo platform, and a self-hosted Wikipedia search.
   observed live uses a TID rkey (`3mj3vne6yql2m`, `3mj5tkbj5x62t`, garden
   firehose sample `3mhrocz3kdo2z`). Readers must `listRecords` and treat the
   latest (or appview-uniqued) row as the singleton — `getRecord` at rkey
-  `self` finds nothing. The writer honoring `self` was not located in the
-  leaflet checkout during this pass.
+  `self` finds nothing. No config writer exists anywhere in the leaflet
+  checkout, so nothing in the consumer app enforces the key rule either.
 - **Vendored schema runs ahead of the authority**: leaflet's pinned
   `service.json` adds an optional `canBeScopedToDid` boolean (services that
   can be scoped to a specific user's DID) which the page.parts-published
@@ -149,10 +149,19 @@ From the archive checkout @600c7b5f (paths under
   `filterCollections`; events upsert `{uri, identity_did, record}` into
   `mention_services` / `mention_service_configs` tables (config unique on
   `identity_did` — the singleton is enforced here, not by rkey).
-- **RPCs** (`app/api/rpc/[command]/`): `get_user_mention_services` (public;
-  reads the appview tables) and `proxy_mention_search` (server-side proxy of
-  the service XRPC; **requires leaflet auth** — unauthenticated probe got
-  "Not authenticated").
+- **RPCs** (`app/api/rpc/[command]/`): both **session-scoped**.
+  `get_user_mention_services` takes no input at all — the stale doc's
+  empty-did open item was resolved by dropping the parameter; it reads the
+  leaflet session identity, then the appview tables behind 60 s in-memory
+  caches (config by DID, service records by uri).
+  `proxy_mention_search` proxies the selected service's XRPC (5 s timeout,
+  ≤50 results). Unauthenticated probes get `{"services":[]}` /
+  "Not authenticated" respectively — not evidence about ingestion.
+- **No config writer in the repo**: nothing in leaflet writes
+  `parts.page.mention.config` — no settings UI, no putRecord anywhere in the
+  checkout. The live configs were written out-of-band: provider onboarding
+  (grain.social's config enables only grain's own service) or by hand; new
+  configs reach readers only via the appview's firehose ingestion.
 - **Editor UI** (`components/Mention.tsx`): services appear in the default
   `@` scope; Tab scopes into one; Enter inserts a `service_result` as an
   `atMention` node with `{atURI, text: name, href}`.
@@ -220,10 +229,11 @@ discovery is firehose or index. What works today, verified from this machine
    `public.api.bsky.app` no longer serves `com.atproto.repo.*` reads — go to
    the account's PDS (from its DID doc).
 7. **leaflet.pub's own aggregator** — `POST /api/rpc/get_user_mention_services`
-   is public but answered `{"services":[]}` for both live config holders
-   tested (appview coverage gap, or events predating its ingestion);
-   `proxy_mention_search` needs auth. Useful as leaflet's view, not as a
-   network index.
+   answered `{"services":[]}` in this session's probes, but for a mundane
+   reason established from source afterwards: the RPC is session-scoped (no
+   input; anonymous callers get the empty-list path), and
+   `proxy_mention_search` 401s unauthenticated. It is leaflet's logged-in
+   view of its appview tables, not a network index.
 
 ## Open questions
 
