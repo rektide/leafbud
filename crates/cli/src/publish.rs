@@ -24,6 +24,7 @@ use serde::Serialize;
 use serde_json::Value;
 use springleaf_leaflet::{BuildOptions, PublicationInfo, build_record, derive_document_url};
 
+use crate::config::{self, Config};
 use crate::workspace::{Sidecar, Workspace, now_rfc3339, sha256_hex};
 
 /// What a successful put returned.
@@ -95,17 +96,20 @@ pub(crate) fn build_and_write(
 
 /// `publish build` command body. `publication_url` derivation goes to
 /// the network only when the publication came from the `--publication`
-/// flag (caller-supplied); the toml default derives the fallback URL
-/// offline.
+/// flag (caller-supplied); toml defaults derive the fallback URL
+/// offline. The publication target itself layers — flag > workspace
+/// toml > global toml (`config::layered`).
 pub(crate) async fn publish_build_cmd(file: &Path, publication_flag: Option<String>, root: Option<PathBuf>, overwrite: bool, json: bool) -> Result<i32> {
-    let ws = Workspace::resolve(root.as_deref())?;
+    let global = config::global_layer()?;
+    let ws = Workspace::resolve(root.as_deref(), &global)?;
     let markdown = std::fs::read_to_string(file).with_context(|| format!("reading {}", file.display()))?;
-    let config = ws.config();
-    let publication = match publication_flag.as_deref().or(config.publication.as_deref()) {
-        Some(p) => p.to_string(),
+    let layered = config::layered(&Config::from_flags(None, publication_flag.clone()), Some(&ws.root), &global)?;
+    let publication = match layered.publication {
+        Some(p) => p,
         None => bail!(
-            "no publication target: pass --publication <at-uri> or set `publication` in {}",
-            ws.root.join("springleaf.toml").display()
+            "no publication target: pass --publication <at-uri> or set `publication` in {} or {}",
+            ws.root.join(config::CONFIG_FILE_NAME).display(),
+            config::xdg_config_toml_path()?.display()
         ),
     };
 
@@ -320,7 +324,8 @@ pub(crate) async fn publish_run_cmd(
     pub_info: Option<PublicationInfo>,
     connect: Option<ConnectFn>,
 ) -> Result<i32> {
-    let ws = Workspace::resolve(root.as_deref())?;
+    let global = config::global_layer()?;
+    let ws = Workspace::resolve(root.as_deref(), &global)?;
     let (source, slug) = resolve_source(&ws, slug_or_file)?;
     let record_text = std::fs::read_to_string(source_path(&source)).with_context(|| format!("reading {}", source_path(&source).display()))?;
     let record: Value = serde_json::from_str(&record_text).context("record file is not valid JSON")?;
@@ -459,7 +464,7 @@ mod tests {
 
     fn workspace() -> (TempDir, Workspace) {
         let tmp = TempDir::new("publish");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         (tmp, ws)
     }
 

@@ -24,6 +24,7 @@ use anyhow::{Context, Result, bail};
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::config::{self, Config};
 use crate::publish::ConnectFn;
 use crate::workspace::{Sidecar, Workspace, now_rfc3339, sha256_hex};
 
@@ -381,18 +382,19 @@ pub(crate) async fn sync_cmd(opts: SyncOptions) -> Result<i32> {
         target,
         connect,
     } = opts;
-    let ws = Workspace::resolve(root.as_deref())?;
+    let global = config::global_layer()?;
+    let ws = Workspace::resolve(root.as_deref(), &global)?;
 
     let target = match target {
         Some(t) => t,
         None => {
-            let input = match sync_handle(handle_flag, &ws) {
+            let input = match sync_handle(handle_flag, &ws, &global)? {
                 Some(h) => h,
                 None => {
                     eprintln!(
                         "error: no handle: pass --handle <handle> (or set `handle` in {} or {})",
-                        ws.root.join("springleaf.toml").display(),
-                        crate::workspace::xdg_config_toml_path()?.display()
+                        ws.root.join(config::CONFIG_FILE_NAME).display(),
+                        config::xdg_config_toml_path()?.display()
                     );
                     return Ok(2);
                 }
@@ -464,17 +466,16 @@ pub(crate) async fn sync_cmd(opts: SyncOptions) -> Result<i32> {
     Ok(0)
 }
 
-/// Handle for sync: `--handle` > workspace toml > XDG config toml >
-/// `$ATPROTO_HANDLE` (the env var because sync itself needs no session).
-fn sync_handle(flag: Option<String>, ws: &Workspace) -> Option<String> {
-    flag.or_else(|| ws.config().handle)
-        .or_else(|| {
-            crate::workspace::xdg_config_toml_path()
-                .ok()
-                .and_then(|p| crate::workspace::toml_value_at(&p, "handle"))
-        })
-        .or_else(|| std::env::var("ATPROTO_HANDLE").ok())
+/// Handle for sync: `--handle` > workspace toml > global toml >
+/// `$ATPROTO_HANDLE` (the env var because sync itself needs no
+/// session). The toml layers resolve through the figment stack
+/// (`config::layered`); the env read stays at this edge.
+fn sync_handle(flag: Option<String>, ws: &Workspace, global: &Config) -> Result<Option<String>> {
+    let layered = config::layered(&Config::from_flags(flag, None), Some(&ws.root), global)?;
+    Ok(layered
+        .handle
         .filter(|h| !h.is_empty())
+        .or_else(|| std::env::var("ATPROTO_HANDLE").ok().filter(|h| !h.is_empty())))
 }
 
 /// Human report.
@@ -633,6 +634,7 @@ fn json_report(report: &SyncReport) -> JsonReport<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::with_env_vars;
     use crate::workspace::TempDir;
     use serde_json::json;
 
@@ -737,7 +739,7 @@ mod tests {
     #[test]
     fn semantics_table_all_rows() {
         let tmp = TempDir::new("sync-table");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         // clean: hash matches, remote cid matches sidecar's remoteCid
         write_posted(&ws, "clean-one", matching("bafyrei-clean"));
         // local-newer: file edited since the sidecar (hash differs), remote cid unchanged
@@ -775,7 +777,7 @@ mod tests {
     #[test]
     fn sidecar_without_remote_cid_is_not_clean() {
         let tmp = TempDir::new("sync-no-remote-cid");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         write_posted(
             &ws,
             "stale-sidecar",
@@ -792,7 +794,7 @@ mod tests {
     #[test]
     fn empty_workspace_reports_everything_remote() {
         let tmp = TempDir::new("sync-empty");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         let locals = scan_posted(&ws).unwrap();
         assert!(locals.is_empty());
         let statuses = status_by_rkey(&classify(locals, vec![remote("r1", "c1"), remote("r2", "c2")]));
@@ -806,7 +808,7 @@ mod tests {
     #[test]
     fn pull_adopts_orphans_and_updates_drift_only() {
         let tmp = TempDir::new("sync-pull");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         write_posted(&ws, "clean-one", matching("bafyrei-clean"));
         write_posted(&ws, "remote-drift", matching("bafyrei-old"));
         write_posted(&ws, "true-conflict", edited("bafyrei-old"));
@@ -858,7 +860,7 @@ mod tests {
     #[tokio::test]
     async fn force_refuses_without_yes() {
         let tmp = TempDir::new("sync-force-refuse");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         write_posted(&ws, "local-newer", edited("bafyrei-ln"));
         let target = SyncTarget {
             handle: None,
@@ -886,7 +888,7 @@ mod tests {
     #[tokio::test]
     async fn force_with_yes_reputs_eligible_rows_via_mocked_transport() {
         let tmp = TempDir::new("sync-force-run");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         write_posted(&ws, "local-newer", edited("bafyrei-ln"));
         write_posted(&ws, "local-missing", matching("bafyrei-was"));
         write_posted(&ws, "true-conflict", edited("bafyrei-old"));
@@ -944,10 +946,38 @@ mod tests {
         assert_eq!(conflict.cid, "bafyreisidecar", "true conflicts are never force-resolved");
     }
 
+    /// `sync`'s full handle chain: flag, then workspace toml, then
+    /// global toml, then `$ATPROTO_HANDLE` (the env var read under a
+    /// guard so parallel test runs are safe; no test reads the
+    /// machine's real config dir).
+    #[test]
+    fn sync_handle_flag_over_workspace_over_global_over_env() {
+        let tmp = TempDir::new("sync-handle");
+        let ws = Workspace::resolve(Some(&tmp), &Config::default()).unwrap();
+        let global = Config {
+            handle: Some("global.example".into()),
+            ..Config::default()
+        };
+
+        // env only (no toml layers set it)
+        with_env_vars(&[("ATPROTO_HANDLE", Some("from-env.example"))], || {
+            assert_eq!(sync_handle(None, &ws, &Config::default()).unwrap().as_deref(), Some("from-env.example"));
+            // global toml beats env
+            assert_eq!(sync_handle(None, &ws, &global).unwrap().as_deref(), Some("global.example"));
+        });
+
+        // workspace toml beats global
+        std::fs::write(ws.root.join(config::CONFIG_FILE_NAME), "handle = \"ws.example\"\n").unwrap();
+        assert_eq!(sync_handle(None, &ws, &global).unwrap().as_deref(), Some("ws.example"));
+
+        // the flag beats everything
+        assert_eq!(sync_handle(Some("flag.example".into()), &ws, &global).unwrap().as_deref(), Some("flag.example"));
+    }
+
     #[test]
     fn report_text_and_json_shapes() {
         let tmp = TempDir::new("sync-report");
-        let ws = Workspace::resolve(Some(&tmp)).unwrap();
+        let ws = Workspace::resolve(Some(&tmp), &crate::config::Config::default()).unwrap();
         write_posted(&ws, "clean-one", matching("bafyrei-clean"));
         let locals = scan_posted(&ws).unwrap();
         let report = report_over(&ws, classify(locals, vec![remote("clean-one", "bafyrei-clean"), remote("orphan", "bafyrei-o")]));

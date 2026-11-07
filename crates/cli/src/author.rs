@@ -341,7 +341,8 @@ pub(crate) async fn drafts_author_cmd(
     json: bool,
     push: Option<PushFn>,
 ) -> Result<i32> {
-    let ws = Workspace::resolve(root.as_deref())?;
+    let global = crate::config::global_layer()?;
+    let ws = Workspace::resolve(root.as_deref(), &global)?;
     let (source, _slug) = crate::publish::resolve_source(&ws, from)?;
     let record_path = crate::publish::source_path(&source).to_path_buf();
     let record_text = std::fs::read_to_string(&record_path).with_context(|| format!("reading {}", record_path.display()))?;

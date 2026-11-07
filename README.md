@@ -9,7 +9,10 @@ Status: **stage 5** — `auth status`, `drafts list`/`show`/`export`
 (read-only, live-verified), `pubs list`, `publish build` (offline-safe),
 `publish run` (writes; the live putRecord is still operator-gated — see
 [Publishing for real](#publishing-for-real-operator-gated)), `sync` (report-only by
-default), and the extraction ⇄ authoring pair complete:
+default), `config show/set` for the layered `springleaf.toml` files
+(figment2 layering — see
+[Configuration](#configuration-springleaftoml-layering)), and the
+extraction ⇄ authoring pair complete:
 `drafts export` pulls a draft into a canonical record, `drafts author`
 builds (and, operator-gated, pushes) the reverse mutation batch, and
 `drafts create` (operator-gated) mints the fresh draft via `GET /new`
@@ -91,6 +94,12 @@ springleaf publish run <slug-or-file> [--yes] [--json]
 springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
                                            #   report posted/ vs the PDS (default:
                                            #   report-only, no writes)
+springleaf config show [--json]            # the effective layered config + which
+                                           #   file each value came from
+springleaf config set <key> <value>        # write one key (workspace|handle|pds|
+                                           #   publication) to the global toml,
+                                           #   comments preserved; --workspace-file
+                                           #   targets the workspace toml instead
 ```
 
 - `drafts list` parses the `/home` RSC flight payload in one request.
@@ -101,9 +110,9 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   human rendering covers title, rights, entity set, publication linkage,
   published documents, and state.
 - `pubs list` needs no leaflet auth: it resolves `--handle` (a handle or
-  a full DID; default: `handle` from `springleaf.toml` in the springleaf
-  XDG config dir — `$XDG_CONFIG_HOME/springleaf/`, hand-parsed — no toml
-  crate yet), then reads
+  a full DID; default: `handle` layered from the workspace and global
+  `springleaf.toml` — see
+  [Configuration](#configuration-springleaftoml-layering)), then reads
   `site.standard.publication` + `pub.leaflet.publication` from the PDS
   via `listRecords`. The record decoder tries the jacquard-generated
   types first and falls back to raw field extraction (third-party
@@ -126,7 +135,9 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   drawing/embedded-canvas blocks warn and skip (v0).
 - Exit codes: `0` ok, `1` operational error (anonymous `auth status`
   counts), `2` usage error or an intentional refusal (`publish run`,
-  `sync --force`, and `drafts create`/`drafts author` without `--yes`).
+  `sync --force`, `drafts create`/`drafts author` without `--yes`, and
+  `config set`'s invalid routing — empty value, or `workspace` +
+  `--workspace-file`).
 
 ## Workspace: drafts/ and posted/
 
@@ -144,14 +155,17 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   local fields — exactly what `putRecord` writes. All local state lives
   in the sidecar (`rkey`, `uri`, `cid`, `publication`, `publishedAt`,
   `lastPutAt`, `contentHash` sha256 of the record file, `remoteCid`).
-- Root resolution: `--root` > the `workspace` key in the XDG config
-  `springleaf.toml` (`$XDG_CONFIG_HOME/springleaf/springleaf.toml` — the
-  only place it can be found before the workspace is known) > cwd.
+- Root resolution: `--root` > the global `workspace` key (see
+  [Configuration](#configuration-springleaftoml-layering) — the only
+  place it can be found before the workspace is known) > cwd. Relative
+  `workspace` values resolve against the config file's directory.
   `drafts/` and `posted/` are created on demand.
 - `publish build` needs a publication target: `--publication <at-uri>`
-  or `publication` in the workspace `springleaf.toml`. Passing the flag
-  also fetches the publication record (one public read) to derive the
-  publication-domain URL; otherwise the fallback
+  or `publication` in the workspace or global `springleaf.toml`
+  (workspace wins — see
+  [Configuration](#configuration-springleaftoml-layering)). Passing the
+  flag also fetches the publication record (one public read) to derive
+  the publication-domain URL; otherwise the fallback
   `https://leaflet.pub/lish/{did}/{pubRkey}/{rkey}` derives offline.
 - `publish run` moves the record to `posted/` — a slug lives in exactly
   one place. Re-running over a posted record is an idempotent re-put
@@ -167,12 +181,60 @@ springleaf sync [--pull] [--force] [--yes] [--json] [--handle H]
   re-put), and **no-sidecar** (indeterminate → re-put writes one).
   `--pull` is a local write only; nothing is ever deleted.
 
+## Configuration (springleaf.toml layering)
+
+Config is real toml parsed by [figment2](https://docs.rs/figment2) —
+stacked providers, not per-key fallback chains. Every
+`springleaf.toml` is a flat key set (`workspace`, `handle`, `pds`,
+`publication`; unknown keys ignored); two files can supply them:
+
+| layer | file |
+| --- | --- |
+| workspace | `<workspace-root>/springleaf.toml` |
+| global | `$XDG_CONFIG_HOME/springleaf/springleaf.toml` (else `~/.config/springleaf/springleaf.toml`) |
+
+Precedence per key (higher wins):
+
+| key | resolution order |
+| --- | --- |
+| `publication` | `--publication` flag > workspace toml > global toml |
+| `handle` | `--handle` flag > workspace toml > global toml > `$ATPROTO_HANDLE` (sync's final fallback only; `pubs list` skips the env) |
+| `workspace` | `--root` resolves the root directly; else the global toml key; else cwd |
+
+A workspace value overriding the global one is the point: a workspace
+is its own publication context. `pubs list` resolves its default
+handle through the same workspace + global layers (workspace found via
+the global `workspace` key), so every command shares one identity
+default.
+
+`config` works on these files directly: `config show` renders the
+effective layered values and which file each came from (the workspace
+is resolved the usual way — global key, else cwd); `config set
+<key> <value>` writes one key via toml_edit — comment- and
+sibling-preserving, creating the file when absent, refusing malformed
+files rather than rewriting them. Keys default to the global toml;
+`--workspace-file` targets the resolved workspace's toml instead
+(valid for `handle`/`pds`/`publication` — the `workspace` key
+necessarily lives in the global file). Figment is read-only; the write
+path is that separate, deliberate half.
+
+**A malformed config is a loud error.** An absent file or key is
+simply unset, but a present `springleaf.toml` that fails to parse — or
+types a known key wrongly (`handle = 42`) — aborts with the file path
+and the parser's error instead of silently falling back. (The old hand
+parser never failed; a typo'd config silently shadowing defaults is a
+footgun in a publishing tool, so this change is deliberate.) An
+explicitly empty value (`handle = ""`) counts as unset. Relative
+`workspace` values resolve against the config file's directory.
+
 ## Auth model
 
 springleaf's config lives under one XDG dir —
 `$XDG_CONFIG_HOME/springleaf/` (else `~/.config/springleaf/`):
-`springleaf.toml` (identity defaults, the `workspace` root key),
-`auth-token` (web cookie), and `session.json` (app-password session).
+`springleaf.toml` (identity defaults, the `workspace` root key —
+layering per the [Configuration](#configuration-springleaftoml-layering)
+section), `auth-token` (web cookie), and `session.json` (app-password
+session).
 
 Two surfaces, never mixed:
 

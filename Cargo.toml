@@ -18,12 +18,14 @@ jacquard-lexicon = { version = "=0.12.1", default-features = false }
 anyhow = "1.0.104"
 base64 = "0.22.1"
 clap = { version = "4.6.7", features = ["derive", "env"] }
+figment2 = { version = "0.11.5", default-features = false, features = ["toml"] }
 jiff = "0.2.39"
 regex = "1.13.1"
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "query", "rustls"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 sha2 = "0.10.9"
+toml_edit = "0.25.19"
 springleaf-atproto = { version = "0.1.0", path = "crates/atproto" }
 springleaf-drafts = { version = "0.1.0", path = "crates/drafts" }
 springleaf-leaflet = { version = "0.1.0", path = "crates/leaflet" }

@@ -3,7 +3,8 @@
 //! Commands: `auth status`, `drafts list [--json] [--fetch]`,
 //! `drafts show <token-id> [--json]`, `drafts export <token-id>`
 //! (read-only pull → canonical record in drafts/), `drafts create`
-//! (operator-gated /new mint), `pubs list`, `publish build/run`, `sync`.
+//! (operator-gated /new mint), `pubs list`, `publish build/run`,
+//! `sync`, `config show/set`.
 //!
 //! Auth model: the `auth_token` cookie value resolved from `--token` >
 //! `$LEAFLET_AUTH_TOKEN` > `$XDG_CONFIG_HOME/springleaf/auth-token`
@@ -22,6 +23,8 @@ use std::fmt::Write as _;
 use uuid::Uuid;
 
 mod author;
+mod config;
+mod config_cmd;
 mod create;
 mod export;
 mod publish;
@@ -65,6 +68,8 @@ enum Command {
     Publish(PublishArgs),
     /// Reconcile posted/ against the PDS (report-only by default)
     Sync(SyncArgs),
+    /// Show or edit the layered springleaf.toml files
+    Config(ConfigArgs),
 }
 
 #[derive(Args)]
@@ -178,7 +183,8 @@ enum PubsCommand {
         #[arg(long)]
         json: bool,
         /// Handle (or full DID) whose publications to list; default:
-        /// `handle` from springleaf.toml in the XDG config dir, if any
+        /// `handle` layered from the workspace springleaf.toml and the
+        /// XDG config toml (workspace wins)
         #[arg(long, value_name = "HANDLE")]
         handle: Option<String>,
     },
@@ -229,6 +235,39 @@ enum PublishCommand {
 }
 
 #[derive(Args)]
+struct ConfigArgs {
+    #[command(subcommand)]
+    cmd: ConfigCommand,
+}
+
+#[derive(Subcommand)]
+enum ConfigCommand {
+    /// Show the effective layered config and where each value came
+    /// from (workspace toml > global toml; no flag layer — flags are
+    /// per-invocation). --json emits the v1 schema.
+    Show {
+        /// Emit the v1 JSON schema
+        #[arg(long)]
+        json: bool,
+    },
+    /// Set one key (<workspace|handle|pds|publication>) in the global
+    /// springleaf.toml, comments preserved (toml_edit); creates the
+    /// file when absent, refuses malformed files
+    Set {
+        /// The key to set
+        #[arg(value_enum)]
+        key: config_cmd::ConfigKey,
+        /// The value (non-empty; empty counts as unset — edit the file
+        /// to remove a key)
+        value: String,
+        /// Write to the resolved workspace's springleaf.toml instead of
+        /// the global file (not valid for the `workspace` key)
+        #[arg(long)]
+        workspace_file: bool,
+    },
+}
+
+#[derive(Args)]
 struct SyncArgs {
     /// Adopt remote records into posted/ (a local write, never remote)
     #[arg(long)]
@@ -242,8 +281,8 @@ struct SyncArgs {
     /// Emit the v1 JSON report schema
     #[arg(long)]
     json: bool,
-    /// Handle (or full DID) to sync against; default: workspace toml,
-    /// XDG config toml, else $ATPROTO_HANDLE
+    /// Handle (or full DID) to sync against; default: --handle flag >
+    /// workspace toml > XDG config toml > $ATPROTO_HANDLE
     #[arg(long, value_name = "HANDLE")]
     handle: Option<String>,
     #[arg(long, value_name = "DIR")]
@@ -306,6 +345,10 @@ async fn run(cli: Cli) -> Result<i32> {
             })
             .await
         }
+        Command::Config(ConfigArgs { cmd }) => match cmd {
+            ConfigCommand::Show { json } => config_cmd::config_show_cmd(json),
+            ConfigCommand::Set { key, value, workspace_file } => config_cmd::config_set_cmd(key, value, workspace_file),
+        },
         auth_or_drafts => {
             // Resolution order: flag > env > default / token file. The
             // token value is never echoed, logged, or embedded in error
@@ -349,7 +392,7 @@ async fn run(cli: Cli) -> Result<i32> {
                             json,
                         },
                 }) => author::drafts_author_cmd(&client, &token_id.to_string(), &from, root, yes, json, None).await,
-                _ => unreachable!("pubs/publish/sync dispatched above"),
+                _ => unreachable!("pubs/publish/sync/config dispatched above"),
             }
         }
     }
@@ -362,7 +405,7 @@ fn resolve_token(flag_or_env: Option<&str>) -> Result<Option<String>> {
     if let Some(token) = flag_or_env.map(str::trim).filter(|t| !t.is_empty()) {
         return Ok(Some(token.to_string()));
     }
-    let path = workspace::xdg_config_dir()
+    let path = config::xdg_config_dir()
         .context("token file: locating the springleaf XDG config dir")?
         .join("auth-token");
     match std::fs::read_to_string(&path) {
@@ -624,13 +667,23 @@ struct PubsIdentity {
 
 /// `pubs list`: resolve the handle (or DID) → PDS, then `listRecords`
 /// both publication collections to exhaustion (public, unauthenticated).
+/// The handle layers like every other config key — flag > workspace
+/// toml > global toml — resolving the workspace via the global
+/// `workspace` key when needed, so listing follows the same identity
+/// defaults as `sync`/`publish`. Unlike sync there is no
+/// `$ATPROTO_HANDLE` fallback: this is a casual public read, not a
+/// session operation.
 async fn pubs_list(json: bool, handle: Option<String>) -> Result<i32> {
-    let input = match handle.or_else(default_handle_from_config) {
+    let global = config::global_layer()?;
+    let ws = workspace::Workspace::resolve(None, &global)?;
+    let layered = config::layered(&config::Config::from_flags(handle, None), Some(&ws.root), &global)?;
+    let input = match layered.handle {
         Some(h) => h,
         None => {
             eprintln!(
-                "error: no handle: pass --handle <handle> (or set `handle` in {})",
-                config_toml_path()?.display()
+                "error: no handle: pass --handle <handle> (or set `handle` in {} or {})",
+                ws.root.join(config::CONFIG_FILE_NAME).display(),
+                config::xdg_config_toml_path()?.display()
             );
             return Ok(2);
         }
@@ -744,16 +797,6 @@ fn pubs_table(list: &PubsList) -> String {
         list.count, standard, legacy,
     );
     out
-}
-
-/// Path of the optional identity-defaults config (see `workspace`).
-fn config_toml_path() -> Result<std::path::PathBuf> {
-    workspace::xdg_config_toml_path()
-}
-
-/// Default handle from the config file, if present.
-fn default_handle_from_config() -> Option<String> {
-    workspace::toml_value_at(&config_toml_path().ok()?, "handle")
 }
 
 #[cfg(test)]
@@ -992,5 +1035,5 @@ mod tests {
         );
     }
 
-    // (`handle` toml parsing is covered in `workspace`'s tests.)
+    // (`handle` toml layering is covered in `config`'s tests.)
 }
