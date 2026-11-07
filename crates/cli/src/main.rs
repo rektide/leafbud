@@ -18,6 +18,10 @@ use springleaf_drafts::{DEFAULT_BASE_URL, Error as DraftsError, LeafletClient, L
 use std::fmt::Write as _;
 use uuid::Uuid;
 
+mod publish;
+mod sync;
+mod workspace;
+
 #[derive(Parser)]
 #[command(
     name = "springleaf",
@@ -51,6 +55,10 @@ enum Command {
     Drafts(DraftsArgs),
     /// Publication operations (public PDS reads, no auth)
     Pubs(PubsArgs),
+    /// Build and publish canonical records (build is offline-safe; run writes)
+    Publish(PublishArgs),
+    /// Reconcile posted/ against the PDS (report-only by default)
+    Sync(SyncArgs),
 }
 
 #[derive(Args)]
@@ -112,6 +120,72 @@ enum PubsCommand {
     },
 }
 
+#[derive(Args)]
+struct PublishArgs {
+    #[command(subcommand)]
+    cmd: PublishCommand,
+}
+
+#[derive(Subcommand)]
+enum PublishCommand {
+    /// Build the canonical record into drafts/<slug>.json (always safe)
+    Build {
+        /// Markdown source (frontmatter + body)
+        file: std::path::PathBuf,
+        /// Target publication at-uri; default: `publication` from the
+        /// workspace springleaf.toml. Passing the flag also enables one
+        /// public getRecord to derive the publication-domain URL.
+        #[arg(long, value_name = "AT_URI")]
+        publication: Option<String>,
+        /// Workspace root (default: `workspace` from the XDG config
+        /// springleaf.toml, else cwd)
+        #[arg(long, value_name = "DIR")]
+        root: Option<std::path::PathBuf>,
+        /// Replace an existing drafts/<slug>.json
+        #[arg(long)]
+        overwrite: bool,
+        /// Emit the v1 JSON schema (record + rkey + url + draft path)
+        #[arg(long)]
+        json: bool,
+    },
+    /// putRecord the draft (upsert), move it to posted/, write the
+    /// sidecar — refuses without --yes (exit 2)
+    Run {
+        /// Slug (drafts/<slug>.json or posted/<slug>.json) or a record file path
+        slug_or_file: String,
+        /// Execute the putRecord (required; without it the command only
+        /// prints the exact record + target and exits 2)
+        #[arg(long)]
+        yes: bool,
+        #[arg(long, value_name = "DIR")]
+        root: Option<std::path::PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Args)]
+struct SyncArgs {
+    /// Adopt remote records into posted/ (a local write, never remote)
+    #[arg(long)]
+    pull: bool,
+    /// Re-put eligible local records (refuses without --yes)
+    #[arg(long)]
+    force: bool,
+    /// Execute --force re-puts (requires app-password env)
+    #[arg(long, requires = "force")]
+    yes: bool,
+    /// Emit the v1 JSON report schema
+    #[arg(long)]
+    json: bool,
+    /// Handle (or full DID) to sync against; default: workspace toml,
+    /// XDG config toml, else $ATPROTO_HANDLE
+    #[arg(long, value_name = "HANDLE")]
+    handle: Option<String>,
+    #[arg(long, value_name = "DIR")]
+    root: Option<std::path::PathBuf>,
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -128,33 +202,69 @@ async fn main() {
 }
 
 async fn run(cli: Cli) -> Result<i32> {
-    // `pubs list` is a public read: no leaflet cookie needed, so it
-    // dispatches before the drafts client (and its token resolution).
-    if let Command::Pubs(PubsArgs {
-        cmd: PubsCommand::List { json, handle },
-    }) = cli.command
-    {
-        return pubs_list(json, handle).await;
-    }
-    // Resolution order: flag > env > default / token file. The token value
-    // is never echoed, logged, or embedded in error text.
-    let base_url = cli
-        .base_url
-        .clone()
-        .or_else(|| std::env::var("LEAFLET_BASE_URL").ok())
-        .unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
-    let flag_token = cli.token.clone().or_else(|| std::env::var("LEAFLET_AUTH_TOKEN").ok());
-    let token = resolve_token(flag_token.as_deref())?;
-    let client = LeafletClient::new(&base_url, token).with_context(|| format!("invalid base url {base_url:?}"))?;
+    // Public/PDS-only commands dispatch without the drafts client (and
+    // its token resolution): `pubs list`, `publish`, and `sync` need no
+    // leaflet cookie.
     match cli.command {
-        Command::Auth(AuthArgs { cmd: AuthCommand::Status }) => auth_status(&client).await,
-        Command::Drafts(DraftsArgs {
-            cmd: DraftsCommand::List { json, fetch },
-        }) => drafts_list(&client, json, fetch).await,
-        Command::Drafts(DraftsArgs {
-            cmd: DraftsCommand::Show { token_id, json },
-        }) => drafts_show(&client, &token_id, json).await,
-        Command::Pubs(..) => unreachable!("dispatched above"),
+        Command::Pubs(PubsArgs {
+            cmd: PubsCommand::List { json, handle },
+        }) => pubs_list(json, handle).await,
+        Command::Publish(PublishArgs {
+            cmd:
+                PublishCommand::Build {
+                    file,
+                    publication,
+                    root,
+                    overwrite,
+                    json,
+                },
+        }) => publish::publish_build_cmd(&file, publication, root, overwrite, json).await,
+        Command::Publish(PublishArgs {
+            cmd: PublishCommand::Run { slug_or_file, yes, root, json },
+        }) => publish::publish_run_cmd(&slug_or_file, root, yes, json, None, None).await,
+        Command::Sync(SyncArgs {
+            pull,
+            force,
+            yes,
+            json,
+            handle,
+            root,
+        }) => {
+            sync::sync_cmd(sync::SyncOptions {
+                handle,
+                root,
+                pull,
+                force,
+                yes,
+                json,
+                target: None,
+                connect: None,
+            })
+            .await
+        }
+        auth_or_drafts => {
+            // Resolution order: flag > env > default / token file. The
+            // token value is never echoed, logged, or embedded in error
+            // text.
+            let base_url = cli
+                .base_url
+                .clone()
+                .or_else(|| std::env::var("LEAFLET_BASE_URL").ok())
+                .unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
+            let flag_token = cli.token.clone().or_else(|| std::env::var("LEAFLET_AUTH_TOKEN").ok());
+            let token = resolve_token(flag_token.as_deref())?;
+            let client = LeafletClient::new(&base_url, token).with_context(|| format!("invalid base url {base_url:?}"))?;
+            match auth_or_drafts {
+                Command::Auth(AuthArgs { cmd: AuthCommand::Status }) => auth_status(&client).await,
+                Command::Drafts(DraftsArgs {
+                    cmd: DraftsCommand::List { json, fetch },
+                }) => drafts_list(&client, json, fetch).await,
+                Command::Drafts(DraftsArgs {
+                    cmd: DraftsCommand::Show { token_id, json },
+                }) => drafts_show(&client, &token_id, json).await,
+                _ => unreachable!("pubs/publish/sync dispatched above"),
+            }
+        }
     }
 }
 
@@ -548,49 +658,14 @@ fn pubs_table(list: &PubsList) -> String {
     out
 }
 
-/// Path of the optional identity-defaults config: `$XDG_CONFIG_HOME/
-/// springleaf.toml`, else `~/.config/springleaf.toml` (the same file
-/// `design/records-canonical.glm53m.md` plans for publication defaults).
+/// Path of the optional identity-defaults config (see `workspace`).
 fn config_toml_path() -> Result<std::path::PathBuf> {
-    let dir = match std::env::var_os("XDG_CONFIG_HOME") {
-        Some(xdg) if !xdg.is_empty() => std::path::PathBuf::from(xdg),
-        _ => {
-            let home = std::env::var_os("HOME").context("config lookup: $HOME unset and no $XDG_CONFIG_HOME")?;
-            std::path::PathBuf::from(home).join(".config")
-        }
-    };
-    Ok(dir.join("springleaf.toml"))
+    workspace::xdg_config_toml_path()
 }
 
-/// Default handle from the config file, if present: a manual two-line
-/// parse for `handle = "value"` (or unquoted) — no toml crate, per the
-/// lean-deps posture. Returns `None` when the file is absent or has no
-/// `handle` key.
+/// Default handle from the config file, if present.
 fn default_handle_from_config() -> Option<String> {
-    handle_from_config_path(&config_toml_path().ok()?)
-}
-
-fn handle_from_config_path(path: &std::path::Path) -> Option<String> {
-    let contents = std::fs::read_to_string(path).ok()?;
-    for line in contents.lines() {
-        let line = line.trim();
-        if line.starts_with('#') {
-            continue;
-        }
-        let Some(rest) = line.strip_prefix("handle") else { continue };
-        let rest = rest.trim_start();
-        let Some(value) = rest.strip_prefix('=') else { continue };
-        let value = value.trim();
-        let value = value
-            .strip_prefix('"')
-            .and_then(|v| v.strip_suffix('"'))
-            .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
-            .unwrap_or(value);
-        if !value.is_empty() {
-            return Some(value.to_string());
-        }
-    }
-    None
+    workspace::toml_value_at(&config_toml_path().ok()?, "handle")
 }
 
 #[cfg(test)]
@@ -829,23 +904,5 @@ mod tests {
         );
     }
 
-    #[test]
-    fn config_handle_parse_shapes() {
-        let dir = std::env::temp_dir().join("springleaf-cli-pubs-test");
-        std::fs::create_dir_all(&dir).unwrap();
-        let parse = |body: &str| -> Option<String> {
-            let path = dir.join("springleaf.toml");
-            std::fs::write(&path, body).unwrap();
-            handle_from_config_path(&path)
-        };
-        assert_eq!(
-            parse("# comment\nhandle = \"jauntywunderkind.bsky.social\"\npublication = \"at://x\"\n").as_deref(),
-            Some("jauntywunderkind.bsky.social")
-        );
-        assert_eq!(parse("handle='unquoted'").as_deref(), Some("unquoted"));
-        assert_eq!(parse("handle = bare-handle.example").as_deref(), Some("bare-handle.example"));
-        assert!(parse("other = x").is_none());
-        assert!(parse("handle = \"\"").is_none());
-        assert!(parse("").is_none());
-    }
+    // (`handle` toml parsing is covered in `workspace`'s tests.)
 }

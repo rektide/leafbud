@@ -7,8 +7,10 @@ edition.workspace = true
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+jiff.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 springleaf-atproto.workspace = true
 springleaf-drafts.workspace = true
 springleaf-leaflet.workspace = true

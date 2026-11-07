@@ -2841,8 +2841,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "jiff",
  "serde",
  "serde_json",
+ "sha2",
  "springleaf-atproto",
  "springleaf-drafts",
  "springleaf-leaflet",
@@ -2890,6 +2892,7 @@ dependencies = [
  "serde_json",
  "springleaf-atproto",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 
