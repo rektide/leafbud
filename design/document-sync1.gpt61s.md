@@ -30,6 +30,10 @@ sources:
     title: "Inspected UI sequence pushes editor state before native publication; Bluesky sharing is separate"
   - resource: "https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/utils/addImage.ts"
     title: "Editor images require URL/dimension facts and asset storage handling"
+  - resource: /design/document-sync1.gpt6a.md
+    title: "Read after committing Sol's independent round 1; comparison and revised recommendations below"
+  - resource: "https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/utils/resolveDocumentFilter.ts"
+    title: "Checked after Astra's report: publication paths are resolved before rkey fallback"
   - resource: /experiments/02-draft-internals/REPORT.md
     title: "Existing read/source evidence for full pulls, acknowledged mutation failures, and replay protection"
 ---
@@ -379,3 +383,76 @@ round-0 reasoning. Their ancestor-storage recommendation is rejected, not
 carried forward. The [original record design](/design/records-canonical.glm53m.md)
 provides the document-first precedent, but its sidecar, purity, filename-key,
 and raw-publication assumptions are not this redesign's destination.
+
+## Round-1 join: comparison, not acceptance
+
+Sol's independent draft above was committed as `e3e7345e` before reading
+[Astra's new draft](/design/document-sync1.gpt6a.md), committed as `bf4e9161`.
+Both replace earlier ancestor-storage and PDS-primary recommendations. These
+documents remain proposals, not implementation authorization.
+
+### Agreement
+
+- One mutable local document, embedded compact metadata, no saved base bodies,
+  historical fact graphs, persisted request bodies, or maintained merge copies.
+- Exclusive draft/post lifecycle. Published content with unreleased edits is
+  still a published document, not a new draft.
+- One Leaflet-managed adapter; editor/application/PDS are upstream components
+  whose differences must be exposed without turning them into local masters.
+- Independent filename/path and document/Leaflet witnesses; report-only status,
+  optional two-way tidy, no automatic name changes after native publication.
+- Current-endpoint conflict inspection, explicit resolution pinned to reviewed
+  hashes, preflight/read-back rather than invented transactional guarantees.
+- Complete current-block and asset support; no permanent warn-and-skip adapter.
+- Directories are defaults, not authority; no implicit publication-time move.
+- Markdown is an alternate encoding; lossy conversion needs explicit approval,
+  not another maintained input/output synchronization relationship.
+
+### Differences and Sol's revised leans
+
+| Topic | Sol | Astra | Recommendation for eventual synthesis |
+|---|---|---|---|
+| Meaning of push | Save editor in either lifecycle | Save draft; save and republish post | Keep save/release symmetry: push saves, publish releases in both states; needs user selection |
+| Meaning of publish on a post | Release update to same identity | Already published; use push | Same choice as above, not an independent fork |
+| Initial document path | May derive local intent from filename | Absent/unassigned by default | Adopt Astra's unassigned default; explicit path remains possible but its unsupported native intent is shown |
+| Accepted metadata shape | Editor agreement separate from release receipt | E/A/P component tuple with pending publication status | Prefer separate compact save/release witnesses so saving can never imply public release; keep Astra's explicit component diagnostics |
+| Asset materialization | Require resolvable assets and complete mappings | Specify read-only construction with compact asset-source locators | Adopt explicit read-only pull contract and compact asset locators; no upload just to represent a pulled image or invented published poll reference |
+
+### Verified refinement: custom paths route
+
+After reading Astra, inspected `resolveDocumentFilter.ts:20-38` and
+`getPostPageData.ts:41-43` directly. Publication post lookup first matches
+`documents.data.path` within publication membership, then falls back to rkey.
+`resolveStandardSitePostUrl.ts:87-112` also resolves actual record paths.
+Thus arbitrary matching single-segment publication paths are not inherently
+forbidden or required to equal rkey. This does not establish every nested path
+route or standalone-post custom-path behavior.
+
+The ordinary native setter remains the constraint: publish chooses a first
+key and writes `/rkey`, whereas trusted import can pass a chosen key. A PDS
+adapter can exercise independent rkey/path control, subject to routing and
+collision checks, but does not acquire native editor linkage or native
+publication effects merely by choosing a better URL. No hybrid native-then-PDS
+path rewrite is proposed: a subsequent native update would reset it again.
+
+### Concrete snapshot-free drift account
+
+Keep accepted local fingerprint, accepted editor fingerprint, and publication
+receipt fingerprints/CID only. Fetch current remote payload transiently for
+diff or read-back; it is not another stored document. Full editor fingerprint
+detects opaque changes and topology; semantic mapping identifies actual editable
+differences. These are two views of one upstream observation, not two copied
+payloads. Editor save advances editor agreement; publish advances release
+evidence only after outcome verification. Naming settlement advances neither.
+
+If live output changes externally without editor change, report publication
+divergence before republish. Hashes cannot reconstruct the prior body or prove
+which external change should win, and this design does not claim otherwise.
+
+### Remaining judgment
+
+The significant user-facing choice is whether `push` may change public content
+solely because a file is already published. Sol recommends no: preserve
+predictable save versus release semantics and make `publish` valid for initial
+and subsequent releases. Other source/adapter gates are implementation research,
+not reasons to revive a saved base or dual local lifecycle.
