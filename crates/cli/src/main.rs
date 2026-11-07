@@ -13,6 +13,7 @@
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
+use serde::Serialize;
 use springleaf_drafts::{DEFAULT_BASE_URL, Error as DraftsError, LeafletClient, LeafletData, LeafletList, LeafletState, classify};
 use std::fmt::Write as _;
 use uuid::Uuid;
@@ -48,6 +49,8 @@ enum Command {
     Auth(AuthArgs),
     /// Leaflet (draft) operations
     Drafts(DraftsArgs),
+    /// Publication operations (public PDS reads, no auth)
+    Pubs(PubsArgs),
 }
 
 #[derive(Args)]
@@ -89,6 +92,26 @@ enum DraftsCommand {
     },
 }
 
+#[derive(Args)]
+struct PubsArgs {
+    #[command(subcommand)]
+    cmd: PubsCommand,
+}
+
+#[derive(Subcommand)]
+enum PubsCommand {
+    /// List publications from listRecords (public read, no auth)
+    List {
+        /// Emit the v1 JSON schema
+        #[arg(long)]
+        json: bool,
+        /// Handle (or full DID) whose publications to list; default:
+        /// `handle` from springleaf.toml in the XDG config dir, if any
+        #[arg(long, value_name = "HANDLE")]
+        handle: Option<String>,
+    },
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -105,6 +128,14 @@ async fn main() {
 }
 
 async fn run(cli: Cli) -> Result<i32> {
+    // `pubs list` is a public read: no leaflet cookie needed, so it
+    // dispatches before the drafts client (and its token resolution).
+    if let Command::Pubs(PubsArgs {
+        cmd: PubsCommand::List { json, handle },
+    }) = cli.command
+    {
+        return pubs_list(json, handle).await;
+    }
     // Resolution order: flag > env > default / token file. The token value
     // is never echoed, logged, or embedded in error text.
     let base_url = cli
@@ -123,6 +154,7 @@ async fn run(cli: Cli) -> Result<i32> {
         Command::Drafts(DraftsArgs {
             cmd: DraftsCommand::Show { token_id, json },
         }) => drafts_show(&client, &token_id, json).await,
+        Command::Pubs(..) => unreachable!("dispatched above"),
     }
 }
 
@@ -361,6 +393,206 @@ fn show_text(data: &LeafletData) -> String {
     out
 }
 
+// ---------------------------------------------------------------------------
+// pubs list — public PDS reads via springleaf-atproto (no leaflet cookie)
+// ---------------------------------------------------------------------------
+
+/// One publication row in the `pubs list` output.
+#[derive(Debug, Clone, Serialize)]
+struct PublicationSummary {
+    collection: String,
+    rkey: String,
+    uri: String,
+    cid: Option<String>,
+    name: Option<String>,
+    url: Option<String>,
+}
+
+/// The `pubs list --json` schema (version 1).
+#[derive(Debug, Serialize)]
+struct PubsList {
+    version: u8,
+    identity: PubsIdentity,
+    count: usize,
+    publications: Vec<PublicationSummary>,
+}
+
+#[derive(Debug, Serialize)]
+struct PubsIdentity {
+    handle: Option<String>,
+    did: String,
+    pds: String,
+}
+
+/// `pubs list`: resolve the handle (or DID) → PDS, then `listRecords`
+/// both publication collections to exhaustion (public, unauthenticated).
+async fn pubs_list(json: bool, handle: Option<String>) -> Result<i32> {
+    let input = match handle.or_else(default_handle_from_config) {
+        Some(h) => h,
+        None => {
+            eprintln!(
+                "error: no handle: pass --handle <handle> (or set `handle` in {})",
+                config_toml_path()?.display()
+            );
+            return Ok(2);
+        }
+    };
+
+    let resolver = springleaf_atproto::Resolver::new();
+    let identity = resolver.resolve(&input).await.with_context(|| format!("resolving identity for {input}"))?;
+    if identity.handle_binding_verified == Some(false) {
+        eprintln!("warning: DID document does not list at://{input} in alsoKnownAs (unidirectional binding)");
+    }
+    let client = springleaf_atproto::XrpcClient::new(&identity.pds_endpoint).with_context(|| format!("invalid PDS endpoint {:?}", identity.pds_endpoint))?;
+    let did = identity.did.to_string();
+
+    let mut publications = Vec::new();
+    for collection in ["site.standard.publication", "pub.leaflet.publication"] {
+        let records = client
+            .list_all_records(&did, collection)
+            .await
+            .with_context(|| format!("listRecords {collection}"))?;
+        for record in records {
+            publications.push(summarize_publication(collection, &record));
+        }
+    }
+
+    let list = PubsList {
+        version: 1,
+        identity: PubsIdentity {
+            handle: springleaf_atproto::Handle::parse(&input).ok().map(|h| h.to_string()),
+            did,
+            pds: identity.pds_endpoint,
+        },
+        count: publications.len(),
+        publications,
+    };
+    if json {
+        println!("{}", serde_json::to_string_pretty(&list)?);
+    } else {
+        print!("{}", pubs_table(&list));
+    }
+    Ok(0)
+}
+
+/// Decode one raw record into a summary. Third-party publications are not
+/// guaranteed lexicon-clean (experiment 03 §2: blento's `preferences` is
+/// an open object that does not fit the generated type), so the generated
+/// types are tried first and raw field extraction is the fallback — the
+/// generated-type compatibility is exactly why both paths stay.
+fn summarize_publication(collection: &str, record: &springleaf_atproto::RawRecord) -> PublicationSummary {
+    use springleaf_leaflet::DefaultStr;
+    let typed = if collection == "site.standard.publication" {
+        serde_json::from_value::<springleaf_leaflet::site_standard::publication::Publication<DefaultStr>>(record.value.clone())
+            .ok()
+            .map(|p| (p.name.as_str().to_string(), Some(p.url.as_str().to_string())))
+    } else {
+        serde_json::from_value::<springleaf_leaflet::pub_leaflet::publication::Publication<DefaultStr>>(record.value.clone())
+            .ok()
+            .map(|p| (p.name.as_str().to_string(), None))
+    };
+    let (name, url) = match typed {
+        Some(pair) => pair,
+        None => (
+            record.value.get("name").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            record.value.get("url").and_then(|v| v.as_str()).map(str::to_string),
+        ),
+    };
+    PublicationSummary {
+        collection: collection.to_string(),
+        rkey: record.uri.rsplit('/').next().unwrap_or_default().to_string(),
+        uri: record.uri.clone(),
+        cid: Some(record.cid.clone()),
+        name: (!name.is_empty()).then_some(name),
+        url,
+    }
+}
+
+/// Human table: COLLECTION | RKEY | NAME (38 chars, ellipsized) | URL,
+/// footer with counts and identity.
+fn pubs_table(list: &PubsList) -> String {
+    let mut out = String::new();
+    let name_width = 40;
+    let collection_width = list.publications.iter().map(|p| p.collection.len()).max().unwrap_or(21).max("COLLECTION".len());
+    let rkey_width = list.publications.iter().map(|p| p.rkey.len()).max().unwrap_or(4).max("RKEY".len());
+    let _ = writeln!(out, "{:<collection_width$} {:<rkey_width$} {:<name_width$} URL", "COLLECTION", "RKEY", "NAME",);
+    for p in &list.publications {
+        let name = p.name.as_deref().unwrap_or("(unnamed)");
+        let name = if name.chars().count() > 38 {
+            format!("{}…", name.chars().take(35).collect::<String>())
+        } else {
+            name.to_string()
+        };
+        let _ = writeln!(
+            out,
+            "{:<collection_width$} {:<rkey_width$} {:<name_width$} {}",
+            p.collection,
+            p.rkey,
+            name,
+            p.url.as_deref().unwrap_or(""),
+        );
+    }
+    let standard = list.publications.iter().filter(|p| p.collection == "site.standard.publication").count();
+    let legacy = list.count - standard;
+    let who = list
+        .identity
+        .handle
+        .as_deref()
+        .map(|h| format!(" as {h} ({})", list.identity.did))
+        .unwrap_or_else(|| format!(" as {}", list.identity.did));
+    let _ = writeln!(
+        out,
+        "\n{} publications ({} site.standard, {} pub.leaflet legacy){who}",
+        list.count, standard, legacy,
+    );
+    out
+}
+
+/// Path of the optional identity-defaults config: `$XDG_CONFIG_HOME/
+/// springleaf.toml`, else `~/.config/springleaf.toml` (the same file
+/// `design/records-canonical.glm53m.md` plans for publication defaults).
+fn config_toml_path() -> Result<std::path::PathBuf> {
+    let dir = match std::env::var_os("XDG_CONFIG_HOME") {
+        Some(xdg) if !xdg.is_empty() => std::path::PathBuf::from(xdg),
+        _ => {
+            let home = std::env::var_os("HOME").context("config lookup: $HOME unset and no $XDG_CONFIG_HOME")?;
+            std::path::PathBuf::from(home).join(".config")
+        }
+    };
+    Ok(dir.join("springleaf.toml"))
+}
+
+/// Default handle from the config file, if present: a manual two-line
+/// parse for `handle = "value"` (or unquoted) — no toml crate, per the
+/// lean-deps posture. Returns `None` when the file is absent or has no
+/// `handle` key.
+fn default_handle_from_config() -> Option<String> {
+    handle_from_config_path(&config_toml_path().ok()?)
+}
+
+fn handle_from_config_path(path: &std::path::Path) -> Option<String> {
+    let contents = std::fs::read_to_string(path).ok()?;
+    for line in contents.lines() {
+        let line = line.trim();
+        if line.starts_with('#') {
+            continue;
+        }
+        let Some(rest) = line.strip_prefix("handle") else { continue };
+        let rest = rest.trim_start();
+        let Some(value) = rest.strip_prefix('=') else { continue };
+        let value = value.trim();
+        let value = value
+            .strip_prefix('"')
+            .and_then(|v| v.strip_suffix('"'))
+            .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
+            .unwrap_or(value);
+        if !value.is_empty() {
+            return Some(value.to_string());
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,5 +693,159 @@ mod tests {
         assert!(text.contains("state:         draft"));
         assert!(text.contains("publication linkage: none"));
         assert!(!text.contains("reply drafts"));
+    }
+
+    // ── pubs list ─────────────────────────────────────────────────────────
+
+    fn raw_record(collection: &str, rkey: &str, value: serde_json::Value) -> springleaf_atproto::RawRecord {
+        springleaf_atproto::RawRecord {
+            uri: format!("at://did:plc:zjbq26wybii5ojoypkso2mso/{collection}/{rkey}"),
+            cid: format!("bafyrei-{rkey}"),
+            value,
+        }
+    }
+
+    fn pubs_list_from(records: &[springleaf_atproto::RawRecord]) -> PubsList {
+        PubsList {
+            version: 1,
+            identity: PubsIdentity {
+                handle: Some("jauntywunderkind.bsky.social".into()),
+                did: "did:plc:zjbq26wybii5ojoypkso2mso".into(),
+                pds: "https://puffball.us-east.host.bsky.network".into(),
+            },
+            count: records.len(),
+            publications: records
+                .iter()
+                .map(|r| {
+                    summarize_publication(
+                        if r.uri.contains("pub.leaflet.publication") {
+                            "pub.leaflet.publication"
+                        } else {
+                            "site.standard.publication"
+                        },
+                        r,
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    /// Experiment 03 §2's inventory shapes: a lexicon-clean publication,
+    /// a third-party publication with an open-object `preferences` that
+    /// does not fit the generated type (blento), and one with a tolerated
+    /// extra field (skyreader).
+    #[test]
+    fn pubs_summaries_decode_typed_and_fallback() {
+        let records = vec![
+            raw_record(
+                "site.standard.publication",
+                "3molsbwkh522o",
+                json!({
+                    "$type": "site.standard.publication",
+                    "name": "JauntyWunderKind's Technautical Expeditions",
+                    "url": "https://technautical.leaflet.pub"
+                }),
+            ),
+            raw_record(
+                "site.standard.publication",
+                "blento.self",
+                json!({
+                    "$type": "site.standard.publication",
+                    "name": "JauntyWunderKind",
+                    "url": "https://blento.app/jauntywk.bsky.social",
+                    "preferences": {"baseColor": "#ffffff", "accentColor": "#000000"}
+                }),
+            ),
+            raw_record(
+                "site.standard.publication",
+                "skyreader-links",
+                json!({
+                    "$type": "site.standard.publication",
+                    "name": "JauntyWunderKind's links",
+                    "url": "https://linkblogs.skyreader.app/did:plc:zjbq26wybii5ojoypkso2mso/",
+                    "skyreaderLinkblog": {"syndicate": true}
+                }),
+            ),
+            raw_record(
+                "pub.leaflet.publication",
+                "legacy1",
+                json!({
+                    "$type": "pub.leaflet.publication", "name": "Legacy shape"
+                }),
+            ),
+        ];
+        let list = pubs_list_from(&records);
+        assert_eq!(list.count, 4);
+        let technautical = &list.publications[0];
+        assert_eq!(technautical.rkey, "3molsbwkh522o");
+        assert_eq!(technautical.name.as_deref(), Some("JauntyWunderKind's Technautical Expeditions"));
+        assert_eq!(technautical.url.as_deref(), Some("https://technautical.leaflet.pub"));
+        // blento: preferences shape does not fit the generated type — the
+        // raw fallback still extracts name/url.
+        let blento = &list.publications[1];
+        assert_eq!(blento.name.as_deref(), Some("JauntyWunderKind"));
+        assert_eq!(blento.url.as_deref(), Some("https://blento.app/jauntywk.bsky.social"));
+        // skyreader: unknown extra field tolerated by extra_data (typed).
+        let skyreader = &list.publications[2];
+        assert_eq!(skyreader.name.as_deref(), Some("JauntyWunderKind's links"));
+        // legacy collection: no url field in the lexicon.
+        let legacy = &list.publications[3];
+        assert_eq!(legacy.name.as_deref(), Some("Legacy shape"));
+        assert_eq!(legacy.url, None);
+    }
+
+    #[test]
+    fn pubs_human_table_shape() {
+        let records = vec![
+            raw_record(
+                "site.standard.publication",
+                "3molsbwkh522o",
+                json!({
+                    "name": "JauntyWunderKind's Technautical Expeditions", "url": "https://technautical.leaflet.pub"
+                }),
+            ),
+            raw_record(
+                "site.standard.publication",
+                "blento.self",
+                json!({
+                    "name": "JauntyWunderKind", "url": "https://blento.app/jauntywk.bsky.social",
+                    "preferences": {"baseColor": "#fff"}
+                }),
+            ),
+        ];
+        let table = pubs_table(&pubs_list_from(&records));
+        let lines: Vec<&str> = table.lines().collect();
+        assert!(lines[0].starts_with("COLLECTION"), "{}", lines[0]);
+        assert!(lines[1].contains("3molsbwkh522o"));
+        // 42-char name ellipsized to 35 chars + … inside the 40-wide column
+        assert!(lines[1].contains("JauntyWunderKind's Technautical Exp…"), "{}", lines[1]);
+        assert!(lines[1].contains("https://technautical.leaflet.pub"));
+        assert!(
+            table
+                .lines()
+                .last()
+                .unwrap()
+                .contains("2 publications (2 site.standard, 0 pub.leaflet legacy) as jauntywunderkind.bsky.social")
+        );
+    }
+
+    #[test]
+    fn config_handle_parse_shapes() {
+        let dir = std::env::temp_dir().join("springleaf-cli-pubs-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let parse = |body: &str| -> Option<String> {
+            let path = dir.join("springleaf.toml");
+            std::fs::write(&path, body).unwrap();
+            handle_from_config_path(&path)
+        };
+        assert_eq!(
+            parse("# comment\nhandle = \"jauntywunderkind.bsky.social\"\npublication = \"at://x\"\n").as_deref(),
+            Some("jauntywunderkind.bsky.social")
+        );
+        assert_eq!(parse("handle='unquoted'").as_deref(), Some("unquoted"));
+        assert_eq!(parse("handle = bare-handle.example").as_deref(), Some("bare-handle.example"));
+        assert!(parse("other = x").is_none());
+        assert!(parse("handle = \"\"").is_none());
+        assert!(parse("").is_none());
     }
 }

@@ -175,14 +175,17 @@ impl Resolver {
             return Ok(None);
         }
         let body = response.text().await?;
+        // The well-known body is the DID, optionally `did=`-prefixed
+        // (bsky.social serves the bare form; both are spec-legal).
         let did = body
             .lines()
-            .find_map(|l| l.trim().strip_prefix("did="))
             .map(str::trim)
-            .filter(|s| !s.is_empty())
+            .find(|l| !l.is_empty())
+            .map(|l| l.strip_prefix("did=").unwrap_or(l))
+            .filter(|s| s.starts_with("did:"))
             .ok_or_else(|| Error::Identity {
                 input: handle.to_string(),
-                reason: format!("well-known response has no did= line (HTTP {status})"),
+                reason: format!("well-known response has no DID (HTTP {status})"),
             })?;
         Did::parse(did).map(Some)
     }
@@ -358,9 +361,18 @@ mod tests {
 
     #[test]
     fn well_known_body_parse_shapes() {
-        // The production body is `did=did:plc:...`; some servers append CRLF.
-        let body = "did=did:plc:zjbq26wybii5ojoypkso2mso\r\n";
-        let did = body.lines().find_map(|l| l.trim().strip_prefix("did=")).map(str::trim).unwrap();
-        assert_eq!(Did::parse(did).unwrap().as_str(), "did:plc:zjbq26wybii5ojoypkso2mso");
+        // Production serves the bare DID; the spec also allows `did=`.
+        let bare = "did:plc:zjbq26wybii5ojoypkso2mso\n";
+        let prefixed = "did=did:plc:zjbq26wybii5ojoypkso2mso\r\n";
+        for body in [bare, prefixed] {
+            let did = body
+                .lines()
+                .map(str::trim)
+                .find(|l| !l.is_empty())
+                .map(|l| l.strip_prefix("did=").unwrap_or(l))
+                .filter(|s| s.starts_with("did:"))
+                .unwrap();
+            assert_eq!(Did::parse(did).unwrap().as_str(), "did:plc:zjbq26wybii5ojoypkso2mso");
+        }
     }
 }
