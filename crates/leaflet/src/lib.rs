@@ -52,5 +52,9 @@ pub mod builder_types;
 pub mod markdown;
 pub mod record;
 
+/// The generated types' default string backing, re-exported so callers
+/// can name `Type<DefaultStr>` without a direct jacquard dependency.
+pub use jacquard_common::DefaultStr;
+
 pub use markdown::{MarkdownError, convert_markdown};
 pub use record::{BuildError, BuildOptions, BuiltRecord, Frontmatter, build_record, derive_document_url, parse_frontmatter, slugify};
