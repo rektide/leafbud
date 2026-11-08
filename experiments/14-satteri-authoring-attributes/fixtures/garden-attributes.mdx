@@ -1,0 +1,42 @@
+---
+format: springleaf-mdx/1
+title: A garden notebook
+description: A locally authored note with an unpublished poll and a named page
+tags: [gardens, maps]
+publishedAt: "2026-11-08T12:00:00Z"
+---
+
+## A patient garden 🦀 {#introduction}
+
+The **beds** are *ready*, and [Café maps](https://example.test/maps?q=a&b=2)
+help us plan. An escaped \*star\* &amp; Unicode é😀 stay text.  
+Bring `seeds`, not a runtime.
+{#argument}
+
+- Measure the sunny patch.
+  {#first-item}
+- Keep **notes** in order.
+
+3. Dig carefully.
+4. Water after planting.
+
+> Patience is part of the plan.
+> {#reminder}
+
+<Key id="example" />
+```mdx
+	<Key id="literal-only" />
+<Poll key="also-literal" options={["A", "B"]} />
+```
+
+<Poll key="next-topic" options={["Gardens & maps", "Café 🦀", "  exact spacing  "]} />
+
+<PageLink page="details" />
+
+<Page name="details" kind="linear">
+
+### Field notes {#details-heading}
+
+Exact data: <Run text={"  raw\ntext <>{} & 🦀\tend  "} />then<HardBreak />a new line.
+
+</Page>

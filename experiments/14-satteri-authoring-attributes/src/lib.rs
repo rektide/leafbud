@@ -1,4 +1,8 @@
 //! Optional brace-key experiment over the unchanged experiment 13 compiler.
+mod adapter;
+pub use adapter::{Annotation, CheckedDocument, Prepared, compile, prepare, semantic_document, semantic_plan};
+pub use satteri_authoring_experiment::{facts, model, simulator, text};
+
 use satteri_arena::{Arena, Mdast, decode_string_ref_data};
 use satteri_ast::mdast::*;
 use satteri_pulldown_cmark::{MDX_OPTIONS, Options};
