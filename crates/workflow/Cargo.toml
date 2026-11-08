@@ -5,6 +5,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+figment2.workspace = true
+tempfile.workspace = true
+toml_edit.workspace = true
 serde.workspace = true
 springleaf-web.workspace = true
 thiserror.workspace = true

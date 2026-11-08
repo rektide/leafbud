@@ -30,11 +30,23 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand, ValueEnum};
 use springleaf_workflow::{LeafletState, RemoteOptions};
 
+mod config;
 mod remote;
 
 #[derive(Parser)]
 #[command(name = "springleaf", version, about = "Local-first MDX authoring for leaflet.pub (remote list/show implemented)")]
 struct Cli {
+    /// Document workspace: explicit root > global workspace setting > cwd
+    #[arg(long, global = true, value_name = "DIR")]
+    root: Option<PathBuf>,
+    /// Per-invocation authoring identity default (not native cookie auth)
+    #[arg(long, global = true)]
+    handle: Option<String>,
+    #[arg(long, global = true)]
+    pds: Option<String>,
+    /// Default for unbound documents only; never retargets imported bindings
+    #[arg(long, global = true)]
+    publication: Option<String>,
     /// Leaflet origin (LEAFLET_BASE_URL; default https://leaflet.pub)
     #[arg(long, global = true, value_name = "URL")]
     base_url: Option<String>,
@@ -294,10 +306,13 @@ enum AuthCommand {
 #[derive(Debug, Subcommand)]
 enum ConfigCommand {
     /// Show the effective layered config and provenance
-    Show,
+    Show {
+        #[arg(long)]
+        json: bool,
+    },
     /// Write one key to the layered config
     Set {
-        key: String,
+        key: springleaf_workflow::config::Key,
         value: String,
         #[arg(long)]
         workspace_file: bool,
@@ -310,6 +325,12 @@ async fn main() -> ExitCode {
     let options = RemoteOptions {
         base_url: cli.base_url,
         token: cli.token,
+    };
+    let flags = springleaf_workflow::config::Config {
+        handle: cli.handle,
+        pds: cli.pds,
+        publication: cli.publication,
+        ..Default::default()
     };
     let result = match &cli.command {
         Command::Remote {
@@ -328,6 +349,12 @@ async fn main() -> ExitCode {
         Command::Remote {
             command: RemoteCommand::Show { locator, json },
         } => remote::show(options, locator, *json).await,
+        Command::Config {
+            command: ConfigCommand::Show { json },
+        } => config::show(cli.root.as_deref(), &flags, *json),
+        Command::Config {
+            command: ConfigCommand::Set { key, value, workspace_file },
+        } => config::set(*key, value, *workspace_file, cli.root.as_deref()),
         _ => return not_implemented(&cli.command),
     };
     match result {
@@ -382,7 +409,7 @@ fn command_name(command: &Command) -> String {
             AuthCommand::Status => "auth status".into(),
         },
         Command::Config { command } => match command {
-            ConfigCommand::Show => "config show".into(),
+            ConfigCommand::Show { .. } => "config show".into(),
             ConfigCommand::Set { .. } => "config set".into(),
         },
     }

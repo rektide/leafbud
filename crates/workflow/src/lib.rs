@@ -1,7 +1,9 @@
 //! Small read-only remote workflows. No local document lifecycle yet.
 //!
-//! Configuration is intentionally limited to flag > environment > XDG token
-//! file/default URL. There is no TOML layer, so Figment is not needed here.
+//! Native credentials remain separate from restored TOML authoring defaults.
+
+pub mod config;
+mod files;
 
 use std::path::PathBuf;
 
@@ -68,7 +70,7 @@ fn env_text(name: &'static str) -> Result<Option<String>, Error> {
     }
 }
 
-fn config_home(xdg: Option<std::ffi::OsString>, home: Option<std::ffi::OsString>) -> Result<PathBuf, Error> {
+pub(crate) fn config_home(xdg: Option<std::ffi::OsString>, home: Option<std::ffi::OsString>) -> Result<PathBuf, Error> {
     if let Some(xdg) = xdg.filter(|v| !v.is_empty()).map(PathBuf::from).filter(|p| p.is_absolute()) {
         return Ok(xdg);
     }

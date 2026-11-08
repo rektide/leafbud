@@ -12,10 +12,14 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 
 [workspace.dependencies]
+anyhow = "1"
+figment2 = { version = "0.11", features = ["toml"] }
+tempfile = "3"
+toml_edit = "0.25"
 # jacquard pins (springleaf-records): exact-pinned to the codegen binary's
 # workspace version — see crates/leaflet/records/LEAFLET-PIN.md.
 jacquard-common = { version = "=0.12.1", default-features = false, features = ["std"] }
@@ -28,9 +32,9 @@ jiff = "0.2"
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "query", "rustls"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-springleaf-atproto = { version = "=0.3.0", path = "crates/atproto" }
-springleaf-web = { version = "=0.3.0", path = "crates/leaflet/web" }
-springleaf-workflow = { version = "=0.3.0", path = "crates/workflow" }
+springleaf-atproto = { version = "=0.4.0", path = "crates/atproto" }
+springleaf-web = { version = "=0.4.0", path = "crates/leaflet/web" }
+springleaf-workflow = { version = "=0.4.0", path = "crates/workflow" }
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"
