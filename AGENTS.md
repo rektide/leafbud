@@ -9,7 +9,7 @@ generated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Operator requested rolling 1–4-ticket previews, g by default, Sol high recommendations for higher-concern work and 160–350k-token agent sessions"
+    title: "Operator requested narrative 1–4-ticket previews, g by default, Sol high recommendations for higher-concern work and 160–350k-token agent sessions"
 ---
 
 # Leafspring work-session cadence
@@ -43,6 +43,9 @@ sources:
 - Name ticket IDs, intended payoff, proposed agent and useful batching/dependencies.
   Refresh the preview from actual outcomes and current Beads state; do not repeat
   the whole roadmap or automatically carry stale plans forward.
+- Make the preview narrative: explain what the next batch makes possible, why its
+  tickets belong together, the main judgment involved and the boundary of the
+  slice. A bare ticket/agent table is not enough. Keep it a quick readable account.
 - Keep tracker pointers and material completion notes current, including actual
   session provenance. Preserve earlier work history when updating tickets.
 
