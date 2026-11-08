@@ -7,9 +7,12 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6.1-sol#high
+updated:
+  at: 2026-11-08
+  by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e4900b8d7ffeDT9QuFwmKRAB7t"
-    title: "User-directed authoring redesign, experiment commissions, reviewed reports, and requested recommendation with alternatives"
+    title: "Authoring redesign, experiment review and recommendation; subsequent handoff/addendum restores intended keyed bidirectional Yrs editing"
   - resource: /experiments/13-satteri-authoring/REPORT.md
     title: "Real compiler slice, independent Yjs consumption, and bounded replacement simulator"
   - resource: /experiments/14-satteri-authoring-attributes/REPORT.md
@@ -37,6 +40,14 @@ sources:
 # Recommend Satteri for local MDX authoring
 
 ## Recommendation and standing
+
+**Subsequent clarification:** the
+[keyed bidirectional addendum](authoring-handoff0.gpt61s.md#keyed-bidirectional-addendum)
+changes the edit target from routine recreation to retaining existing Leaflet/Yrs
+identities through MDX keys, automatically assigned when needed. Read that
+addendum before implementing the workflow below. The Satteri/parser recommendation
+stands; fresh-body recreation is now an explicit fallback rather than the normal
+response to every edit.
 
 **Build the authoring path on Satteri's direct parser → MDAST arena route.
 Keep the local MDX file authoritative; compile a fresh Leaflet body under a

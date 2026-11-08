@@ -1,15 +1,18 @@
 ---
 type: Design
 title: "Preliminary design and implementation handoff — local MDX authoring"
-description: "A source-authoritative Satteri compiler, fresh Leaflet body recreation under stable identity, native publication, experimental reuse map and staged implementation gates."
+description: "Preliminary Satteri/MDX handoff with a subsequent keyed bidirectional/Yrs addendum: stable current-content identities, automatic key assignment, modest synchronization, and explicit recreation fallback."
 resource: /design/authoring-handoff0.gpt61s.md
 status: preliminary
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6.1-sol#high
+updated:
+  at: 2026-11-08
+  by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e4900b8d7ffeDT9QuFwmKRAB7t"
-    title: "User's authoring/storage/lifecycle direction, experiment commissions and request for this preliminary design and handoff"
+    title: "User's authoring/storage direction and experiments; preliminary handoff followed by clarification that MDX keys should retain Yrs/Leaflet identity and enable some bidirectional conversion"
   - resource: /design/authoring-recommendation0.gpt61s.md
     title: "Current Satteri recommendation with alternatives and adoption boundaries"
   - resource: /design/mdx-recreate0.gpt6a.md
@@ -27,7 +30,7 @@ sources:
   - resource: /experiments/05-yrs-conversion/REPORT.md
     title: "Verified text wire semantics, no-op and wrong-existing-root replacement evidence"
   - resource: /design/yrs-conversion0.gpt6a.md
-    title: "Detailed current-block, resource, fact and inline mapping obligations; fine-grained editing not required here"
+    title: "Detailed identity-preserving Yrs edits and current-block/resource/fact mapping; revisited for the bidirectional addendum"
   - resource: /Cargo.toml
     title: "Current production crate/dependency layout, separate from experimental workspaces"
   - resource: /crates/drafts/src/lib.rs
@@ -43,9 +46,12 @@ sources:
 **Goal: let someone author a document locally in MDX and make Leaflet match it,
 then publish or update it through Leaflet.**
 
-Recommended path: Satteri's direct parser/MDAST arena, a small typed compiler,
-fresh generated Leaflet content, Yrs for fresh text encoding, verified replacement
-under an existing Leaflet binding, and native publication.
+**Read the [keyed bidirectional addendum](#keyed-bidirectional-addendum) before
+implementing.** The original handoff below emphasized fresh-body recreation.
+The user's subsequent clarification changes the target: preserve associations
+between MDX blocks and existing Leaflet/Yrs content, generating durable keys
+automatically when needed. Recreation remains a deliberate fallback, not the
+default for every edit. Earlier sections are retained to make that change clear.
 
 This is a preliminary implementation brief, not an accepted schema or permission
 to execute remote writes. The user requested a document, not implementation in
@@ -55,7 +61,8 @@ identified below. No production code changed or live requests were made.
 For a short decision account and alternatives, read the
 [recommendation](authoring-recommendation0.gpt61s.md). For exact experimental
 receipts, use the [experiment index](../experiments/README.md). Start substantive
-code work with experiments **13 and 14**, not the earliest parser prototypes.
+code work with experiments **05, 13 and 14**, connecting the existing-state Yrs
+proof to the MDX/keying compiler rather than promoting only fresh encoding.
 
 ## 1. Direction, assumptions, and boundaries
 
@@ -489,3 +496,206 @@ slice and any concrete contradiction found; do not start by re-running every
 historical parser experiment or implementing a live merge engine. Keep source,
 compiler, materializer and transport boundaries inspectable, commit explicit
 owned stages, and stop before any unapproved remote write.
+
+<a id="keyed-bidirectional-addendum"></a>
+
+## 12. Addendum — keyed bidirectional MDX and Yrs editing
+
+### Correction of intent
+
+The user clarified that authoring keys were meant to retain the associations
+with Yjs/Yrs content, not merely label disposable generated output. They want
+to draft locally and push, with at least some useful conversion in both
+directions. They permit whatever identifiers the representation needs;
+human-friendly naming is optional. Unnamed blocks must not therefore be treated
+as permanently unidentifiable.
+
+**That is feasible as a structured, editable projection of current content.**
+The earlier recreation-only emphasis simplified away too much of this goal.
+This addendum controls where it conflicts with the earlier handoff:
+
+| Earlier emphasis | Revised intended direction |
+| --- | --- |
+| Fresh ordinary blocks on each meaningful save | Retain mapped blocks and relationships; create only new objects and deliberately replace unsupported cases |
+| Yrs used only to initialize fresh text | Also load current remote text and apply identity-preserving edits |
+| Keys optional labels without prose continuity | Stable source-to-remote association, automatically assigned where the author supplied none |
+| Reverse editor-to-MDX conversion entirely outside the first direction | Prove a small bidirectional profile; grow coverage without first implementing every rich block |
+| Stage/switch is the main edit algorithm | Stage/switch remains useful for initial creation and explicit recreation fallback |
+
+No live multiplayer UI, stored ancestor, persistent CRDT history or automatic
+three-way merge is added. MDX is still the one local current document, and the
+draft/published lifecycle remains exclusive.
+
+### What is encoded, and what is not
+
+Leaflet has an outer fact graph for pages, blocks, order and references. Each
+ordinary rich-text block has a relatively shallow **separate** Yjs document:
+the named `prosemirror` fragment, paragraph, text runs/marks and inline nodes.
+Yrs operates on that text state; it is not a CRDT for the entire fact graph.
+
+The file should encode **current meaning and durable associations**:
+
+```text
+MDX block identity
+  -> existing Leaflet block entity and membership fact
+    -> existing block/text fact and Yjs document
+      -> current XML/text items loaded through Yrs for this edit
+```
+
+Yjs internal items use numeric client/clock identities. An author key such as
+`introduction` is not a replacement spelling for those identities. The key
+locates the same remote object; loading and editing its actual CRDT state
+retains surviving item identities and allocates new ones for new content.
+Choosing the same numeric client ID for independently regenerated text does
+not recreate the old history safely and must not be the implementation.
+
+Two round-trip claims must not be confused:
+
+1. **Current-content round trip:** editor facts/Yrs -> MDX -> parsed current
+   document preserves supported text, marks, layout and reference meanings,
+   with durable node associations. This is the desired storage/conversion goal.
+2. **Exact CRDT-state reconstruction from MDX alone:** reproduce tombstones,
+   causal history, every text-item identity and binary updates without reading
+   the remote state. Ordinary Markdown plus block IDs does not supply that
+   information. This is not promised and does not justify stashing a full CRDT
+   snapshot or adding per-character annotations to normal prose.
+
+An existing bound document can obtain current CRDT state by a fresh pull when
+applying changes. A new unbound document initializes fresh state. If the remote
+state has disappeared, the file still contains its current authored meaning,
+but cannot resurrect lost causal history merely from identifiers.
+
+### Automatic identity, optional human names
+
+Every source node needing independent remote continuity needs a durable logical
+identifier. Authors may choose useful names with the existing Key/brace syntax;
+otherwise the tool assigns one. For example:
+
+```mdx
+<Key id="b-6d247168-3a91-4fd2-856e-225d028bfa68" />
+An ordinary paragraph whose identity was assigned by the tool.
+
+## Introduction {#introduction}
+```
+
+Both identify current content; one is machine-generated, the other friendly.
+The concrete generated spelling remains preliminary. The tested alphabet allows
+the `b-` prefix; these strings are not assumed to be remote UUIDs or Yjs IDs.
+Do not turn a name edit into an accidental delete/recreate: key renaming/rekeying
+must either retain the binding through an explicit operation or be diagnosed.
+
+**Persist the association with the block in the source.** A frontmatter-only
+table keyed by array position, source offset or content hash cannot reliably
+recognize a paragraph that was both moved and rewritten. A compact table may
+map the source ID to remote entity/fact IDs; it must not be the only record of
+which source block owns that identity. Copying a keyed block produces a duplicate
+identity until a new one is assigned; it is not an implicit move.
+
+This revises the previous blanket avoidance of body writes: a focused local
+preparation step may insert missing identity annotations, while preserving all
+other source bytes. It can be an explicit prepare/key operation or part of a
+confirmed first save; settle that interface before implementation. Do not mint
+fresh identities on every parse or save. Unchanged keyed input is byte-untouched.
+Keep ordinary Markdown content and optional human naming; no mandatory prose
+wrappers and no visible per-character identity ledger.
+
+The exact association rules for list items, derived list wrappers, multiple
+references and split/join operations still need the combined experiment. Give
+IDs to meaningful editable nodes and relationship occurrences, not blindly to
+every parser AST node. Already named Page/Poll/reference objects also need a
+consistent binding policy.
+
+Suggested compact extension of `@springleaf`, not a finalized schema:
+
+```text
+nodes[sourceId]
+  entityId
+  membershipFactId(s)
+  textFactId                         where applicable
+  acceptedLocalHash, acceptedRemoteWitness
+  mappingProfile, confirmedAt
+```
+
+These are identifiers and witnesses, not previous text or CRDT state. If a
+meaningful inline object requires a separate locator, retain its association
+too. Do not annotate every Yjs character unless a concrete requirement proves
+that necessary; the fresh remote CRDT already has those identities.
+
+### A modest bidirectional save/pull path
+
+For the initially supported profile:
+
+1. Parse MDX, validate identities and load the current bound Leaflet graph and
+   text states. Resolve content/resource references explicitly.
+2. Match by durable identity. Unchanged objects produce no writes; moved objects
+   retain entity identity and update membership/order where supported. New
+   objects receive new bindings and fresh initial text.
+3. For a changed existing text block, load its current update into Yrs. Compile
+   edits to existing text/formatting/XML nodes, preserving surviving identities;
+   emit one cumulative delta per existing text fact/Replicache client as required
+   by the server cache. Do not substitute a new independent full document.
+4. Handle structural/metadata changes through explicit fact operations. An
+   unsupported identity-preserving change can offer deliberate recreation with
+   its effects stated; it must not silently select that fallback.
+5. Push and read back actual meaning and preserved associations. CRDT convergence
+   does not guarantee exact equality with the requested file under concurrent
+   edits. Report divergence rather than repeatedly applying edits until local
+   text wins. Update witnesses only after the result is understood/verified.
+6. In the other direction, decode current Leaflet/Yrs content and serialize the
+   supported MDX profile, carrying the same logical IDs. Ordinary content stays
+   Markdown; explicit components/Run escapes preserve structure that plain
+   Markdown cannot express. A guarded pull may update the one file; it does not
+   create a second maintained source. A no-change operation must not normalize
+   or rewrite the body needlessly.
+
+This is the missing connection between experiment 05 and experiments 13/14.
+It is **not yet proven end-to-end**. In particular, existing XML-node identity
+matching under splits/joins is not solved by simply adding block keys.
+
+### Synchronization evidence without stored bases
+
+Retain compact accepted local fingerprints and remote witnesses per useful
+scope. Status can distinguish unchanged, local-changed, remote-changed,
+both-changed, untracked and missing without a saved historical document.
+Hashes need not reconstruct old content. A conservative editor witness must
+include meaningful state that the current serializer cannot interpret yet.
+
+When both sides changed, compare today's endpoints and ask for an explicit
+choice/manual edit; automatic historical merge is not promised. Preserve the
+separate optional filename/path witness. Renaming the file must not break node
+bindings, and updating text must not clear unrelated naming or publication drift.
+
+Without a common local CRDT history, applying a locally edited paragraph to a
+freshly changed remote paragraph cannot reveal which remote characters were
+never seen by the author. The user does not need a multiplayer editor, but
+preflight drift reporting and a clear overwrite choice are still useful.
+The existing creation/release and no-unapproved-write boundaries remain intact.
+
+### Revised next experiment and acceptance
+
+Do not start another parser comparison. Connect the existing proofs in a new
+focused experiment space, without changing their preserved evidence:
+
+- A small real Yjs/fact fixture -> MDX with automatic and friendly IDs -> parse
+  back with the same current-content semantics and reference associations.
+- Edit one paragraph, change a mark and move a keyed block. Plan against the
+  same remote objects; apply the emitted updates to real Yjs and a scoped fact
+  model. Check unchanged block/paragraph/XML identities and retained text items
+  in the exercised cases, not only the final words.
+- New local prose receives identities once and creates new remote objects once.
+  A second save is a no-op; deleting/reordering blocks does not append duplicates.
+- Exercise generated-ID source insertion, duplicate-ID copying and a deliberate
+  rekey. Show that machine IDs do not require the author to name each paragraph.
+- Pull a web edit into the same MDX file, preserve its IDs, edit again, push again.
+  No saved base body or binary CRDT copy is introduced.
+- Include a bounded concurrent-edit case and an unsupported structural case;
+  report the outcome and explicit recreation option instead of hidden replacement.
+
+Start with ordinary rich text, breaks and a small block graph. Full inline/media
+coverage remains a capability progression. A reliable narrow bidirectional loop
+is more valuable now than either a full multiplayer architecture or silently
+discarding all existing CRDT identities through recreation.
+
+This addendum authorizes no implementation or live write by itself. The next
+handoff should be an explicitly commissioned combined experiment/integration
+slice using the corrected target above.

@@ -38,7 +38,10 @@ what remains unproved. They are not all implemented product capabilities.
 
 - **Implementation handoff:** [preliminary local-MDX design](../design/authoring-handoff0.gpt61s.md)
   connects the recommended workflow to module boundaries, reusable experimental
-  code, remaining decisions and production/remote verification gates.
+  code, remaining decisions and production/remote verification gates. Its
+  [latest addendum](../design/authoring-handoff0.gpt61s.md#keyed-bidirectional-addendum)
+  restores identity-preserving MDX/Yrs edits and a modest bidirectional target;
+  the combined path still needs its own proof.
 - **Current recommendation:** [local MDX authoring with Satteri, with
   alternatives](../design/authoring-recommendation0.gpt61s.md). This incorporates
   the later compiler evidence, not just the initial parser comparison.
@@ -48,7 +51,8 @@ what remains unproved. They are not all implemented product capabilities.
   [14 — optional brace keys](14-satteri-authoring-attributes/REPORT.md).
 - **What is the intended workflow?**
   [Local MDX → replace the Leaflet body → publish](../design/mdx-recreate0.gpt6a.md)
-  explains the source-authoritative recreation proposal.
+  explains the earlier recreation proposal. The handoff addendum above retains
+  recreation as a fallback rather than discarding existing identities on each edit.
 - **Why were other parsers considered?** The
   [comparative assessment](../design/authoring-parser-assessment1.gpt6a.md)
   records the earlier choice and alternatives. Its mdxjs preference predates 13/14.
