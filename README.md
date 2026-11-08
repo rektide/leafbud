@@ -5,7 +5,7 @@ documents, in Rust: one MDX file per document, durable identities,
 push saves the Leaflet editor, publish releases, pull adopts web edits.
 
 Status: **Markdown-first rich text with checked fallbacks, deliberate
-`tidy --markdown`, scoped read-only status, guarded pull, layered config, version 0.8.0.** The accepted authoring interface
+`tidy --markdown`, scoped read-only status, external-tool human diff, guarded pull, layered config, version 0.9.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
@@ -19,7 +19,7 @@ destination shape. Implemented versus pending:
 | `leafspring-atproto` — retained identity resolution, XRPC, app-password sessions; `leafspring-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
 | `leafspring-web` — cookie-authenticated discovery, metadata and full editor pull; `leafspring-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
 | `leafspring-document` + `leafspring-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
-| `leafspring-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, read-only `status [FILE...] --offline/--json`, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `diff`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
+| `leafspring-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -176,7 +176,7 @@ No operands selects local managed MDX files, not remote discovery or a new
 `list` command. Operands resolve against the workspace; absolute operands are
 also supported. Status never writes bodies, keys, receipts or remotes—even
 when current endpoints have converged. It does not compare text or explain
-an operation plan; `diff` remains unimplemented/deferred.
+an operation plan; [human diff](#human-localeditor-diff) is a separate view.
 
 For supported bound drafts, status reports `clean`, `local-changed`,
 `remote-changed`, `both-changed`, `converged` or `unverified`, with independent
@@ -221,7 +221,7 @@ They cannot supply a new scoped historical baseline: differing endpoints are
 rewriting the body; status cannot. Unknown profiles block managed mutation.
 No saved body, ancestor, sidecar or CRDT snapshot was added.
 
-**Actual live rename gap:** the 27 files in `~/l` still use
+**Last verified live rename gap** (status implementation session): the 27 files in `~/l` use
 `springleaf-mdx/1`/`@springleaf`, and config/auth stores remain under the old
 `springleaf` name. Online/offline status with explicit `--root ~/l` accounts
 for all 27 as unsupported legacy managed files, with remote evidence
@@ -234,6 +234,94 @@ tested with the current namespace.
 
 Implementation/verification handoff:
 [`design/status-witnesses0.gpt61s.md`](design/status-witnesses0.gpt61s.md).
+
+## Human local/editor diff
+
+```sh
+leafspring diff drafts/chosen.mdx --tool diff --tool-arg=-u --tool-exit diff
+
+# Or persist trusted viewer configuration (global, or add --workspace-file):
+leafspring config set diff-program diff
+leafspring config set diff-args '["-u"]'
+leafspring config set diff-exit diff
+leafspring diff drafts/chosen.mdx                 # --edge editor is the default
+```
+
+This compares **current local authored content → current bound native editor**,
+not a saved base, public/released document, proposed operation or merge. It shares
+status/pull's read-only observation and strict supported draft profile. Both sides
+are rendered by the same normalized view writer; original MDX bytes are never
+compared asymmetrically against generated remote output. No keys, receipts, local
+source or remotes are written, including when content has converged. Missing or
+inaccessible editors, unsupported content/lifecycle/namespace, incoherent or
+duplicate bindings and a local save during acquisition stop comparison with an
+error—never a partial or invented empty endpoint. Fresh means acquired in this
+invocation, not transactional freshness through the lifetime of an open viewer.
+
+**View contract.** The two transient UTF-8 files contain normalized YAML for title,
+description, ordered tags, confirmed publication association (including null),
+watermark theme and contributors; then distinct linear pages and ordered blocks.
+Prose, headings, quotes, links, strong/emphasis/strike and inline code reuse the
+existing checked Markdown-first renderer. Underline/highlight, difficult whitespace
+or mark combinations, ineligible code text/language and image source/fallback/dimensions/
+alt retain exact typed `Run`/block components where ordinary Markdown cannot carry
+the supported meaning. Code uses a collision-safe fence only when the production
+parser proves exact language/text preservation; otherwise it stays a `Code` component.
+Hard breaks and empty blocks remain explicit when needed.
+This is readable Markdown with exact MDX fallbacks, not a plain-Markdown export or
+an executable document. No MDX is evaluated and linked resources are not fetched.
+
+The view omits the whole tool envelope: receipts, hashes, UUID bindings, source
+`Key` markers and source-key spelling. Page definitions receive presentation-only
+`page-1`, `page-2`, … labels; the entry is first, other pages sort by native page
+association (not printed), and page links refer to those labels. Reordering source
+definitions or renaming keys therefore creates no writing differences. Ordinals
+are not durable identities; adding/removing pages can renumber later ones.
+Local-only dates, delivery/naming intent and custom/unknown author metadata are
+excluded **on both sides**, not presented as if the editor lacked them and never
+removed from the source. Authored links, image URLs, contributor DIDs and publication
+URIs remain content, even if they contain identifiers. View equality does **not**
+prove editor/receipt equality: status can still report identity or hidden-native-
+state changes when visible writing is equal. Nothing here settles that evidence.
+
+**Tool contract.** `diff-program` is one trusted executable name (PATH lookup) or
+path; `diff-args` is a TOML string array, not a shell command. `config set diff-args`
+accepts a JSON string array and writes the corresponding TOML array. Invocation is
+exactly `PROGRAM ARG... /private/temp/local.md /private/temp/editor.md`, left local,
+right editor. Arguments, spaces and punctuation remain literal: no shell expansion,
+placeholders or quoting parser. The child runs in the selected workspace; relative
+executable paths and argument paths resolve there. Config layers remain flag >
+workspace > global. `--tool PROGRAM` overrides only the program; repeatable
+`--tool-arg ARG` replaces the configured argument array when supplied;
+`--tool-exit success|diff` overrides the exit convention. To clear saved arguments,
+set `diff-args` to `[]`. `config show` includes each setting's provenance.
+
+`success` (default) accepts only tool exit **0**; `diff` explicitly supports the
+POSIX diff convention **0 equal, 1 different**, with both successful Leafspring
+reports (exit **0**). Neither the executable's name nor its exit code determines
+Leafspring's own normalized-view equality report. Other codes, a signal or a
+spawn/wait/cleanup failure give Leafspring exit **1**; usage errors give **2**.
+`--edge names/release` is explicitly unimplemented (exit 1). There is deliberately
+**no `--json`**: stdin/stdout/stderr/TTY are inherited for CLI or interactive tools;
+the tool owns stdout and Leafspring emits only a short execution summary on stderr.
+
+Use a **foreground/waiting viewer**. For example, Vim's diff mode can use
+`--tool vim --tool-arg=-d --tool-exit success`; a GUI launcher needs its documented
+wait option. Leafspring owns a private temporary directory until that process
+exits, then removes both files on success or tool failure. Drop cleanup also covers
+ordinary spawn/wait errors; hard process termination can leave temporary files
+(no automatic pruning or secure-erasure promise). Detached viewers are unsupported:
+their paths disappear when the launcher exits. Editing a view never edits the source
+or editor. Treat configured programs/workspace config as trusted code: the child
+receives private writing and the normal inherited environment, and its own backups,
+caches, rendering, resource access or side effects are outside Leafspring's control.
+
+Implementation and verification: [human diff handoff](design/human-diff0.gpt61s.md).
+The [last verified live rename gap](#read-only-localeditor-status) remains a separate
+integration prerequisite; this capability was exercised on synthetic current-format
+fixtures/loopback, not by converting `~/l` or its stores. A separate user session now
+owns the further Leafbud rename and existing-data/config conversion; this diff slice
+does not perform or promise that migration.
 
 ## Refresh bound drafts from their editors (guarded pull)
 
@@ -346,6 +434,7 @@ PDS or leaflet draft.
 - Config restoration and actual MDX checkout: [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md)
 - Guarded refresh of bound drafts: [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md)
 - Scoped editor witnesses and read-only status: [`design/status-witnesses0.gpt61s.md`](design/status-witnesses0.gpt61s.md)
+- Transient human Markdown/external-tool diff: [`design/human-diff0.gpt61s.md`](design/human-diff0.gpt61s.md)
 - Markdown-first rich text (approved design): [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
 - Markdown round-trip implementation receipt: [`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)

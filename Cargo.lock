@@ -1879,7 +1879,7 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "leafspring"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "base64 0.22.1",
  "clap",
@@ -1892,7 +1892,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-atproto"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "base64 0.22.1",
  "regex",
@@ -1906,7 +1906,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-document"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1915,7 +1915,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-editor"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1927,7 +1927,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-mdx"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "leafspring-document",
@@ -1942,7 +1942,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-records"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "jacquard-common",
  "jacquard-derive",
@@ -1955,7 +1955,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-web"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "jiff",
  "regex",
@@ -1969,7 +1969,7 @@ dependencies = [
 
 [[package]]
 name = "leafspring-workflow"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
