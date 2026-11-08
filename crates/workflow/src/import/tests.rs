@@ -2,8 +2,9 @@ use super::*;
 use springleaf_web::{LeafletClient, parse_pull, parse_rpc};
 use std::sync::Arc;
 
+// Shared with the pull tests: one module load of the loopback responder.
 #[path = "../../../atproto/src/testserver.rs"]
-mod testserver;
+pub(crate) mod testserver;
 
 fn fixture() -> Value {
     serde_json::from_str(include_str!("../../../../experiments/02-draft-internals/fixtures/export-pull-doc.json")).unwrap()

@@ -45,7 +45,7 @@ pub struct Item {
     pub error: Option<String>,
 }
 
-pub fn hash(value: &Value) -> String {
+pub(crate) fn hash(value: &Value) -> String {
     fn canonical(v: &Value) -> Value {
         match v {
             Value::Object(o) => Value::Object(
@@ -62,7 +62,7 @@ pub fn hash(value: &Value) -> String {
     format!("sha256:{:x}", Sha256::digest(serde_json::to_vec(&canonical(value)).expect("JSON value")))
 }
 
-fn association(data: &LeafletData) -> Result<Option<String>> {
+pub(crate) fn association(data: &LeafletData) -> Result<Option<String>> {
     let mut associations = BTreeSet::new();
     for row in data.association_rows() {
         for link in row["leaflets_in_publications"].as_array().into_iter().flatten() {
@@ -85,7 +85,7 @@ fn witness(data: &LeafletData, pull: &PullSnapshot) -> Value {
     json!({"profile":PROFILE,"facts":facts,"extras":pull.extras,"root":data.metadata.root_entity,"title":data.metadata.title,"description":data.metadata.description,"associations":data.association_rows().iter().map(|r|json!({"publication":r["leaflets_in_publications"],"standalone":r["leaflets_to_documents"]})).collect::<Vec<_>>()})
 }
 
-fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Result<Document> {
+pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Result<Document> {
     ensure!(data.observed_state() == LeafletState::Draft, "published object is outside draft import profile");
     let root = data.metadata.root_entity.as_deref().context("missing native root entity")?;
     let id = Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("{base}/{}", data.metadata.id).as_bytes());
@@ -198,7 +198,7 @@ fn local_index(root: &Path, base: &str) -> Result<BTreeMap<Uuid, Vec<PathBuf>>> 
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub fn check(path: &Path) -> Result<(usize, bool)> {
     let source = std::fs::read_to_string(path).context("reading MDX source")?;

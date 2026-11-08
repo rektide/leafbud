@@ -21,4 +21,6 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
+base64.workspace = true
 tokio = { workspace = true, features = ["io-util", "net"] }
+yrs.workspace = true
