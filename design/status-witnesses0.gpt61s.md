@@ -11,7 +11,7 @@ sources:
   - resource: "opencode://ses_e438cd26fffedgKcnaMrNRqncp"
     title: "Commissioned Sol high implementation, receipt-scope checkpoint, status integration, synthetic checks and read-only verification of all 27 legacy live files"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Parent commission: witnesses/status only, no diff or operation-explanation work; sequential fresh Astra medium designs follow parent review"
+    title: "Parent commission/review and subsequent operator scope split: Sol high human external diff, parallel Astra high/g edit-strategy designs with cross-review"
   - resource: /design/authoring-interface0.gpt6a.md
     title: "Accepted ownership, root status, YAML and current-endpoint effect contract"
   - resource: /design/guarded-pull0.glm53m.md
@@ -132,6 +132,16 @@ permission to rebaseline editor receipts. Current-namespace configured-default
 routing and actual online classifications are covered synthetically.
 
 ## Parent join and road ahead
+
+**Subsequent operator steering:** the sequential Astra-medium design schedule
+below is superseded. `leafspring-inspect-diff` now commissions Sol high to build
+comparable Markdown views handed to a user-provided diff program.
+`leafspring-editor-plan-design` commissions independent Astra high and g designs
+for a right-sized CRDT/fact editing strategy, followed by each author's
+cross-review addendum after both drafts are available. Coarse operations are
+acceptable candidates; bounded conceptual complexity and tool reuse take
+precedence over structural efficiency. Parent/user assess that join before
+selecting the edit architecture. The live rename gap remains separate.
 
 Review the receipt boundary and the live rename gap first. The commissioned
 sequence remains **`leafspring-inspect-compare-design`**, a fresh Astra medium

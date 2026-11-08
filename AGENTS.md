@@ -9,10 +9,25 @@ generated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Operator requested narrative 1–4-ticket previews, g by default, Sol high recommendations for higher-concern work and 160–350k-token agent sessions"
+    title: "Operator set narrative batch previews, agent/session cadence and low-volume product fit: bounded conceptual complexity, existing tools, modest structural ambition"
 ---
 
 # Leafspring work-session cadence
+
+## Product fit and complexity
+
+- Leafspring is a low-volume tool with few expected users. Prioritize bounded
+  conceptual complexity, correctness and useful authoring over minimizing every
+  structural edit or remote operation. Prefer existing tools and verified Yrs
+  capabilities to a parallel bespoke comparison/planning model.
+- Coarser edits that rewrite more of a block/page are product-acceptable candidates
+  when their identity/content effects are understood and explicit. Evaluate them
+  alongside simple identity-preserving wins; keep modest room to improve without
+  building a general structural optimization framework in advance.
+- Human comparison and enacting edits have distinct purposes. The selected human
+  direction is comparable Markdown views passed to a user-provided diff tool.
+  The architecture inquiry concerns how to enact/plan CRDT and fact-graph changes;
+  diff algorithms are incidental means, not the central product requirement.
 
 ## Commission and agent selection
 
