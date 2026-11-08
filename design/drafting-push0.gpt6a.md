@@ -7,9 +7,22 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-08
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e435692e7ffeGsnomW6T3dcfwp"
-    title: "Independent fresh whole-workflow design; inspected production validation, native creation/mutation/list sources and previous-wave evidence; late accidental search exposure disclosed in independence note"
+    title: "Independent first draft and authorized revision-bound peer cross-review; retained generation default, corrected inactive-data eligibility and verified publication/metadata/recovery distinctions; initial accidental search exposure disclosed"
+  - resource: https://github.com/rektide/leafspring/blob/7c0e6f9501bf8ae52280aef9f37932804703902c/design/drafting-push0.glm53m.md
+    title: "Authorized stage-two review of g's corrected independent draft, read with git show; no evolving peer cross-review read"
+  - resource: https://github.com/rektide/leafspring/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md
+    title: "Preserved independent first argument; the appended cross-review states subsequent changes"
+  - resource: /design/draft-checkout0.gpt61s.md
+    title: "Actual imported-corpus receipt, including mixed JSX/inactive-text blockers resolved before 27-draft success"
+  - resource: /crates/workflow/src/import/tests.rs
+    title: "Committed synthetic inactive-code fixture proves current code projection and opaque remote witnessing"
+  - resource: /crates/workflow/src/config.rs
+    title: "Actual publication defaults remain configured authoring context, not only origin/auth"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Parent commission and operator correction: complete ordinary drafting is the delivery boundary, with coarse mechanisms permitted"
   - resource: /design/drafting-push-brief0.gpt6a.md
@@ -80,6 +93,26 @@ sources:
     title: "Inspected list, text, code, image and comment attribute ownership"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/getBlocks.ts
     title: "Inspected list display-number computation and parent/child semantics"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/actions/publications/moveLeafletToPublication.ts
+    title: "Stage-two source check: explicit existing-draft association action and permission checks"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/utils/addDraftToPublication.ts
+    title: "Stage-two source check: association insertion, creator byline, optional destructive IDs and returned error"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/utils/publishLeaflet.ts
+    title: "Stage-two source check: optional prior draft linkage, existing public identity and release-time association upserts"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/cvr.ts
+    title: "Stage-two source check: publication metadata extras come from persisted rows, not client-local tx.set"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/supabase/migrations/20260721000000_add_pull_data_cvr.sql
+    title: "Stage-two source check: rooted outgoing-reference closure, token-scoped metadata, same-snapshot fact/ack read"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/components/Blocks/CodeBlock.tsx
+    title: "Stage-two source check: active code/language rendering excludes latent block/text"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/components/Blocks/ImageBlock.tsx
+    title: "Stage-two source check: active image payload/alt/layout rendering excludes latent block/text"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/utils/blockTypeOperations.ts
+    title: "Stage-two source check: native text-type changes clear stale heading-level/text-size attributes"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/actions/getIdentityData.ts
+    title: "Stage-two source check: homepage/contributor discovery is not mint-attempt attribution"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/components/Blocks/TextBlock/schemaVersion.tsx
+    title: "Stage-two source check: known meta.schemaVersion semantics, not blanket authority to drop unknown roots"
 ---
 
 # Recommendation: generate a complete body, keep the document
@@ -770,3 +803,476 @@ are revision-bound source evidence. The current [status receipt](status-witnesse
 and [human diff receipt](human-diff0.gpt61s.md) establish reuse boundaries; neither
 claims a write planner already exists. This draft owns no production adoption,
 live result or peer consensus.
+
+## 12. Authorized cross-review and revised stance
+
+**Review target:** g's corrected independent draft at
+[`7c0e6f9501bf8ae52280aef9f37932804703902c`](https://github.com/rektide/leafspring/blob/7c0e6f9501bf8ae52280aef9f37932804703902c/design/drafting-push0.glm53m.md),
+read through `git show`, compared with my first draft at
+[`b5e66475c66a36363d47e4f0c9e198287d59fcf9`](https://github.com/rektide/leafspring/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md).
+The peer's browser-creation requirement was already corrected before this review;
+I assess its corrected automatic `/new` path, not that superseded requirement.
+No parallel evolving peer addendum was read. The checkout still resolved as
+`/home/rektide/src/leafspring` during this review. Sections 1–11 remain the original
+argument; **this addendum controls where it changes that argument**.
+
+### 12.1 Revised verdict: keep generation; correct corpus eligibility
+
+**I retain one generated-body engine as the recommended default**, with actual
+publication-context binding on first push and automatic source identity preparation.
+I withdraw the blanket generation blocker for known inactive `block/text` on
+currently image/code blocks. Generated-body ownership should deliberately carry
+the **current supported body**, while leaving that known inactive conversion
+residue on the old detached entities. The preview and first imported-document
+adoption must say so. Unknown active semantics and interactive relationships still
+block a save. This correction makes generation usable for the already-imported
+kind of documents, instead of holding ordinary prose editing hostage to latent data
+the native renderer itself does not display.
+
+The peer offers a credible alternative: create all new blocks, rewrite changed
+existing text using loaded Yrs, detach omitted memberships and normalize order.
+It can deliver every mandatory paragraph/heading action. **I do not claim that
+generation is the only broad solution, or necessarily fewer lines overall.** Its
+advantage is one body-construction algorithm independent of the old graph's text
+topology/type-transition cases, paid for by explicit staging, activation and
+rebinding. That remains a good fit for the stated low-volume, coarse-effect-tolerant
+product. If preserving native body anchors outweighs that simplicity, select the
+complete keyed alternative, not a narrower text checkpoint or two default engines.
+
+The original first and second save walkthroughs still apply. The changes are:
+publication intent is resolved and realized before calling first binding complete;
+imported image/code conversion residue is explicitly retired rather than blocking;
+request resolution belongs in the basic save lifecycle; metadata/read-back use the
+actual destination storage; and source/default adoption must not quietly invent
+new author intent. Flat lists remain in my proposed delivery profile.
+
+### 12.2 Publication context: the peer's new mint is necessary but insufficient
+
+G now correctly makes browser-free native minting required. However, its corrected
+Story 2 says config never chooses a publication and retains a source publication URI
+only as release intent while recording `binding.publication=null`. That is a new
+product policy, not the existing configured-context contract:
+
+- The corrected brief requires resolving publication context from explicit
+  intent/config on first push.
+- The accepted interface distinguishes absent unbound publication (inherit), null
+  (standalone) and URI (selected publication); once bound, the actual association
+  wins over defaults.
+- The shipped config and checkout receipt explicitly retain publication defaults.
+  Import uses the observed association, rather than retargeting imported files;
+  this does not imply new drafts ignore the default.
+
+`GET /new` has no publication argument and produces a standalone draft. It cannot
+by itself fulfill a selected publication context. A source URI retained as “future
+intent” is truthful only if the user accepts that changed behavior explicitly.
+It does not satisfy the present commission merely because origin/auth were honored.
+Also, `create` should not unconditionally insert `publication:null`: doing so
+would suppress configured publication inheritance before push even runs.
+
+**Recommended resolution remains:** preserve omission in an unbound source,
+resolve the target once at execution using the accepted precedence, record that
+resolution in pending, and call `createPublicationDraft(uri, "doc", {})` for a
+publication target; use `/new` for resolved standalone. Read actual linkage and
+persist it as the binding. An inherited target can be materialized into the author
+field when binding completes under the documented first-binding field update; an
+explicit authored null/URI must never be silently overwritten. After binding,
+ambient config cannot retarget the file.
+
+#### A later association path exists, but it does not remove the action work
+
+I checked the exact alternative rather than assuming association must occur only
+during mint. Native `actions/publications/moveLeafletToPublication.ts` accepts
+`(leaflet_id, publication_uri, {title, description}, entitiesToDelete)`; after
+publication owner/contributor checks it calls `addDraftToPublication`:
+
+1. Insert `leaflets_in_publications` with `doc:null`, title and description.
+2. Add the actor to the draft byline, including an owner.
+3. Delete `entitiesToDelete` when nonempty.
+
+Thus `/new` followed by this action **during the same first push** is a genuine
+association route. It must pass `[]` for deletions, retain the minted token on any
+later failure, verify actual association, and account for its byline defaults.
+The wrapper does not return the helper's insert error as a useful result, making
+read-back especially important. It still needs a Next server-action adapter and
+introduces an extra externally visible transition. `createPublicationDraft` is
+closer to the native new-publication-draft workflow and adds only a non-owner
+contributor by default; I keep it as the selected adapter. Do not build both paths
+speculatively.
+
+The native publisher also reads an optional existing draft link and later upserts
+`leaflets_in_publications` after successful public output. Therefore I do **not**
+claim publication can never establish association later. That path crosses the
+public-release boundary and leaves the working draft unassociated in the meantime.
+It is a different save/release contract, not proof `/new` already implemented
+configured draft context. If a new action adapter is difficult, it remains required
+implementation/proof work rather than a reason to demote publication context.
+
+### 12.3 Metadata: separate persisted rows from local browser cache writes
+
+The source confirms the following receiving table:
+
+| Native context | Durable write/read route | Consequence for push |
+| --- | --- | --- |
+| Pure standalone draft | `updateLeafletMetadata` updates title/description on permission tokens sharing the root; `get_leaflet_data` observes those fields. | Title/description supported; no native tags storage established here. |
+| Publication-associated draft | `updatePublicationDraft` updates its `leaflets_in_publications` row; full pull's `publication_*` extras are built from that row. | Title, description and tags are real editor metadata before public release. |
+| Standalone published editor | `updatePublicationDraft` falls back to `leaflets_to_documents`; pull can expose its tags/title/description too. | A distinct lifecycle, outside this draft delivery; “tags exist only under publication linkage” is too broad. |
+| Contributors | `leaflet_contributors`, with explicit permission checks on addition; pull returns `draft_contributors`. | Native creation defaults are actual state, not a local formatting field. Preserve/adopt them deliberately; no arbitrary byline edits in this profile. |
+
+`updatePublicationDraft` has a `runOnClient` branch calling `tx.set` for title,
+description, tags, local published date and preferences. The server context's
+`runOnClient` does nothing. In particular, sending that mutation on a pure draft
+with neither linkage row cannot create durable tags merely because a browser would
+show optimistic `publication_tags`. Nor does its client-only
+`publication_local_published_at` assignment establish server-side date storage.
+The SQL pull obtains metadata rows from `leaflets_in_publications`, falling back
+to `leaflets_to_documents`; `buildExtras` then exposes them. These are source facts,
+not simulated `tx.set` promises.
+
+G's sole `updateLeafletMetadata` route is insufficient for a publication-associated
+import: an existing publication title can continue to override the changed token
+title in the observation. Its suggestion to accept permanent `local-changed` for
+unsaved tags also violates the complete save/read/repeat-no-op contract if those
+tags remain part of editor equality. Either apply supported fields in their actual
+context or define them as genuinely non-editor intent in a new explicit profile.
+Do not settle a successful editor receipt while differing declared editor content
+is left for future publication.
+
+I keep my narrower initial policy: apply tags on associated drafts; diagnose
+nonempty tags on pure standalone drafts before mint/write. This is not a reason
+to block paragraph/headings in an otherwise valid standalone document. A future
+explicit release-only tag field is possible, but silently reclassifying the current
+flat field is not this implementation. Title/description/watermark have native
+write mappings in both relevant draft contexts.
+
+One further implementation condition: publication mutation and pull SQL address
+the current permission-token ID. Existing metadata discovery can see association
+on sibling tokens. A sibling association alone is not proof that a metadata write
+through the supplied token will hit it. First mint returns the associated token;
+for imports, resolve the actual association-bearing writer token with verified
+rights or report the unsupported identity case. Do not update a shadow token title
+and call it a publication-title save. This belongs in binding/read-back tests.
+
+### 12.4 Existing corpus: known inactive state is not unknown active meaning
+
+The [checkout receipt](draft-checkout0.gpt61s.md) records 15 initial successes and
+12 initial failures involving **both** exact JSX boundary handling and inactive
+text semantics; after fixes, all 27 observed drafts imported. It does not give a
+per-cause count. I cannot infer that all 12, or all 27, contain latent text. It does
+establish that the issue is real in the existing corpus, not a hypothetical edge.
+My first-draft eligibility rule would block a body-changing push in affected files,
+even when the only authored edit was adding a paragraph elsewhere. **I withdraw
+that rule for the precisely known inactive case.** No private files were inspected.
+
+The production fixture `visible_code_ignores_but_witnesses_native_inactive_richtext`
+converts a text block to code, retains its old `block/text`, displays only
+`block/code`, keeps `inactiveTextFact`, and proves that changing even opaque latent
+bytes changes the remote witness. Native `CodeBlock` reads code/language;
+`ImageBlock` reads image/alt/layout. Neither uses `block/text` as its current
+displayed content. This is enough to distinguish:
+
+| Category | Revised generation policy |
+| --- | --- |
+| Current represented code/image content | Recreate exactly from the source's supported active fields. |
+| Known inactive `block/text` on a currently code/image entity | Keep it untouched on the old entity; omit it from the new entity. Report its retirement as part of generated-body ownership. No decoding requirement solely to establish that this renderer does not use it. |
+| Active rich-text state, including known schema metadata | Decode/validate supported meaning, then emit fresh supported state. Do not erase meaningful active nodes/marks through normalization. |
+| Unknown attribute, unknown meaningful active XML/root/meta state, comment or interactive relation | Fail before generation until its role has a supported mapping or an explicit separately selected treatment. “Not displayed by today's projection” alone is insufficient. |
+
+The old inactive payload may represent words the author could recover by converting
+the **old** block back to text. This proposal does not promise that resurrection
+behavior on the new image/code entity. That is the actual loss of continuity;
+“the bytes still exist remotely” does not make it disappear. The source owns the
+current body, not all former renderings of each native object. The first imported
+adoption preview should say, for example:
+
+> Replace this entry's body under the same draft. Native page/block anchors change.
+> Two image/code blocks carry inactive native text; it stays on their detached old
+> entities and is not carried into the new body. Current code, images and prose are
+> preserved. Save does not publish.
+
+The existing `--recreate-body` adoption boundary records acceptance of that body
+policy; no additional per-stale-field approval dialog is needed. Subsequent saves
+retain the policy and show relevant effects. A latent remote edit still changes
+the conservative witness and participates in drift decisions before retirement.
+The new current Node table has no inactive locator for facts not present in the
+new generation; the verified receipt reflects that deliberate state, not an
+unnoticed omission.
+
+I considered copying opaque inactive payloads onto new generated blocks. It is
+technically possible using transient current observations, without local history.
+It nevertheless adds old-key carry-forward rules and perpetuates unrepresented
+conversion state in an otherwise source-generated body. It is not the chosen
+default. If future type-toggle restoration becomes important, prefer retaining
+the actual keyed objects rather than silently growing a generic opaque-state
+copy mechanism. Do not create a second engine solely for latent text.
+
+For unknown roots in **active** text, native source inspected here establishes
+`prosemirror` and `meta.schemaVersion`, not a universal inertness rule for other
+roots. The strict active-state boundary remains. There is no receipt evidence
+here that unknown active roots affect the 27 files, so neither assert zero impact
+nor reject every imported document preemptively. Add explicit fixtures and report
+the concrete unsupported root if encountered.
+
+### 12.5 Comments and rooted visibility: two corrections to the peer
+
+The SQL full pull follows **outgoing** reference/ordered-reference/spatial-reference
+edges from the root. G correctly uses that to explain why detached objects normally
+leave the active pull. Two further claims need correction:
+
+1. **Absence from rooted pull does not prove a creation never landed.** An entity
+   can exist with its type/text facts while its parent membership was skipped,
+   or a page-reference write may have failed. Inspect its known ID through explicit
+   root reads and resolve request acknowledgments. Even explicit absence cannot
+   prove that an unresolved in-flight request will never arrive.
+2. **Native editor comments are not generally invisible incoming references.**
+   `createEditorComment` writes `block/comment` from the block to the comment;
+   replies use `comment/reply`. These are ordered references and therefore reachable
+   from an active block in the same full-pull closure. Both current proposals'
+   strict observer should reject them, rather than claim they are invisibly
+   preserved as an ordinary supported imported case. Truly external incoming-only
+   references can remain undiscovered; that is a separate limitation.
+
+Generation already needs explicit-root reads for staging; a keyed writer also
+needs them for reliable partial-creation diagnosis. This reduces the apparent
+transport gap between the strategies, although generation additionally verifies
+the complete staged graph before activation. SQL's fact/ack snapshot is useful
+evidence; it does not close later read/write races or make external metadata writes
+part of the same transaction.
+
+### 12.6 The keyed alternative's real scope, and protocol improvements worth keeping
+
+The peer's creation case is not inherently a second engine: “new block” can use
+fresh encoding while “existing block” uses loaded-state editing in the same keyed
+planner. I accept that description. Its split/join rules are ordinary source
+identity rules, not a generalized structural matcher. Its willingness to normalize
+order rather than minimize moves is also aligned with the corrected brief.
+
+I challenge four remaining simplifications:
+
+- **Type/scalar operations include removal semantics.** Heading→paragraph cannot
+  merely assert a new type and leave heading-level facts unaccounted for. Native
+  `setTextBlockStyle` clears stale heading-level/text-size fields, and the current
+  strict observer would reject an unused heading-level fact. Optional image fields,
+  removed code language and PageLink retargeting need similarly explicit ownership.
+  The operation vocabulary is bounded, but those cases are real work.
+- **Whole-page replacement is not a costless policy toggle.** Reusing create/detach
+  primitives still needs a complete new identity assignment, desired-to-observed
+  verification and partial replacement semantics. Naming it a degradation is fine;
+  claiming it costs nothing risks hiding a second behavior before it is needed.
+- **Character continuity is useful but not the delivery axis.** A single splice
+  is a small plausible helper, supported by prior Yrs evidence. Its exact retained
+  ranges/mark clearing need not determine when paragraph additions or splits ship.
+  All-character overwrite in a retained compatible XmlText is an honest alternative;
+  coarse child rebuilding has the already-proven concurrent-visibility cost.
+- **Recovery is part of basic successful execution.** The peer calls the milestone
+  complete through batch 3 and batch 4 “hardening,” while putting pending lifecycle,
+  ack reads and delayed/lost-request tests there. Those minimal uncertainty controls
+  must land before the remote write loop is presented as useful/safe. Extensive
+  autonomous repair can be later; honest stop-and-resolve cannot.
+
+Native helpers permit simplification in either architecture:
+
+| Boundary | Verified shape and recommended use |
+| --- | --- |
+| RPC `createEntity` | Array of `{entityID, permission_set}`; the context method takes one object. Keep these distinct. |
+| `addBlock` | Creates entity/type/membership but requires caller position and can infer list status from a block parent. Suitable when that full behavior is intended. |
+| `addLastBlock` | `{parent, factID, entity}` only; assumes entity already exists, computes an end position and writes the specified membership ID. Useful for generation order and for simple fact-ID-aware reparent/normalize passes. |
+| `moveBlock` | Uses target entity to choose an occurrence; requires unambiguous occurrences if used. An after-chain still must ensure the first desired block actually becomes first. |
+| `retractFact` | RPC arguments are `{factID}`; ordinary source deletion detaches the selected membership, not the entity. |
+| `assertFact` for new text | `id` is optional, not forbidden, for cardinality-one attributes. A supplied explicit ID can be used on a fresh entity; an existing cardinality-one fact retains its existing ID. |
+
+Therefore g's server-minted text-fact IDs are a valid choice, but not a native
+requirement. My generation chooses explicit derived IDs for its entire planned
+inventory, then verifies actual rows. The keyed alternative may omit new text IDs
+and learn them by `(entity, attribute)` read-back, promoting only actual IDs. Both
+must reject ambiguity rather than call a planned ID confirmed. No fake native IDs
+are needed in ordinary authoring source under either approach.
+
+For ordering, native `addLastBlock` means a local fractional-index port is optional,
+not a prerequisite for inserting before the old first block. Create new entities
+and payloads, then place/normalize the desired membership order. Bounded extra writes
+are acceptable. Preserve native helpers' exact semantics and prove >62 siblings;
+do not inherit experiment 13's toy limit. Retrying append/move under fresh mutation
+IDs is still a new effect, not an intrinsically harmless replay.
+
+### 12.7 Source identity, coverage and receipts: shared work neither engine avoids
+
+Keep the desired-versus-confirmed model changes in §5. The peer agrees on new keys
+without node rows and vanished rows awaiting settlement; that is essential. Its
+phrase “null association” is too weak for the canonical desired projection.
+Two new PageLinks to different unbound page keys would otherwise both reduce their
+target to null. Use a tagged local identity for an unconfirmed target, and confirmed
+native associations where available. This is a projection of the existing model,
+not a new diff model.
+
+A small factual correction: current `editor_value` serializes
+`self.state.nodes.get(key)` as an Option; its `expect` concerns JSON serialization,
+not missing-node lookup. A missing row would currently become null if parsing
+allowed it. The problem is the parser invariant and the meaning of missing rows,
+not an existing lookup panic. Fix those semantics deliberately.
+
+The peer does not address the token-derived imported-document-ID assertion.
+Retain my supplied-local-namespace change: a random ID minted by local `create`
+must survive first binding and every later observation. Import's deterministic
+ID is an initial-adoption convention, not a second identity to impose after save.
+The independently verified native tuple remains the remote identity check.
+
+Both source forms are feasible: g's implicit main-page syntax is more ergonomic;
+my explicit Page scaffold keeps the existing container grammar. This is independent
+of the engine decision. I retain the explicit scaffold in this proposal's minimum
+source change, supplied by `create` so authors do not invent page/native IDs.
+An implicit-main convenience can be selected if it is given a stable local page
+identity and unambiguous interaction with explicit Page definitions. Neither form
+requires prose wrappers or manual block identities.
+
+**Flat lists remain included in my proposed first product profile.** Their absence
+does not logically prevent the brief's mandatory paragraph/heading operations;
+the brief explicitly permits a declared list exclusion. Thus g's list deferral
+is not equivalent to its earlier unacceptable paragraph-addition deferral.
+Nevertheless, simple bullet/ordered lists are common drafting, the mapping is
+known, and my recommendation budgets the small representation/read/write work
+instead of claiming it already exists. Nested/tasks/multi-block items remain
+explicitly outside. Quotes/code/rules/images/PageLinks and hard breaks retain the
+concrete coverage in §3, with the inactive-text correction above.
+
+Finally, unchanged source formatting and coherent key renames must not cause a
+body generation, while title-only saves may update metadata without one. A successful
+push must settle a receipt profile whose editor fields actually agree; permanent
+false drift is not an acceptable placeholder for pending metadata integration.
+Receipt changes must preserve old profile interpretation, not reinterpret previously
+stored hashes under new list/presence/identity semantics.
+
+### 12.8 Unknown mint, exact replay and minimum recovery
+
+I reject guaranteed homepage recovery. `createNewLeaflet`'s **`addToHomepage`**
+default controls the auth-conditioned CTE; `addToHome` controls a redirect query
+flag. A valid preflight cookie is not a guarantee it remains valid at mint. The
+identity query's lack of an explicit limit is not verified global completeness.
+Even one new seed candidate is not unique attempt attribution: another tab or
+actor could have created it, and the native mint accepts no client correlation key.
+
+After a lost response, listing candidates is useful. Explicitly adopting a selected
+candidate is a new identity decision; it is not evidence the original attempt
+succeeded exactly once. No match does not prove no mint. Keep pending uncertainty,
+never auto-remint, and preserve a returned token before further effects when local
+byte guards allow it. A crash between server creation and durable token recording
+is an unavoidable uncertainty window in this protocol.
+
+The peer's “absent from pull → rederive with same IDs” and “partial → assert missing
+facts” recipes are unsafe without resolving issued requests first. Same entity IDs
+do not make a newly encoded fresh Yrs payload identical to the lost payload.
+Require acknowledgments/observed effects to resolve prior requests, then inspect
+the relevant entities explicitly. Recovered equal text is not reasserted. Unknown
+late-arrival possibility stops; it does not become a blind repair loop.
+
+For generation, use the same rule before abandoning a stage or issuing another
+activation. A late old activation could select an obsolete body even though later
+generation IDs are different. Keep exact requests in memory for same-process retry;
+persist only identity/evidence. After restart, observe/settle completed effects or
+stop. These constraints are required for both designs; generation is not an
+exactly-once escape hatch.
+
+### 12.9 Updated first/second-save checks and implementation map
+
+The walkthrough in §1 remains the selected algorithm. These additional scenarios
+make the review's substantive differences executable:
+
+1. **Configured publication:** unbound source omits publication; config selects P.
+   First push calls publication mint, observes binding P and `doc:null`, applies
+   title/description/tags to the association row, then body/read-back succeeds.
+   It never claims success with null binding and unsaved release-intent tags.
+2. **Explicit standalone:** authored null overrides config P, chooses `/new`, keeps
+   local UUID, writes token metadata, and repeats without mint or false drift.
+   No unconditional null is inserted by `create` when intent was absent.
+3. **Already-imported document:** committed synthetic code/image fixture contains
+   known inactive text. Add a heading and paragraph before the first block. On
+   explicit generated-body adoption, current code/image/prose survives, old hidden
+   text remains only on old entities, the new association table reflects reality,
+   and immediate pull/repeat push are no-ops. Unknown active fields still fail.
+4. **Second save combined:** add heading/paragraph, edit marks/link/breaks, split,
+   join, delete, reorder and change heading level in one source revision. One new
+   body is verified/activated under the same token/root/entry. Include flat lists
+   and a repeated named-page target in the fixture; neither needs fake rows.
+5. **Interrupted create/placement:** entity/text creation succeeds but membership
+   fails. Active pull omits it; explicit-root read finds it. The workflow must not
+   conclude nonexistence or send independently regenerated fresh text while an
+   earlier request is unresolved. Include delayed activation and lost mint with
+   a plausible but unattributable homepage candidate.
+6. **Metadata and comments:** optimistic client-only extras cannot satisfy server
+   read-back; linked draft title uses its actual row; direct native `block/comment`
+   and reply fixtures are observed and rejected as unsupported, not called invisible.
+
+Keep four coherent batches, with essential failure handling integrated rather than
+deferred as post-delivery hardening. Parent owns actual ticket updates/assignment:
+
+- **A — local authorship and model**, under `leafspring-author-create` and
+  `leafspring-author-keys` if retained in the tracker: g implements optional coherent
+  binding/sync, intent presence, local-ID stability, precise key preparation and the
+  complete chosen source/read-back profile, including flat lists. This makes normal
+  structural drafts valid before remote execution.
+- **B — native first binding and write boundary**, under
+  `leafspring-editor-bind`: recommend Sol high for publication-action invocation,
+  standalone mint, exact protocol shapes, pending-token lifecycle and typed ack/
+  explicit-root reads. Essential lost/uncertain mint and request handling ships here.
+  Resolve actual publication context; don't accept a standalone substitute.
+- **C — full generated-body save**, under `leafspring-editor-structure` with the
+  fresh-text work from `leafspring-editor-text`: g can implement the now-specified
+  emitter, helper-driven ordering, staged verification, entry activation, context-
+  correct metadata and known-inactive retirement policy. It includes source-byte
+  guards and read-back; no independently executable “safe later” write shortcut.
+- **D — joined conflict/recovery/product proof**, under
+  `leafspring-editor-conflicts` and `leafspring-editor-recovery`: recommend Sol high
+  for the final receipt/uncertainty integration and complete matrix. This completes
+  stop/settle recovery, guarded pull and the authorized full two-save native loop.
+  Extensive autonomous repair is optional; the required workflow is not declared
+  complete until this batch's core cases pass.
+
+These are recommendations, not newly created work or a one-session-per-batch
+constraint. If batch B needs multiple sessions for real action transport, use them.
+Do not shrink first binding or later structural drafting to fit a convenient
+session boundary. The prior experiments need not all be rerun; new tests should
+target the receiving code and the concrete differences above.
+
+### 12.10 Final choice, tradeoffs and remaining deployment evidence
+
+**Kept:** one generation engine; explicit current-body ownership; native
+document/public identity; automatic source keys; actual publication-context mint;
+strict unknown-active/interactive boundaries; flat lists; no stored body/history/
+plan; native helper ordering; complete two-save acceptance.
+
+**Changed:** known inactive image/code text no longer blocks generation; its
+retirement is a documented ownership effect. The imported-corpus receipt and native
+renderers justify that narrower treatment. I sharpened metadata storage, association-
+token handling, optional fact-ID semantics and essential recovery timing.
+
+**Accepted from the peer:** keyed create/update/detach/order is one plausible
+complete engine, not necessarily a second broad implementation; ordinary split/join
+can follow source keys without a structural diff; no minimal-move requirement;
+headless native creation is mandatory. Its preservation of unchanged keyed objects
+is a genuine advantage, including inactive state, rather than mere operation savings.
+
+**Rejected:** postponing selected publication context until release by default;
+calling permanent unsaved-tag drift a completed save; rooted absence as noncreation
+proof; guaranteed homepage mint attribution; blanket comment invisibility; and
+portraying whole-page replacement/recovery as free switches or later-only polish.
+
+The human decision is still substantive: **accept changed native body anchors and
+retired inactive conversion state in exchange for source-complete generation**, or
+choose the complete keyed engine to retain them. My recommendation remains the
+former under the expressed priorities. If the operator wants the latter, it must
+retain all required drafting actions and the binding/metadata/recovery corrections
+above. There is no evidence-based reason to retreat to existing-one-XmlText scope.
+
+Deployment uncertainties remain concrete: action-reference discovery and result
+decoding for publication mint; auth/redirect behavior for `/new`; actual returned
+association and contributor defaults; array-shaped creation and ordered buffered
+mutations; explicit-root completeness and stage visibility; entry update/metadata
+partial outcomes; browser rendering of lists/marks/images/title; and request-ack
+recovery on the deployed server. Source inspection supports implementation choices,
+and existing probes support Yrs mechanics. Neither substitutes for the authorized
+**local create → first native push → structural revision → second push → pull →
+unchanged push** deployment proof in both supported creation contexts.
+
+No new runtime experiment was needed to resolve the reviewed contradictions: native
+source, current production code and committed corpus fixtures suffice. This stage
+performs no production, private-data or remote changes, and does not claim peer
+consensus before the parent joins both separately committed addenda.
