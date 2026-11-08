@@ -34,6 +34,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use leafspring_workflow::{LeafletState, RemoteOptions};
 
 mod config;
+mod diff;
 mod import;
 mod pull;
 mod remote;
@@ -141,11 +142,23 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Compare current endpoints (editor is the default)
+    /// Compare readable current local/editor Markdown through a foreground tool
+    #[command(
+        after_help = "Example: leafspring diff essay.mdx --tool diff --tool-arg=-u --tool-exit diff\nOr configure: leafspring config set diff-program diff\n              leafspring config set diff-args '[\"-u\"]'\n              leafspring config set diff-exit diff\nTool receives ARG... LOCAL.md EDITOR.md; no shell. GUI tools must wait until closed.\nStdio/TTY is inherited; --json is intentionally unsupported. names/release are not implemented."
+    )]
     Diff {
         file: PathBuf,
         #[arg(long, default_value = "editor")]
         edge: Edge,
+        /// Executable name/path only (not a shell command); overrides diff-program
+        #[arg(long, value_name = "PROGRAM")]
+        tool: Option<String>,
+        /// Literal argument, repeatable; replaces diff-args when supplied
+        #[arg(long, value_name = "ARG", allow_hyphen_values = true)]
+        tool_arg: Vec<String>,
+        /// success: only exit 0; diff: 0 equal/1 different are successful reports
+        #[arg(long, value_name = "success|diff")]
+        tool_exit: Option<leafspring_workflow::diff::ExitMode>,
     },
     /// Plan/execute identity-preserving editor updates and first binding
     /// (save; publish releases)
@@ -364,12 +377,35 @@ async fn main() -> ExitCode {
         base_url: cli.base_url,
         token: cli.token,
     };
-    let flags = leafspring_workflow::config::Config {
+    let mut flags = leafspring_workflow::config::Config {
         handle: cli.handle,
         pds: cli.pds,
         publication: cli.publication,
         ..Default::default()
     };
+    if let Command::Diff {
+        file,
+        edge,
+        tool,
+        tool_arg,
+        tool_exit,
+    } = &cli.command
+    {
+        if *edge != Edge::Editor {
+            eprintln!("leafspring: diff --edge names/release is not implemented; only current local/editor content is compared");
+            return ExitCode::FAILURE;
+        }
+        flags.diff_program = tool.clone();
+        flags.diff_args = (!tool_arg.is_empty()).then(|| tool_arg.clone());
+        flags.diff_exit = *tool_exit;
+        return match diff::run(options, cli.root.as_deref(), &flags, file).await {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("leafspring: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Status { files, offline, json } = &cli.command {
         return match status::run(
             options,

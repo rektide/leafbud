@@ -14,6 +14,120 @@ use tokio::process::Command as TokioCommand;
 const FIXTURE: &str = include_str!("../../../experiments/02-draft-internals/fixtures/export-pull-doc.json");
 const TOKEN: &str = "01999000-0000-7aaa-8000-000000000001";
 
+#[cfg(unix)]
+#[tokio::test]
+async fn diff_cli_uses_config_literal_argv_foreground_stdio_and_read_only_views() {
+    use std::os::unix::fs::PermissionsExt;
+    let (server, current) = server().await;
+    let temp = tempfile::Builder::new().prefix("diff workspace ").tempdir().unwrap();
+    let root = temp.path().to_str().unwrap();
+    import(&server, root).await;
+    let doc = temp.path().join("doc.mdx");
+    let before = std::fs::read(&doc).unwrap();
+    let modified = std::fs::metadata(&doc).unwrap().modified().unwrap();
+    let program = temp.path().join("synthetic viewer");
+    let record = temp.path().join("record with spaces");
+    std::fs::write(&program, "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$1\"\ncat \"$3\" > \"$1.local\"\ncat \"$4\" > \"$1.editor\"\nprintf 'viewer stdout\\n'\nprintf 'viewer stderr\\n' >&2\nexit 1\n").unwrap();
+    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o700)).unwrap();
+    for (key, value) in [
+        ("diff-program", program.to_str().unwrap().to_owned()),
+        ("diff-args", json!([record.to_str().unwrap(), "literal ; $(no shell) *"]).to_string()),
+        ("diff-exit", "diff".into()),
+    ] {
+        let output = cli(&server.base_url, root, &["config", "set", key, &value, "--workspace-file"])
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    }
+    let output = cli(&server.base_url, root, &["diff", "doc.mdx"]).output().await.unwrap();
+    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "viewer stdout\n");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("viewer stderr") && stderr.contains("equal normalized views") && stderr.contains("tool exit 1"));
+    let local_path = record.with_file_name("record with spaces.local");
+    let remote_path = record.with_file_name("record with spaces.editor");
+    assert_eq!(std::fs::read(&local_path).unwrap(), std::fs::read(&remote_path).unwrap());
+    let args = std::fs::read_to_string(&record).unwrap();
+    assert_eq!(args.lines().nth(1), Some("literal ; $(no shell) *"));
+    assert!(!std::path::Path::new(args.lines().nth(2).unwrap()).parent().unwrap().exists());
+
+    set_paragraph_text(current.write().unwrap().get_mut(TOKEN).unwrap(), "Remote current writing");
+    let output = cli(
+        &server.base_url,
+        root,
+        &[
+            "diff",
+            "doc.mdx",
+            "--edge",
+            "editor",
+            "--tool",
+            program.to_str().unwrap(),
+            "--tool-exit",
+            "diff",
+        ],
+    )
+    .output()
+    .await
+    .unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("different normalized views"));
+    assert!(std::fs::read_to_string(remote_path).unwrap().contains("Remote current writing"));
+    assert!(std::fs::read_to_string(local_path).unwrap().contains("Synthetic body copy"));
+    assert_eq!(std::fs::read(&doc).unwrap(), before);
+    assert_eq!(std::fs::metadata(&doc).unwrap().modified().unwrap(), modified);
+
+    let output = cli(&server.base_url, root, &["diff", "doc.mdx", "--tool-exit", "success"])
+        .output()
+        .await
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("expected 0 in success mode"));
+    let calls = server.request_count("/api/rpc/get_leaflet_data");
+    for args in [
+        &["diff", "doc.mdx", "--json"][..],
+        &["diff"][..],
+        &["diff", "doc.mdx", "--tool-exit", "guess"][..],
+    ] {
+        assert_eq!(cli(&server.base_url, root, args).output().await.unwrap().status.code(), Some(2));
+    }
+    for edge in ["names", "release"] {
+        let output = cli(&server.base_url, root, &["diff", "doc.mdx", "--edge", edge]).output().await.unwrap();
+        assert_eq!(output.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("not implemented"));
+    }
+    assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), calls);
+}
+
+#[tokio::test]
+async fn diff_help_configuration_and_bad_tool_fail_without_fake_output() {
+    let (server, _) = server().await;
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().to_str().unwrap();
+    import(&server, root).await;
+    let calls = server.request_count("/api/rpc/get_leaflet_data");
+    let output = cli(&server.base_url, root, &["diff", "doc.mdx"]).output().await.unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("configure diff-program"));
+    assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), calls);
+    let output = cli(
+        &server.base_url,
+        root,
+        &["diff", "doc.mdx", "--tool", "/nonexistent/viewer", "--tool-arg=--one-literal-argument"],
+    )
+    .output()
+    .await
+    .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("starting/waiting"));
+    let output = cli(&server.base_url, root, &["diff", "--help"]).output().await.unwrap();
+    assert!(output.status.success());
+    let help = String::from_utf8_lossy(&output.stdout);
+    assert!(help.contains("--tool-arg=-u") && help.contains("config set diff-args") && help.contains("GUI tools must wait"));
+}
+
 fn fixture() -> Value {
     serde_json::from_str(FIXTURE).unwrap()
 }
@@ -266,5 +380,5 @@ async fn status_invalid_operands_are_per_file_and_missing_remote_is_a_report_not
     assert_eq!(output.status.code(), Some(2), "status has no mutation/settlement selector");
     let output = cli(&server.base_url, root, &["diff", "doc.mdx"]).output().await.unwrap();
     assert_eq!(output.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("not implemented"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("configure diff-program"));
 }

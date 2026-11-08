@@ -18,7 +18,7 @@ serde.workspace = true
 serde_json.workspace = true
 leafspring-web.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["fs"] }
+tokio = { workspace = true, features = ["fs", "process"] }
 
 [dev-dependencies]
 base64.workspace = true

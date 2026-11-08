@@ -20,6 +20,12 @@ pub struct Config {
     pub pds: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub publication: Option<String>,
+    #[serde(default, rename = "diff-program", skip_serializing_if = "Option::is_none")]
+    pub diff_program: Option<String>,
+    #[serde(default, rename = "diff-args", skip_serializing_if = "Option::is_none")]
+    pub diff_args: Option<Vec<String>>,
+    #[serde(default, rename = "diff-exit", skip_serializing_if = "Option::is_none")]
+    pub diff_exit: Option<crate::diff::ExitMode>,
 }
 
 impl Config {
@@ -40,6 +46,15 @@ impl Config {
             Key::Handle => self.handle.clone(),
             Key::Pds => self.pds.clone(),
             Key::Publication => self.publication.clone(),
+            Key::DiffProgram => self.diff_program.clone(),
+            Key::DiffArgs => self.diff_args.as_ref().map(|v| serde_json::to_string(v).expect("argument JSON")),
+            Key::DiffExit => self.diff_exit.map(|v| {
+                match v {
+                    crate::diff::ExitMode::Success => "success",
+                    crate::diff::ExitMode::Diff => "diff",
+                }
+                .into()
+            }),
         }
     }
 }
@@ -50,6 +65,9 @@ pub enum Key {
     Handle,
     Pds,
     Publication,
+    DiffProgram,
+    DiffArgs,
+    DiffExit,
 }
 impl Key {
     pub fn as_str(self) -> &'static str {
@@ -58,6 +76,9 @@ impl Key {
             Self::Handle => "handle",
             Self::Pds => "pds",
             Self::Publication => "publication",
+            Self::DiffProgram => "diff-program",
+            Self::DiffArgs => "diff-args",
+            Self::DiffExit => "diff-exit",
         }
     }
 }
@@ -69,7 +90,10 @@ impl std::str::FromStr for Key {
             "handle" => Ok(Self::Handle),
             "pds" => Ok(Self::Pds),
             "publication" => Ok(Self::Publication),
-            _ => Err("expected workspace, handle, pds or publication"),
+            "diff-program" => Ok(Self::DiffProgram),
+            "diff-args" => Ok(Self::DiffArgs),
+            "diff-exit" => Ok(Self::DiffExit),
+            _ => Err("expected workspace, handle, pds, publication, diff-program, diff-args or diff-exit"),
         }
     }
 }
@@ -110,7 +134,7 @@ fn read(path: &Path) -> Result<Option<(Config, Vec<u8>)>> {
     // Do not print Figment's raw parse error: unknown settings may be secrets.
     let config: Config = Figment::new().merge(Toml::string(text)).extract().map_err(|_| {
         anyhow::anyhow!(
-            "invalid config {} (expected flat string keys workspace, handle, pds, publication)",
+            "invalid config {} (expected string defaults, diff-program string, diff-args string array, diff-exit success|diff)",
             path.display()
         )
     })?;
@@ -158,30 +182,38 @@ pub fn load_at(global_path: &Path, cwd: &Path, root: Option<&Path>, flags: &Conf
         .extract()
         .context("merging config layers")?;
     effective.workspace = Some(root.clone());
-    let values = [Key::Workspace, Key::Handle, Key::Pds, Key::Publication]
-        .into_iter()
-        .map(|key| {
-            let (source, source_path) = if key == Key::Workspace {
-                (Some(workspace_source), (workspace_source == "global").then(|| global_path.to_path_buf()))
-            } else if flags.value(key).is_some() {
-                (Some("flag"), None)
-            } else if document.value(key).is_some() {
-                (Some("document"), None)
-            } else if workspace.value(key).is_some() {
-                (Some("workspace"), Some(workspace_toml_path.clone()))
-            } else if global.value(key).is_some() {
-                (Some("global"), Some(global_path.to_path_buf()))
-            } else {
-                (None, None)
-            };
-            ShownValue {
-                key: key.as_str(),
-                value: effective.value(key),
-                source,
-                source_path,
-            }
-        })
-        .collect();
+    let values = [
+        Key::Workspace,
+        Key::Handle,
+        Key::Pds,
+        Key::Publication,
+        Key::DiffProgram,
+        Key::DiffArgs,
+        Key::DiffExit,
+    ]
+    .into_iter()
+    .map(|key| {
+        let (source, source_path) = if key == Key::Workspace {
+            (Some(workspace_source), (workspace_source == "global").then(|| global_path.to_path_buf()))
+        } else if flags.value(key).is_some() {
+            (Some("flag"), None)
+        } else if document.value(key).is_some() {
+            (Some("document"), None)
+        } else if workspace.value(key).is_some() {
+            (Some("workspace"), Some(workspace_toml_path.clone()))
+        } else if global.value(key).is_some() {
+            (Some("global"), Some(global_path.to_path_buf()))
+        } else {
+            (None, None)
+        };
+        ShownValue {
+            key: key.as_str(),
+            value: effective.value(key),
+            source,
+            source_path,
+        }
+    })
+    .collect();
     Ok(Context {
         version: 1,
         global_path: global_path.into(),
@@ -221,7 +253,21 @@ pub fn set_at(path: &Path, key: Key, value: &str) -> Result<()> {
         None => toml_edit::DocumentMut::new(),
     };
     let decor = doc.get(key.as_str()).and_then(|v| v.as_value()).map(|v| v.decor().clone());
-    doc[key.as_str()] = toml_edit::value(value);
+    doc[key.as_str()] = match key {
+        Key::DiffArgs => {
+            let args: Vec<String> = serde_json::from_str(value).map_err(|_| anyhow::anyhow!("diff-args requires a JSON array of strings, e.g. '[\"-u\"]'"))?;
+            let mut array = toml_edit::Array::new();
+            for arg in args {
+                array.push(arg);
+            }
+            toml_edit::value(array)
+        }
+        Key::DiffExit => {
+            value.parse::<crate::diff::ExitMode>().map_err(anyhow::Error::msg)?;
+            toml_edit::value(value)
+        }
+        _ => toml_edit::value(value),
+    };
     if let Some(decor) = decor {
         *doc[key.as_str()].as_value_mut().expect("new value").decor_mut() = decor;
     }
@@ -235,6 +281,56 @@ pub fn set_at(path: &Path, key: Key, value: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn diff_config_layers_and_preserving_typed_sets() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("workspace");
+        std::fs::create_dir(&root).unwrap();
+        let global = temp.path().join("global.toml");
+        std::fs::write(
+            &global,
+            "diff-program = 'global viewer'\ndiff-args = ['--wait', 'two words']\ndiff-exit = 'diff'\n",
+        )
+        .unwrap();
+        let local = root.join(FILE_NAME);
+        std::fs::write(
+            &local,
+            "# preserve\nhandle = 'kept'\ndiff-args = ['old'] # arguments\nsecret = 'not emitted on errors'\n",
+        )
+        .unwrap();
+        set_at(&local, Key::DiffArgs, r#"["-u", "two words", "$(literal)"]"#).unwrap();
+        assert!(std::fs::read_to_string(&local).unwrap().contains("# arguments"));
+        let context = load_at(&global, temp.path(), Some(&root), &Config::default(), None).unwrap();
+        assert_eq!(context.effective.diff_program.as_deref(), Some("global viewer"));
+        assert_eq!(context.effective.diff_args.unwrap(), vec!["-u", "two words", "$(literal)"]);
+        assert_eq!(context.values.iter().find(|v| v.key == "diff-args").unwrap().source, Some("workspace"));
+        let before = std::fs::read(&local).unwrap();
+        for (key, bad) in [(Key::DiffArgs, "--not-json"), (Key::DiffArgs, "[1]"), (Key::DiffExit, "guess")] {
+            assert!(set_at(&local, key, bad).is_err());
+            assert_eq!(std::fs::read(&local).unwrap(), before);
+        }
+        let flags = Config {
+            diff_program: Some("flag viewer".into()),
+            diff_args: Some(vec![]),
+            diff_exit: Some(crate::diff::ExitMode::Success),
+            ..Default::default()
+        };
+        let loaded = load_at(&global, temp.path(), Some(&root), &flags, None).unwrap();
+        assert_eq!(loaded.effective.diff_args, Some(vec![]));
+        assert_eq!(loaded.effective.diff_program.as_deref(), Some("flag viewer"));
+        assert_eq!(loaded.effective.diff_exit, Some(crate::diff::ExitMode::Success));
+        assert!(crate::diff::Tool::from_config(&Config::default()).is_err());
+        assert!(
+            crate::diff::Tool::from_config(&Config {
+                diff_program: Some(" ".into()),
+                ..Default::default()
+            })
+            .is_err()
+        );
+        std::fs::write(&local, "diff-args = 'secret value not printed'\n").unwrap();
+        let error = load_at(&global, temp.path(), Some(&root), &Config::default(), None).unwrap_err().to_string();
+        assert!(!error.contains("secret value"));
+    }
     #[test]
     fn layering_roots_and_provenance() {
         let temp = tempfile::tempdir().unwrap();
