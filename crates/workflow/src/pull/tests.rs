@@ -241,6 +241,37 @@ async fn legacy_receipts_require_current_agreement_to_settle_and_unknown_profile
 }
 
 #[tokio::test]
+async fn swapped_author_labels_follow_native_associations_not_deterministic_key_spelling() {
+    let (server, current) = server_current().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    let source = std::fs::read_to_string(&path).unwrap();
+    let before = leafspring_mdx::parse(&source).unwrap();
+    let a = &before.pages[0].blocks[0].key;
+    let b = &before.pages[0].blocks[1].key;
+    let source = source.replace(a, "SWAP-TEMPORARY").replace(b, a).replace("SWAP-TEMPORARY", b);
+    std::fs::write(&path, &source).unwrap();
+    let existing = leafspring_mdx::parse(&source).unwrap();
+    assert_eq!(existing.editor_value(), before.editor_value());
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!(report.unchanged, 1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    set_paragraph_text(
+        current.write().unwrap().get_mut(TOKEN).unwrap(),
+        &yrs_payload("Remote preserves relabeled objects", None),
+    );
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!(report.updated, 1);
+    let after = leafspring_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(after.state.nodes, existing.state.nodes);
+    assert_eq!(
+        after.pages[0].blocks.iter().map(|b| &b.key).collect::<Vec<_>>(),
+        existing.pages[0].blocks.iter().map(|b| &b.key).collect::<Vec<_>>()
+    );
+    assert_eq!(after.state.sync.local_hash, import::hash(&after.editor_value()));
+}
+
+#[tokio::test]
 async fn pull_noop_is_an_exact_byte_and_mtime_noop() {
     let (server, _current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();

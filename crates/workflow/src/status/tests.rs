@@ -256,6 +256,19 @@ async fn foreign_origins_and_unknown_owned_state_do_not_fetch_or_retarget() {
     assert!(!serde_json::to_string(&report).unwrap().contains("never print"));
     assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), calls);
     assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    let original = snapshot(&path);
+    let mut header = leafspring_mdx::header(&source).unwrap();
+    header["@leafspring"].as_object_mut().unwrap().remove("futurePolicy");
+    header["@leafspring"]["binding"].as_object_mut().unwrap().remove("publication");
+    let body = source.split_once("---\n\n").unwrap().1;
+    let missing_association = format!("---\n{}\n---\n\n{body}", serde_json::to_string(&header).unwrap());
+    assert!(
+        leafspring_mdx::parse(&missing_association)
+            .unwrap_err()
+            .to_string()
+            .contains("association is unknown")
+    );
+    assert_eq!(snapshot(&path), original, "validation itself never writes");
 }
 
 #[tokio::test]

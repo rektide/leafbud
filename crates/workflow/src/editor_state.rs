@@ -175,6 +175,12 @@ impl RemoteReader {
             // Non-entry page definition ordering is source layout, not editor
             // content. Settling witnesses must keep its original body bytes.
             merged.pages = existing.pages.clone();
+            if merged.editor_value() != existing.editor_value() {
+                return Err(with_hash(
+                    "unsupported",
+                    "source association correspondence could not be retained safely".into(),
+                ));
+            }
         }
         Ok(Observed { data, merged, agreement })
     }
@@ -199,14 +205,7 @@ fn same_identity(existing: &Document, fresh: &Document) -> Result<()> {
 fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, String> {
     let mut rename = BTreeMap::new();
     let mut claimed = BTreeSet::new();
-    for key in fresh.state.nodes.keys().filter(|k| existing.state.nodes.contains_key(*k)) {
-        claimed.insert(key.clone());
-        rename.insert(key.clone(), key.clone());
-    }
     for (key, node) in &fresh.state.nodes {
-        if rename.contains_key(key) {
-            continue;
-        }
         let same_entity: Vec<(&String, &Node)> = existing.state.nodes.iter().filter(|(_, n)| n.entity == node.entity).collect();
         let memberships: BTreeSet<_> = node.memberships.keys().collect();
         let exact: Vec<&String> = same_entity
@@ -215,18 +214,29 @@ fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, Str
             .map(|(k, _)| *k)
             .collect();
         let chosen = if exact.len() == 1 {
-            exact[0].clone()
+            Some(exact[0].clone())
         } else if same_entity.len() == 1 {
-            same_entity[0].0.clone()
+            Some(same_entity[0].0.clone())
         } else {
-            key.clone()
+            None
         };
-        if claimed.insert(chosen.clone()) {
+        if let Some(chosen) = chosen
+            && claimed.insert(chosen.clone())
+        {
             rename.insert(key.clone(), chosen);
-        } else {
-            claimed.insert(key.clone());
-            rename.insert(key.clone(), key.clone());
         }
+    }
+    // Reserve every matched author label before naming unmatched fresh nodes.
+    // A newly observed deterministic label must not steal a manually renamed
+    // existing object's spelling or make collect() silently drop a node row.
+    for key in fresh.state.nodes.keys().filter(|k| !rename.contains_key(*k)).cloned().collect::<Vec<_>>() {
+        let mut chosen = key.clone();
+        let mut suffix = 2;
+        while !claimed.insert(chosen.clone()) {
+            chosen = format!("{key}-imported-{suffix}");
+            suffix += 1;
+        }
+        rename.insert(key, chosen);
     }
     rename
 }

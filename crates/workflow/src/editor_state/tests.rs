@@ -167,3 +167,32 @@ fn malformed_receipts_never_claim_change_direction() {
         "current equality is still observable, not accepted"
     );
 }
+
+#[test]
+fn new_native_nodes_cannot_steal_matched_author_labels_or_drop_association_rows() {
+    let base = document();
+    let mut local = base.clone();
+    let key = local.pages[0].blocks[0].key.clone();
+    let node = local.state.nodes.remove(&key).unwrap();
+    local.state.nodes.insert("new-native-node".into(), node);
+    local.pages[0].blocks[0].key = "new-native-node".into();
+    let mut fresh = base;
+    fresh.state.nodes.insert(
+        "new-native-node".into(),
+        Node {
+            entity: "new-entity".into(),
+            memberships: BTreeMap::from([("new-occurrence".into(), "new-occurrence".into())]),
+            text_fact: None,
+            inactive_text_fact: None,
+        },
+    );
+    fresh.pages[0].blocks.push(Block {
+        key: "new-native-node".into(),
+        kind: BlockKind::Rule,
+    });
+    let merged = adopt(&local, &fresh);
+    assert_eq!(merged.state.nodes.len(), fresh.state.nodes.len());
+    assert_eq!(merged.state.nodes["new-native-node"], local.state.nodes["new-native-node"]);
+    assert_eq!(merged.pages[0].blocks.last().unwrap().key, "new-native-node-imported-2");
+    assert_eq!(merged.editor_value(), fresh.editor_value());
+}

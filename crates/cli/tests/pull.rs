@@ -251,6 +251,17 @@ async fn status_invalid_operands_are_per_file_and_missing_remote_is_a_report_not
     let output = cli(&server.base_url, root, &["status", "doc.mdx", "--json"]).output().await.unwrap();
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(serde_json::from_slice::<Value>(&output.stdout).unwrap()["items"][0]["outcome"], "missing");
+    let mut malformed = fixture();
+    malformed["response"] = json!({"private":"reflected-remote-secret"});
+    current.write().unwrap().insert(TOKEN.into(), malformed);
+    let output = cli(&server.base_url, root, &["status", "doc.mdx", "--json"]).output().await.unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["items"][0]["outcome"], "failed");
+    assert_eq!(report["items"][0]["remote"]["freshness"], "unavailable");
+    assert_eq!(report["items"][0]["remote"]["change"], "unknown");
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("reflected-remote-secret"));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("reflected-remote-secret"));
     let output = cli(&server.base_url, root, &["status", "--take", "remote"]).output().await.unwrap();
     assert_eq!(output.status.code(), Some(2), "status has no mutation/settlement selector");
     let output = cli(&server.base_url, root, &["diff", "doc.mdx"]).output().await.unwrap();
