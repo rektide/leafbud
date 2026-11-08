@@ -7,9 +7,18 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:zai-coding-plan/glm-5.3#max
+updated:
+  at: 2026-11-08
+  by: model:zai-coding-plan/glm-5.3#max
 sources:
   - resource: "opencode://ses_e437006ffffetjLhrTerTYFAE4"
-    title: "Independent g design wave: this session's evidence reading, stance and draft; stage-2 cross-review to follow on parent dispatch"
+    title: "g stage-1 independent draft; then stage-2 cross-review of the peer draft and its executed probes, producing the revised-stance addendum"
+  - resource: /design/native-edit0.gpt6a.md
+    title: "Peer Astra-high stage-1 draft at commit 4ab29da3de51 (initial independent version, read for cross-review before any peer addendum)"
+  - resource: /.test-agent/native-edit-astra/README.md
+    title: "Peer-executed offline probe scope: container-vs-character replacement and delta-vs-full wire forms; scratch is untracked, findings recorded here and in the peer draft"
+  - resource: /.test-agent/native-edit-astra/wire-probe.mjs
+    title: "Executed assertions read for this review: concurrent-insert visibility by edit granularity, self-containedness, and stale-base regeneration duplicating content"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Parent/user authority: commission, updated low-volume complexity-first stance, and mid-session Leafbud rename steering"
   - resource: /AGENTS.md
@@ -416,3 +425,204 @@ parallel wave. The peer Astra-high draft (`design/native-edit0.gpt6a.md`)
 has deliberately not been read; a cross-review addendum with any revised
 stance will follow on explicit parent dispatch, after both drafts are
 committed, as a separately committed addendum preserving this text unchanged.
+
+<a id="cross-review-addendum-1"></a>
+
+## Addendum — cross-review of the Astra draft and revised stance
+
+Stage 2, dispatched by the parent after both drafts were committed. The text
+above is my unchanged stage-1 argument; this addendum supersedes it where
+stated. Reviewed: the peer's initial draft at commit **`4ab29da3de51`** (no
+peer addendum existed when I began; I did not read one before committing
+this), its cited Yrs/lib0/y-prosemirror source readings, and its executed
+offline probes in `.test-agent/native-edit-astra/` (Rust source, `probe.mjs`,
+`wire-probe.mjs` — read and checked against their assertions).
+
+### Corrections to this document, first
+
+Reading the peer's probe evidence and its wire-form companion surfaced three
+errors or overclaims in my stage-1 text. Correcting mine before criticizing
+theirs:
+
+1. **The concurrency claim was half wrong.** I wrote that unseen concurrent
+   content "survives" coarse replacement, citing experiment 05's
+   character-deletion case — while my prescribed mechanism was
+   *child-level* removal ("remove all currently-seen paragraph children and
+   characters"). The peer's probe separates the granularities, and I verified
+   its assertions: deleting and reinserting **characters inside a retained
+   XmlText** leaves a concurrent insert visible (both orders converge to
+   `Rnew`; read-back then *differs* from desired and is honestly reported as
+   diverged); deleting the **XmlText child itself** hides a concurrent insert
+   living inside it — the merged result reads exactly `new`, so read-back
+   *equality* is satisfied while the concurrent intent is silently invisible.
+   The precise rule: our delete set never tombstones unseen items, but
+   visibility follows the *container*; content inside a removed child
+   disappears from the rendered sequence without ever being "deleted" by us.
+   **Read-back equality proves achieved meaning, not absence of lost
+   concurrent intent.** My stage-1 wording is corrected accordingly.
+2. **The recovery claim was over-broad.** "Any interruption re-pulls and
+   replans; the same plan converges" is unsafe in one window: the peer's
+   wire probe shows two *independently compiled* edits of the same stale
+   base merge into `newnew`, not an idempotent retry. Re-planning is safe
+   only from an observation that *resolves the prior attempt* (it landed →
+   semantic no-op; or its absence is established via acknowledgment reads
+   and fresh state). In-flight/lost-response uncertainty must stop and
+   report, never regenerate a payload and call it a replay. Exact-bytes
+   retry (same request re-sent) remains harmless — experiment 05's duplicate
+   delivery evidence covers that case only.
+3. **A dependency mislabel.** I implied automatic key assignment exists to
+   reuse; the accepted interface settled its behavior but the current
+   baseline has no key-assignment pass. Corrected below in the revised slice
+   scoping.
+
+### The five joined tensions
+
+**1. Splice-retain vs coarse same-block overwrite — I move; the peer is
+right, and the decisive precedent is one I under-weighted.** My stage-1
+rejection bundled "prefix/suffix splice" with the LCS/split-merge machinery
+I was actually rejecting. They are not the same thing: a single
+common-prefix/suffix splice is what production y-prosemirror does on every
+keystroke (`updateYText` → lib0 `simpleDiff`, per the peer's installed-source
+reading), it is ~100–150 lines with tests, and the peer's design never
+proposes cross-node relocation, child-kind LCS, or repeated-text
+disambiguation — the parts that made experiment 05's compiler expensive stay
+rejected, by both of us. What the splice buys is concrete: comment anchors
+and character identity in the untouched ends of an edited block — the
+typical shape of a text edit — and, per the probe above, *visible divergence*
+instead of silent hiding for concurrent edits inside retained containers.
+Refinements I would add to the peer's policy: extend prefix/suffix only
+while `(scalar, marks)` pairs are equal (retained ranges then never need
+`format`), and treat chars-equal-marks-differ as a separate `format`-only
+path so a mark-only edit never rewrites characters. Topology changes fall
+back to the coarse paragraph-interior rebuild, now with its concurrency cost
+stated in the effect summary. The empty-paragraph rule (keep the single
+text node, delete its characters) is adopted as-is.
+
+**2. Full edited-state payload vs edit-transaction delta — I concede the
+wire form; the probe settles it as a robustness question, not semantics.**
+The peer's wire probe (assertions read) shows delta and full forms produce
+the *same* concurrent merge semantics; the difference is that the
+full-state update of the loaded-and-edited document is **self-contained**
+(applies standalone with no pending structs) while the transaction delta
+dangles without its causal base. Since the server merge cache composes our
+payload with *its* captured base (`Y.mergeUpdates([latest, base])`), a
+self-contained payload is strictly more robust if that base is lost or
+stale on the server side (e.g. another writer retracted/recreated the text
+fact between our pull and push), and it is exactly what the native browser
+writes send — least novelty against the one code path we cannot test
+offline. Payload size is irrelevant at this volume. **First transport sends
+the complete edited state; the transaction delta stays as a test artifact
+and later optimization.** Two distinctions from the peer are worth
+restating sharply because both drafts converged on them independently: a
+full state of the *loaded-and-edited* doc is not the negative-control
+"independently generated fresh document" (which merges into two
+paragraphs), and retract-then-reassert of the text fact remains forbidden
+either way.
+
+**3. Granularity, not wire form, decides concurrent visibility — corrected
+above.** To delimit exactly, in the revised policy: the paragraph element
+is never removed; XmlText children are removed **only** when inline
+topology changes, and the effect summary then says concurrent web edits
+inside rebuilt inline containers may be hidden — undetectable by read-back.
+Concurrent content in retained containers surfaces as visible divergence.
+Concurrent *children* inserted into the paragraph by a collaborator are not
+in our delete set and remain visible under either granularity. None of this
+is multiplayer support, and no server CAS exists or is claimed; preflight
+narrows the race, read-back verifies achieved meaning, and the user-facing
+wording must not advertise more.
+
+**4. Does the equality gate make per-block planning mandatory? No — I
+overstated the "free rider" argument; the case for per-block is semantic,
+and the marginal-cost comparison is closer than I presented.** The conflict
+gate needs document-level typed equality only; per-block planning adds a
+comparator (~50 lines) plus an operation builder (~200–300), while
+fresh-subtree-every-save adds a generator (~300, experiment 13 is
+promotable), staged reads, and whole-binding rewrites. The machinery costs
+are comparable; neither is free. What actually decides it is product
+semantics: per-block leaves untouched blocks unwritten (anchors, receipts
+and witnesses stable, previews say "2 blocks changed"), while a
+regenerated body detaches every block's anchors on every save — including
+reader comment anchors on blocks the author never touched — and
+accumulates detached generations. Under the operator's "no silent
+unrelated-content destruction" line, that is the difference. Where the
+peer's candid table is right and I keep it: fresh-body staging remains a
+credible *product* selection if the user one day declares internal anchors
+disposable wholesale; until then per-block with `--recreate KEY`/
+`--recreate-body` as the explicit escape preserves that option without
+maintaining two engines.
+
+**5. First-slice scope — converged shape, with my corrections folded in.**
+Both drafts now point at the same first coherent slice; I adopt the peer's
+sharper boundaries: existing **bound draft** text only (today's parse
+already requires every source key to have a confirmed node row, which this
+slice satisfies without new machinery); **atomic scope refusal** — a desired
+change outside the slice's supported scope (title, images, structure)
+refuses the whole push rather than saving part of the document; a compact
+**pending-attempt marker** before effects (intent/preflight hashes, attempt
+and client IDs, touched native targets — a small owned-state extension);
+acknowledgment reads as recovery evidence with **processed ≠ applied**; and
+the derived-title interaction (first-block edits versus stored title) as an
+explicit fixture. Key assignment stays labeled accepted-not-implemented:
+new-block creation waits for it plus the desired-source/association
+validation extension, and belongs to the structure slice.
+
+### Adopted, kept, and rejected
+
+**Adopted from the peer:** splice-with-coarse-fallback text policy (with my
+marks refinements); full-state wire form; retain-container rule; atomic
+scope refusal; pending marker field sketch; acknowledgment-based recovery
+with the regeneration prohibition; shared-entity consistent-intent rule;
+rooted-closure/staged-read and multiple-root-refusal boundaries; the
+fixture list merged with mine (concurrency-visibility cases added).
+
+**Kept from mine:** keyed per-block operations as the default save path
+with fresh-subtree as fallback/first generation only; targeted fractional
+moves; the `edit_text`-style single seam where any future finer engine
+plugs in (now the splice helper, not a diff library); no diff dependency;
+drift-guard/receipts reuse; draft-first scope; import-adopted empty draft
+as the first-binding route with headless creation as its own probe.
+
+**Rejected or challenged in the peer:** "move every desired child to the
+end in desired order" — it rewrites every membership position on any
+reorder, churning witnesses and previews for unchanged blocks; targeted
+moves to fractional positions are equally simple and honest (and the peer's
+own reading says `moveBlock` uses Leaflet's position generator, so the
+server side is exercised either way). End-normalization remains acceptable
+as a deliberate fallback if targeted placement misbehaves against the real
+deployment. The peer's suggestion of adopting y-prosemirror's
+`updateYFragment` in Rust is declined for this project's shape (private/
+unstable API, JS runtime, schema bridge) — it stays the independent test
+consumer, as both drafts otherwise agree.
+
+### Revised recommendation (operative summary)
+
+Keyed per-block operations; per changed text block, splice retained
+containers (prefix/suffix on `(scalar, marks)`, format-only for
+chars-equal) and rebuild paragraph children only when inline topology
+changes, with that hiding effect stated; one complete edited-state payload
+per changed text fact; targeted fact operations for structure per my
+stage-1 table; fresh-subtree staging reserved for explicit recreation and
+first generation; recovery that never regenerates payloads and re-plans
+only from resolving observations. First slice per §5 above: offline
+plan/verify engine for existing-bound draft text (fixtures first), then
+the write transport with pending marker, preflight, atomic scope refusal
+and full read-back — gated live probe before any claim of a working save.
+
+### Still unresolved, and what would change this stance
+
+- The **gated live probe** remains the arbiter of deployed merge/mutation
+  behavior; a surprising server response (payload rejection, merge
+  poisoning, position scheme) changes the transport slice, not the
+  strategy.
+- **Anchor prevalence**: if comments/annotations on *edited middles* turn
+  out common, the next step is a better interior matcher behind the splice
+  seam — still not a general engine.
+- **Whether the user ever declares body anchors disposable wholesale** —
+  that single product statement would flip the default to fresh-body
+  staging per tension 4, and nothing else in either draft would need to
+  survive unchanged.
+- **Key assignment timing** (push-time insertion vs `tidy --keys` habit)
+  affects only the structure slice's UX, not architecture.
+- Peer's Sol-high recommendation for the first write boundary is
+  reasonable and remains the parent's call; my stage-1 slice sequencing
+  (offline fixtures first) stands as the safer prefix either way.
