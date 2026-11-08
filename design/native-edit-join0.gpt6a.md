@@ -1,7 +1,7 @@
 ---
 type: Assessment
-title: "Native edit design join — a small existing-text save before structural architecture"
-description: "Parent assessment of the independent Astra/g proposals and cross-reviews, separating delivered external human diff from a recommended bounded first native-write slice."
+title: "Native edit design join — useful drafting and push as the delivery boundary"
+description: "Parent assessment and user correction: existing-text edits are an internal checkpoint; usable drafting requires first binding and paragraph/heading creation, editing, deletion and ordering in one coherent push loop."
 resource: /design/native-edit-join0.gpt6a.md
 status: recommendation
 generated:
@@ -9,7 +9,7 @@ generated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "User's complexity-first product direction, independent-wave commission, parent cross-review join and proposed next implementation boundary"
+    title: "User's complexity-first direction, independent-wave join, rejection of the text-only milestone and correction to a useful complete drafting/push delivery"
   - resource: /AGENTS.md
     title: "Low-volume product fit and bounded conceptual complexity"
   - resource: /design/native-edit0.gpt6a.md
@@ -28,7 +28,49 @@ sources:
 
 # Native edit design join
 
-## Main recommendation
+## Controlling correction: deliver normal drafting
+
+The user rejected the parent recommendation below as an inadequate product slice:
+editing only existing single-container text does not support drafting a document,
+adding a paragraph or inserting a heading. **That narrow delivery recommendation
+is withdrawn.** The probe/algorithm findings remain useful implementation evidence.
+
+The next product milestone is **write locally, push a draft, revise its ordinary
+document structure, and push again**. Minimum end-to-end acceptance:
+
+1. Create a local draft without remote IDs, then push it to a newly bound native
+   editor using the configured publication context without publishing it.
+2. Add paragraphs and headings anywhere, including a heading before the previous
+   first block; assign required source IDs automatically once.
+3. Edit prose/formatting/links, split/join paragraphs, remove blocks and reorder
+   ordinary supported content. New nodes need not already have confirmed bindings.
+4. Push the complete supported desired document into the same bound editor, with
+   identity/ownership effects stated and ordinary conflict handling intact.
+5. Read back/pull equivalent content and associations; a repeated unchanged push
+   is a no-op rather than a second draft or duplicate body.
+6. Preserve unsupported/unrelated existing content by refusing an unsafe save,
+   rather than silently dropping it. A declared rich-content limit is different
+   from excluding basic paragraph/heading authoring from the milestone.
+
+The implementation can have internal commits for parser state, key assignment,
+Yrs editing, creation and transport. Completion of one such mechanism is not the
+claimed completion of this user workflow. Coordinate `author-create`, `author-keys`,
+`editor-text`, `editor-structure`, `editor-bind` and the essential conflict/recovery
+work as one delivery goal instead of making every mechanism a separate product
+stop. Existing tickets remain useful ownership/checkpoint units.
+
+**Simple structure is in scope; structural optimization is not required.** Use
+source keys to recognize existing objects, create genuinely new blocks, detach
+removed memberships and set a straightforward desired order. A changed-page
+ordering pass or coarse text/topology update is acceptable when simpler. If
+generated page/body materialization is materially simpler for this complete loop,
+evaluate it on that product payoff and explicit identity effects. Do not make
+minimal moves, character continuity or an elaborate tree matcher prerequisites
+for adding a paragraph. The exact write strategy remains to be selected against
+this corrected delivery scope; the rejected scope is not a reason to restart all
+the parser/protocol research.
+
+## Earlier parent recommendation — superseded as a delivery boundary
 
 **Land an existing-bound-text save, not a general structural planner.** Keep the
 current block and its single native text container, make one simple text splice,
@@ -77,7 +119,7 @@ full edited-state transport. Astra conceded the validity of a single delta and
 the genuine additional machinery required for keyed structure. Those corrections
 make this join stronger than agreement on a generic “incremental editing” slogan.
 
-## The proposed next batch
+## Earlier proposed next batch — internal evidence only
 
 Use `leafspring-editor-text` plus the essential portions of
 `leafspring-editor-conflicts`. **Sol high is recommended** for this first native
@@ -113,7 +155,7 @@ separately authorized deployed write probe. Existing-text work does not depend o
 automatic key assignment, which remains accepted but unimplemented. It must not
 close the broader structure/recovery tickets merely by delivering this narrow loop.
 
-## Choices to preserve, not prematurely solve
+## Earlier staging choices — reconsider under the corrected product boundary
 
 - **If the splice/mark implementation grows disproportionate**, all-character
   replacement inside the retained text child remains an acceptable simpler option.

@@ -28,6 +28,11 @@ sources:
   direction is comparable Markdown views passed to a user-provided diff tool.
   The architecture inquiry concerns how to enact/plan CRDT and fact-graph changes;
   diff algorithms are incidental means, not the central product requirement.
+- Size user-facing deliveries around useful workflows. For drafting/push, adding
+  paragraphs and headings, first binding, and ordinary structural revisions are
+  basic requirements. A text-only existing-block proof can be an internal commit,
+  but must not be presented as a sufficient authoring milestone. Reduce mechanism
+  complexity rather than excluding the normal user actions that make it useful.
 
 ## Commission and agent selection
 
