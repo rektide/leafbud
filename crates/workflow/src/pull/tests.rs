@@ -14,24 +14,24 @@ const TOKEN: &str = "01999000-0000-7aaa-8000-000000000001";
 const TOKEN2: &str = "01999000-0000-7aaa-8000-000000000002";
 const TOKEN3: &str = "01999000-0000-7aaa-8000-000000000003";
 
-fn fixture() -> Value {
+pub(crate) fn fixture() -> Value {
     serde_json::from_str(include_str!("../../../../experiments/02-draft-internals/fixtures/export-pull-doc.json")).unwrap()
 }
 
 /// A fixture variant bound to a distinct permission token, so several
 /// independent documents can coexist in one test workspace.
-fn fixture_with_token(token: &str) -> Value {
+pub(crate) fn fixture_with_token(token: &str) -> Value {
     let mut fixture = fixture();
     fixture["leaflet_data"]["id"] = json!(token);
     fixture["leaflet_data"]["permission_token_rights"][0]["token"] = json!(token);
     fixture
 }
-fn data(fixture: &Value) -> LeafletData {
+pub(crate) fn data(fixture: &Value) -> LeafletData {
     parse_rpc(&json!({"result":{"error":null,"data":fixture["leaflet_data"]}}).to_string()).unwrap()
 }
 
 /// A fresh native text payload with real Yrs state (optionally a strong mark).
-fn yrs_payload(text: &str, strong_from: Option<(usize, usize)>) -> String {
+pub(crate) fn yrs_payload(text: &str, strong_from: Option<(usize, usize)>) -> String {
     yrs_link_payload(text, strong_from, None)
 }
 
@@ -60,7 +60,7 @@ fn yrs_link_payload(text: &str, strong_from: Option<(usize, usize)>, link: Optio
     base64::engine::general_purpose::STANDARD.encode(update)
 }
 
-fn set_paragraph_text(fixture: &mut Value, payload: &str) {
+pub(crate) fn set_paragraph_text(fixture: &mut Value, payload: &str) {
     let response = fixture
         .get_mut("response")
         .and_then(|r| r.get_mut("patch"))
@@ -79,7 +79,7 @@ fn set_paragraph_text(fixture: &mut Value, payload: &str) {
     }
 }
 
-fn swap_block_order(fixture: &mut Value) {
+pub(crate) fn swap_block_order(fixture: &mut Value) {
     let response = fixture
         .get_mut("response")
         .and_then(|r| r.get_mut("patch"))
@@ -97,11 +97,11 @@ fn swap_block_order(fixture: &mut Value) {
     }
 }
 
-type Fixtures = Arc<RwLock<BTreeMap<String, Value>>>;
+pub(crate) type Fixtures = Arc<RwLock<BTreeMap<String, Value>>>;
 
 /// A loopback origin serving the given token → fixture map. Unknown tokens
 /// read as missing objects. RPC bodies carry token_id for both endpoints.
-async fn serving(fixtures: BTreeMap<String, Value>) -> (testserver::TestServer, Fixtures) {
+pub(crate) async fn serving(fixtures: BTreeMap<String, Value>) -> (testserver::TestServer, Fixtures) {
     let current: Fixtures = Arc::new(RwLock::new(fixtures));
     let handle = current.clone();
     let server = testserver::TestServer::spawn(Arc::new(move |r| {
@@ -123,15 +123,15 @@ async fn serving(fixtures: BTreeMap<String, Value>) -> (testserver::TestServer, 
     (server, current)
 }
 
-async fn server_current() -> (testserver::TestServer, Fixtures) {
+pub(crate) async fn server_current() -> (testserver::TestServer, Fixtures) {
     serving(BTreeMap::from([(TOKEN.to_owned(), fixture())])).await
 }
 
-fn context(root: &Path) -> config::Context {
+pub(crate) fn context(root: &Path) -> config::Context {
     config::load_at(&root.join("absent.toml"), root, Some(root), &config::Config::default(), None).unwrap()
 }
 
-async fn seed(server: &testserver::TestServer, root: &Path, token: &str, to: &str) -> PathBuf {
+pub(crate) async fn seed(server: &testserver::TestServer, root: &Path, token: &str, to: &str) -> PathBuf {
     let reader = RemoteReader::new(LeafletClient::new(&server.base_url, Some("synthetic")).unwrap());
     let report = reader
         .import(
@@ -148,7 +148,7 @@ async fn seed(server: &testserver::TestServer, root: &Path, token: &str, to: &st
     report.items[0].path.clone().unwrap()
 }
 
-fn reader(server: &testserver::TestServer) -> RemoteReader {
+pub(crate) fn reader(server: &testserver::TestServer) -> RemoteReader {
     RemoteReader::new(LeafletClient::new(&server.base_url, Some("synthetic")).unwrap())
 }
 

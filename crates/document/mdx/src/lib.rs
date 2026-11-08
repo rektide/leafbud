@@ -833,6 +833,11 @@ pub fn parse_with_spans(source: &str) -> Result<(Document, Vec<BlockSpan>)> {
     let children = reader.arena.get_children(0).to_vec();
     let first = *children.first().context("empty managed document")?;
     ensure!(reader.kind(first) == MdastNodeType::Yaml, "YAML frontmatter required");
+    let raw: Value = frontmatter(reader.value(first))?;
+    ensure!(
+        raw["@leafspring"]["binding"].get("publication").is_some(),
+        "bound publication association is unknown (explicit null or URI required)"
+    );
     let mut document: Document = frontmatter(reader.value(first))?;
     ensure!(
         document.format == "leafspring-mdx/1" && matches!(document.state.sync.profile.as_str(), PROFILE | EDITOR_PROFILE) && document.state.state == "draft",

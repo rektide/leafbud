@@ -15,6 +15,16 @@ pub enum Change {
     Unknown,
 }
 
+impl Change {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Unchanged => "unchanged",
+            Self::Changed => "changed",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct Agreement {
     pub state: &'static str,
@@ -25,6 +35,9 @@ pub struct Agreement {
 }
 
 pub(crate) fn local_change(document: &Document) -> Change {
+    if !valid_hash(&document.state.sync.local_hash) {
+        return Change::Unknown;
+    }
     if document.state.sync.profile == EDITOR_PROFILE {
         if import::hash(&document.editor_value()) == document.state.sync.local_hash {
             Change::Unchanged
@@ -42,17 +55,28 @@ pub(crate) fn local_change(document: &Document) -> Change {
     }
 }
 
+fn valid_hash(hash: &str) -> bool {
+    hash.strip_prefix("sha256:")
+        .is_some_and(|hex| hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+}
+
+pub(crate) fn baseline(document: &Document) -> &'static str {
+    if !valid_hash(&document.state.sync.local_hash) || !valid_hash(&document.state.sync.remote_hash) {
+        "invalid-receipts"
+    } else if document.state.sync.profile == EDITOR_PROFILE {
+        "scoped"
+    } else {
+        "legacy-unscoped"
+    }
+}
+
 pub(crate) fn classify(existing: &Document, merged: &Document, observed_remote_hash: &str) -> Agreement {
     let endpoints_equal = existing.editor_value() == merged.editor_value();
     let local = local_change(existing);
-    let remote = if existing.state.sync.remote_hash == observed_remote_hash {
-        Change::Unchanged
-    } else {
-        Change::Changed
-    };
+    let remote = remote_change(existing, observed_remote_hash);
     let scoped = existing.state.sync.profile == EDITOR_PROFILE;
     let state = if endpoints_equal {
-        if scoped && local == Change::Unchanged {
+        if scoped && local == Change::Unchanged && remote != Change::Unknown {
             if remote == Change::Unchanged { "clean" } else { "remote-changed" }
         } else {
             "converged"
@@ -71,10 +95,20 @@ pub(crate) fn classify(existing: &Document, merged: &Document, observed_remote_h
     };
     Agreement {
         state,
-        baseline: if scoped { "scoped" } else { "legacy-unscoped" },
+        baseline: baseline(existing),
         local,
         remote,
         endpoints_equal,
+    }
+}
+
+pub(crate) fn remote_change(existing: &Document, observed_hash: &str) -> Change {
+    if !valid_hash(&existing.state.sync.remote_hash) {
+        Change::Unknown
+    } else if existing.state.sync.remote_hash == observed_hash {
+        Change::Unchanged
+    } else {
+        Change::Changed
     }
 }
 
@@ -122,10 +156,11 @@ impl RemoteReader {
         // Acquire the conservative witness before mapping. Unsupported content
         // must not disappear simply because it cannot become a Document.
         let hash = import::remote_hash(&data, &snapshot, &existing.state.sync.profile);
+        let conservative_hash = import::remote_hash(&data, &snapshot, EDITOR_PROFILE);
         let with_hash = |kind, message| ObservationError {
             kind,
             message,
-            remote_hash: Some(hash.clone()),
+            remote_hash: Some(conservative_hash.clone()),
         };
         let fresh = import::build(self.client.base_url(), &data, &snapshot).map_err(|e| {
             with_hash(

@@ -190,9 +190,13 @@ fn local_index(root: &Path, base: &str) -> Result<BTreeMap<Uuid, Vec<PathBuf>>> 
                 let source = std::fs::read_to_string(&path)?;
                 let header = match leafspring_mdx::header(&source) {
                     Ok(header) => header,
-                    Err(_) if !source.contains("@leafspring") => continue,
+                    Err(_) if !source.contains("@leafspring") && !source.contains("@springleaf") => continue,
                     Err(error) => return Err(error).with_context(|| format!("cannot safely index managed file {}", path.display())),
                 };
+                ensure!(
+                    header.get("@springleaf").is_none(),
+                    "legacy springleaf managed source requires explicit namespace conversion before import (duplicate checkout refused)"
+                );
                 if header["@leafspring"]["binding"]["baseUrl"] == base {
                     let token = header["@leafspring"]["binding"]["token"].as_str().context("managed file token missing")?;
                     index

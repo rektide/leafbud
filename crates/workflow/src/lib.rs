@@ -6,7 +6,9 @@ pub mod config;
 pub mod editor_state;
 mod files;
 pub mod import;
+mod inventory;
 pub mod pull;
+pub mod status;
 pub mod tidy;
 
 use std::path::PathBuf;

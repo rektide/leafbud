@@ -37,13 +37,14 @@ mod config;
 mod import;
 mod pull;
 mod remote;
+mod status;
 mod tidy;
 
 #[derive(Parser)]
 #[command(
     name = "leafspring",
     version,
-    about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, guarded pull, check and config)"
+    about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, status, guarded pull, check and config)"
 )]
 struct Cli {
     /// Document workspace: explicit root > global workspace setting > cwd
@@ -137,6 +138,8 @@ enum Command {
         /// Report remote state as unknown; local changes relative to stored receipts only
         #[arg(long)]
         offline: bool,
+        #[arg(long)]
+        json: bool,
     },
     /// Compare current endpoints (editor is the default)
     Diff {
@@ -367,6 +370,24 @@ async fn main() -> ExitCode {
         publication: cli.publication,
         ..Default::default()
     };
+    if let Command::Status { files, offline, json } = &cli.command {
+        return match status::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            leafspring_workflow::status::Request { files: files.clone() },
+            *offline,
+            *json,
+        )
+        .await
+        {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("leafspring: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Import { locator, to, all, state, json } = &cli.command {
         return match import::run(
             options,

@@ -103,3 +103,67 @@ fn opaque_remote_evidence_survives_mapping_refusal_and_ignores_transport_only_fi
     assert_ne!(base, leafspring_editor::witness(&changed, &extras, json!({})));
     assert!(leafspring_editor::observe(&changed, "b", uuid::Uuid::nil()).is_err());
 }
+
+#[test]
+fn page_definition_layout_and_page_key_spelling_are_not_remote_content_edits() {
+    let mut base = document();
+    for suffix in ["one", "two"] {
+        let key = format!("page-{suffix}");
+        base.state.nodes.insert(
+            key.clone(),
+            Node {
+                entity: suffix.into(),
+                memberships: BTreeMap::from([(suffix.into(), suffix.into())]),
+                text_fact: None,
+                inactive_text_fact: None,
+            },
+        );
+        base.pages.push(Page { key, blocks: vec![] });
+    }
+    let key = "link-one".to_owned();
+    base.state.nodes.insert(
+        key.clone(),
+        Node {
+            entity: "link".into(),
+            memberships: BTreeMap::from([("placement".into(), "placement".into())]),
+            text_fact: None,
+            inactive_text_fact: None,
+        },
+    );
+    base.pages[0].blocks.push(Block {
+        key,
+        kind: BlockKind::PageLink { page: "page-one".into() },
+    });
+    let mut changed = base.clone();
+    let node = changed.state.nodes.remove("page-one").unwrap();
+    changed.state.nodes.insert("renamed-page".into(), node);
+    changed.pages[1].key = "renamed-page".into();
+    changed.pages[0].blocks.last_mut().unwrap().kind = BlockKind::PageLink { page: "renamed-page".into() };
+    changed.pages.swap(1, 2);
+    assert_eq!(base.editor_value(), changed.editor_value());
+    changed.pages[0].blocks.last_mut().unwrap().kind = BlockKind::PageLink { page: "page-two".into() };
+    assert_ne!(
+        base.editor_value(),
+        changed.editor_value(),
+        "target association, not its label, is editor meaning"
+    );
+}
+
+#[test]
+fn malformed_receipts_never_claim_change_direction() {
+    let mut local = document();
+    local.state.sync.local_hash = "not-a-receipt".into();
+    local.state.sync.remote_hash.clear();
+    let mut remote = local.clone();
+    remote.title.push('!');
+    let agreement = classify(&local, &remote, "new-current-hash");
+    assert_eq!(
+        (agreement.state, agreement.local, agreement.remote, agreement.baseline),
+        ("unverified", Change::Unknown, Change::Unknown, "invalid-receipts")
+    );
+    assert_eq!(
+        classify(&local, &local, "new-current-hash").state,
+        "converged",
+        "current equality is still observable, not accepted"
+    );
+}

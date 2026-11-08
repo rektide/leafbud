@@ -8,14 +8,12 @@
 //! diverged files are preserved for an explicit decision unless `--take
 //! remote` deliberately replaces local editor-owned content. Receipts settle
 //! without content rewrites only after verified semantic correspondence.
+use crate::inventory::Inventory as Bound;
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, ensure};
 use leafspring_web::LeafletState;
 use serde::Serialize;
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 #[derive(Default)]
@@ -54,65 +52,6 @@ pub struct Item {
     pub error: Option<String>,
 }
 
-/// Local workspace scan: bound files by token, plus managed-looking files
-/// whose header cannot be inspected safely (kept loud, never pruned).
-struct Bound {
-    index: BTreeMap<Uuid, Vec<PathBuf>>,
-    states: BTreeMap<PathBuf, String>,
-    broken: BTreeMap<PathBuf, String>,
-    unmanaged: usize,
-}
-
-fn scan(root: &Path, base: &str) -> Result<Bound> {
-    fn visit(path: &Path, base: &str, bound: &mut Bound) -> Result<()> {
-        for entry in std::fs::read_dir(path)? {
-            let entry = entry?;
-            let kind = entry.file_type()?;
-            let path = entry.path();
-            if kind.is_dir() {
-                visit(&path, base, bound)?;
-            } else if kind.is_file() && path.extension().is_some_and(|e| e == "mdx") {
-                let source = std::fs::read_to_string(&path)?;
-                let header = match leafspring_mdx::header(&source) {
-                    Ok(header) => header,
-                    Err(_) if !source.contains("@leafspring") => {
-                        bound.unmanaged += 1;
-                        continue;
-                    }
-                    Err(error) => {
-                        bound.broken.insert(path, format!("{error:#}"));
-                        continue;
-                    }
-                };
-                if header["@leafspring"]["binding"]["baseUrl"] != base {
-                    continue;
-                }
-                let token = header["@leafspring"]["binding"]["token"].as_str().context("managed file token missing")?;
-                match Uuid::parse_str(token).context("managed file token invalid") {
-                    Ok(token) => {
-                        if let Some(state) = header["@leafspring"]["state"].as_str() {
-                            bound.states.insert(path.clone(), state.to_owned());
-                        }
-                        bound.index.entry(token).or_default().push(path);
-                    }
-                    Err(error) => {
-                        bound.broken.insert(path, format!("{error:#}"));
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-    let mut bound = Bound {
-        index: BTreeMap::new(),
-        states: BTreeMap::new(),
-        broken: BTreeMap::new(),
-        unmanaged: 0,
-    };
-    visit(root, base, &mut bound)?;
-    Ok(bound)
-}
-
 /// What one guarded refresh decided for a file.
 enum Outcome {
     Success(&'static str),
@@ -129,7 +68,7 @@ impl RemoteReader {
         );
         let root = std::fs::canonicalize(&context.workspace_root).context("resolving document workspace")?;
         let base = self.client.base_url();
-        let bound = scan(&root, base)?;
+        let bound = crate::inventory::scan(&root, Some(base))?;
         let mut report = Report {
             version: 1,
             workspace: root.clone(),
@@ -148,9 +87,7 @@ impl RemoteReader {
         // `--all` selects existing bound local files (plus loud broken managed
         // files), never remote discovery; unmanaged files are ignored.
         let candidates: Vec<PathBuf> = if request.all {
-            let mut paths: Vec<PathBuf> = bound.index.values().flatten().cloned().chain(bound.broken.keys().cloned()).collect();
-            paths.sort();
-            paths
+            bound.paths.clone()
         } else {
             let mut resolved = Vec::new();
             for file in &request.files {
@@ -195,19 +132,19 @@ impl RemoteReader {
         match self.try_refresh(bound, path, take_remote, dry_run).await {
             Outcome::Success(outcome) => Item {
                 path: path.to_path_buf(),
-                token: bound_token(bound, path),
+                token: bound.token(path),
                 outcome,
                 error: None,
             },
             Outcome::Decision(error) => Item {
                 path: path.to_path_buf(),
-                token: bound_token(bound, path),
+                token: bound.token(path),
                 outcome: "needs-decision",
                 error: Some(error),
             },
             Outcome::Failure(error) => Item {
                 path: path.to_path_buf(),
-                token: bound_token(bound, path),
+                token: bound.token(path),
                 outcome: "failed",
                 error: Some(error),
             },
@@ -227,6 +164,9 @@ impl RemoteReader {
             Err(error) => return fail(error),
         };
         if !source.contains("@leafspring") {
+            if source.contains("@springleaf") {
+                return Outcome::Failure("legacy springleaf namespace requires explicit conversion; do not reimport a duplicate binding".into());
+            }
             return Outcome::Failure("not a managed document; import creates bindings".into());
         }
         let existing = match leafspring_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved") {
@@ -234,10 +174,10 @@ impl RemoteReader {
             Err(error) => return fail(error),
         };
         let token = existing.state.binding.token;
-        let Some(bound_here) = bound.index.get(&token) else {
+        let Some(bound_here) = bound.index.get(&(self.client.base_url().to_owned(), token)) else {
             return fail(anyhow::anyhow!("file is not bound to this origin; import creates bindings"));
         };
-        if bound_here.len() != 1 {
+        if bound_here.len() != 1 || bound.duplicates.contains(path) {
             return fail(anyhow::anyhow!("duplicate local bindings for this remote require resolution; file preserved"));
         }
         let observed = match self.observe_editor(&existing).await {
@@ -306,9 +246,5 @@ impl RemoteReader {
     }
 }
 
-fn bound_token(bound: &Bound, path: &Path) -> Option<Uuid> {
-    bound.index.iter().find(|(_, paths)| paths.iter().any(|p| p == path)).map(|(token, _)| *token)
-}
-
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
