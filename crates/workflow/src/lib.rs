@@ -6,6 +6,7 @@ pub mod config;
 mod files;
 pub mod import;
 pub mod pull;
+pub mod tidy;
 
 use std::path::PathBuf;
 

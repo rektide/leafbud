@@ -12,9 +12,11 @@
 //! - missing source keys are assigned on executed `push`/`publish`;
 //!   manual local assignment is `tidy FILE --keys` (there is no
 //!   `keys assign`), and `keys rename` is the explicit binding-preserving
-//!   rename;
-//! - `tidy FILE` runs all applicable implemented passes by default;
-//!   selectors (`--keys`, `--from`, `--accept`) narrow the work;
+//!   rename — key assignment is not implemented yet and requesting the
+//!   selector fails honestly;
+//! - `tidy FILE` runs all applicable implemented passes by default (today:
+//!   Markdown body normalization); `--markdown` selects it alone, and
+//!   `--keys`/`--from`/`--accept` are rejected until implemented;
 //! - `list` inventories local managed files; `remote list`/`pubs list`
 //!   discover remote objects.
 //!
@@ -35,6 +37,7 @@ mod config;
 mod import;
 mod pull;
 mod remote;
+mod tidy;
 
 #[derive(Parser)]
 #[command(
@@ -223,20 +226,31 @@ enum Command {
         now: bool,
     },
     /// Run all applicable implemented local tidying/normalization passes
-    /// (selectors narrow the work)
+    /// (implemented today: Markdown body normalization; selectors narrow)
     Tidy {
+        /// Managed MDX files to tidy
+        #[arg(required_unless_present = "all", conflicts_with = "all")]
         files: Vec<PathBuf>,
-        /// Assign missing source identities only
+        /// Tidy every managed file in the workspace
+        #[arg(long)]
+        all: bool,
+        /// Markdown body normalization only (the default without selectors)
+        #[arg(long)]
+        markdown: bool,
+        /// Assign missing source identities only (not implemented yet)
         #[arg(long)]
         keys: bool,
-        /// Naming: the filename follows the path intent
+        /// Naming: the filename follows the path intent (not implemented yet)
         #[arg(long, value_name = "FROM", conflicts_with = "accept")]
         from: Option<NameFrom>,
-        /// Naming: witness the present filename/path pair as intentional
+        /// Naming: witness the present filename/path pair as intentional (not implemented yet)
         #[arg(long)]
         accept: bool,
+        /// Preview outcomes and edits without writing anything
         #[arg(long)]
         dry_run: bool,
+        #[arg(long)]
+        json: bool,
     },
     /// Emit a representation with explicit loss reporting (stdout unless --to)
     Export {
@@ -405,6 +419,51 @@ async fn main() -> ExitCode {
         )
         .await
         {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("springleaf: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if let Command::Tidy {
+        files,
+        all,
+        markdown: _,
+        keys,
+        from,
+        accept,
+        dry_run,
+        json,
+    } = &cli.command
+    {
+        // Honest rejection of the accepted-but-unimplemented selectors: this
+        // build only normalizes Markdown bodies and never mints keys or
+        // settles naming silently.
+        if *keys {
+            eprintln!(
+                "springleaf: tidy --keys (missing source identity assignment) is not implemented yet; \
+                 this build only normalizes Markdown bodies"
+            );
+            return ExitCode::FAILURE;
+        }
+        if from.is_some() || *accept {
+            eprintln!(
+                "springleaf: tidy --from/--accept (naming reconciliation) is not implemented yet; \
+                 this build only normalizes Markdown bodies"
+            );
+            return ExitCode::FAILURE;
+        }
+        return match tidy::run(
+            cli.root.as_deref(),
+            &flags,
+            springleaf_workflow::tidy::Request {
+                all: *all,
+                files: files.clone(),
+                dry_run: *dry_run,
+            },
+            *json,
+        ) {
             Ok(code) => code,
             Err(error) => {
                 eprintln!("springleaf: {error}");
