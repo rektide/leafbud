@@ -31,6 +31,11 @@ fn data(fixture: &Value) -> LeafletData {
 
 /// A fresh native text payload with real Yrs state (optionally a strong mark).
 fn yrs_payload(text: &str, strong_from: Option<(usize, usize)>) -> String {
+    yrs_link_payload(text, strong_from, None)
+}
+
+/// Like [`yrs_payload`], optionally adding one href-only link mark.
+fn yrs_link_payload(text: &str, strong_from: Option<(usize, usize)>, link: Option<(usize, usize, &str)>) -> String {
     use base64::Engine;
     use yrs::types::Attrs;
     use yrs::{Doc, Text as _, Transact, XmlFragment as _};
@@ -42,6 +47,11 @@ fn yrs_payload(text: &str, strong_from: Option<(usize, usize)>) -> String {
     if let Some((start, len)) = strong_from {
         let mut attrs = Attrs::new();
         attrs.insert("strong".into(), yrs::Any::Bool(true));
+        node.format(&mut txn, start as u32, len as u32, attrs);
+    }
+    if let Some((start, len, href)) = link {
+        let mut attrs = Attrs::new();
+        attrs.insert("link".into(), yrs::Any::from_json(&json!({ "href": href }).to_string()).unwrap());
         node.format(&mut txn, start as u32, len as u32, attrs);
     }
     let update = txn.encode_update_v1();
@@ -164,6 +174,31 @@ async fn pull_noop_is_an_exact_byte_and_mtime_noop() {
     // adds exactly one of each and takes no write path.
     assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), 3);
     assert_eq!(server.request_count("/api/rpc/pull"), 2);
+}
+
+/// A genuinely changed link-bearing remote body adopts through the
+/// Markdown-first writer; the following no-op pull keeps those bytes exact.
+#[tokio::test]
+async fn pull_adopts_link_bodies_as_markdown_and_repeat_is_exact_noop() {
+    let (server, current) = server_current().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    {
+        let mut fixtures = current.write().unwrap();
+        let fixture = fixtures.get_mut(TOKEN).unwrap();
+        set_paragraph_text(fixture, &yrs_link_payload("see the docs now", None, Some((8, 4, "https://e.org/docs"))));
+    }
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!((report.updated, report.failed), (1, 0), "{}", serde_json::to_string(&report).unwrap());
+    let after = std::fs::read_to_string(&path).unwrap();
+    assert!(after.contains("see the [docs](https://e.org/docs) now"), "ordinary link spelling");
+    assert_eq!(springleaf_mdx::parse(&after).unwrap(), springleaf_mdx::parse(&after).unwrap());
+    // No-op repeat: bytes and mtimes identical.
+    let metadata = std::fs::symlink_metadata(&path).unwrap().modified().unwrap();
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!((report.unchanged, report.updated), (1, 0));
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), after);
+    assert_eq!(std::fs::symlink_metadata(&path).unwrap().modified().unwrap(), metadata);
 }
 
 #[tokio::test]
