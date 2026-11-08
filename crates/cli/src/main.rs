@@ -33,13 +33,14 @@ use springleaf_workflow::{LeafletState, RemoteOptions};
 
 mod config;
 mod import;
+mod pull;
 mod remote;
 
 #[derive(Parser)]
 #[command(
     name = "springleaf",
     version,
-    about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, check and config)"
+    about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, guarded pull, check and config)"
 )]
 struct Cli {
     /// Document workspace: explicit root > global workspace setting > cwd
@@ -163,7 +164,10 @@ enum Command {
     },
     /// Guarded refresh of bound files from their current editors (local write)
     Pull {
+        /// Existing bound local MDX files (never remote discovery; use import)
+        #[arg(required_unless_present = "all", conflicts_with = "all")]
         files: Vec<PathBuf>,
+        /// Refresh every managed file in the workspace
         #[arg(long)]
         all: bool,
         #[arg(long, requires = "all")]
@@ -171,6 +175,11 @@ enum Command {
         /// Deliberately adopt differing current remote content (remote wins)
         #[arg(long, value_name = "TAKE")]
         take: Option<TakeFrom>,
+        /// Preview outcomes and classifications without writing anything
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long)]
+        json: bool,
     },
     /// Plan/execute editor synchronization and native release
     /// (saves as needed, then releases)
@@ -357,6 +366,40 @@ async fn main() -> ExitCode {
                     State::Draft => LeafletState::Draft,
                     State::Published => LeafletState::Published,
                 }),
+            },
+            *json,
+        )
+        .await
+        {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("springleaf: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if let Command::Pull {
+        files,
+        all,
+        state,
+        take,
+        dry_run,
+        json,
+    } = &cli.command
+    {
+        return match pull::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            springleaf_workflow::pull::Request {
+                all: *all,
+                files: files.clone(),
+                state: state.map(|s| match s {
+                    State::Draft => LeafletState::Draft,
+                    State::Published => LeafletState::Published,
+                }),
+                take_remote: take.is_some(),
+                dry_run: *dry_run,
             },
             *json,
         )

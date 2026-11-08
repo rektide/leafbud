@@ -11,5 +11,7 @@ springleaf-workflow.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
+base64.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["io-util", "net", "process"] }
+yrs.workspace = true
