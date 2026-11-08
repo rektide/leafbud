@@ -40,6 +40,18 @@ pub fn render_comparison(document: &Document) -> Result<String> {
         for block in &page.blocks {
             let line = match &block.kind {
                 BlockKind::PageLink { page } => format!("<PageLink page={} />", json(&labels[page.as_str()])),
+                BlockKind::Code { language, text } => {
+                    // Read ordinary code as code, but prove exact language,
+                    // whitespace and trailing-newline values with our parser.
+                    let width = text.split(|c| c != '`').map(str::len).max().unwrap_or(0).saturating_add(1).max(3);
+                    let fence = "`".repeat(width);
+                    let candidate = format!("{fence}{language}\n{text}\n{fence}");
+                    if block_candidate_valid(document, &page.key, block, &candidate) {
+                        candidate
+                    } else {
+                        block_line(document, page, block, false)
+                    }
+                }
                 _ => block_line(document, page, block, false),
             };
             let _ = writeln!(out, "{line}\n");

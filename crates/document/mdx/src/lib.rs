@@ -1287,10 +1287,20 @@ mod tests {
             language: "rust".into(),
             text: "let x = 1;\n\n".into(),
         };
+        assert!(render_comparison(&doc).unwrap().contains("```rust\nlet x = 1;\n\n\n```"));
+        doc.pages[0].blocks[0].kind = BlockKind::Code {
+            language: "text".into(),
+            text: "```\nembedded fence".into(),
+        };
+        assert!(render_comparison(&doc).unwrap().contains("````text\n```\nembedded fence\n````"));
+        doc.pages[0].blocks[0].kind = BlockKind::Code {
+            language: "rust meta".into(),
+            text: "a\r\nb".into(),
+        };
         assert!(
             render_comparison(&doc)
                 .unwrap()
-                .contains("<Code language={\"rust\"} text={\"let x = 1;\\n\\n\"} />")
+                .contains("<Code language={\"rust meta\"} text={\"a\\r\\nb\"} />")
         );
         doc.pages[0].blocks[0].kind = BlockKind::Image {
             src: "https://example.org/image".into(),

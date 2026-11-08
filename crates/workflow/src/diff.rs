@@ -125,8 +125,9 @@ async fn run_tool(root: &Path, tool: &Tool, local: &str, editor: &str) -> Result
         .prefix("leafspring-diff-")
         .tempdir()
         .context("creating private comparison directory")?;
-    let local_path = dir.path().join("local.md");
-    let editor_path = dir.path().join("editor.md");
+    let directory = std::fs::canonicalize(dir.path()).context("resolving private comparison directory")?;
+    let local_path = directory.join("local.md");
+    let editor_path = directory.join("editor.md");
     std::fs::write(&local_path, local).context("writing temporary local view")?;
     std::fs::write(&editor_path, editor).context("writing temporary editor view")?;
     let status = tokio::process::Command::new(&tool.program)
