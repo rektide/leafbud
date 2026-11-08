@@ -9,12 +9,14 @@ generated:
   by: model:openai/gpt-6-astra#medium
 updated:
   at: 2026-11-08
-  by: model:openai/gpt-6-astra#high
+  by: model:zai-coding-plan/glm-5.3#max
 sources:
   - resource: "opencode://ses_e45c7f589ffeP5t82bqsQ23mlI"
     title: "Independent commissioned design; narrow redacted inspection of the user-indicated link, source review and proposed implementation slice"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Parent reviewed and approved the bounded Markdown-first implementation under the user's commission, to follow the active guarded-pull build"
+  - resource: "opencode://ses_e45962104ffetgOyiGVSJHaXiM"
+    title: "g implementation session adding the implementation-receipt connection after delivery"
   - resource: /design/authoring-interface0.gpt6a.md
     title: "Accepted operation-specific preservation, scoped fingerprints and all-applicable tidy"
   - resource: /design/authoring-handoff0.gpt61s.md
@@ -432,6 +434,10 @@ scope of the first slice, then commission implementation separately.
 - [Experiment 14](../experiments/14-satteri-authoring-attributes/REPORT.md): precedent
   for syntax-aware source ranges and strict validation after edits, not a new
   requirement to implement brace keys in this slice.
+- [Implementation receipt](markdown-roundtrip1.glm53m.md): the approved
+  bounded slice as delivered — checked Markdown-first blocks, exact
+  fallbacks, deliberate `tidy --markdown`, and the `State`
+  `deny_unknown_fields` correction this review prompted.
 
 Reciprocal links and index updates are left to the parent after the concurrent
 build joins; this commission owns this new design file only.

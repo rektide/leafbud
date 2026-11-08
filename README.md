@@ -4,7 +4,8 @@ Local-first MDX authoring for [leaflet.pub](https://leaflet.pub)
 documents, in Rust: one MDX file per document, durable identities,
 push saves the Leaflet editor, publish releases, pull adopts web edits.
 
-Status: **guarded pull for bound drafts, layered config, version 0.5.0.** The accepted authoring interface
+Status: **Markdown-first rich text with checked fallbacks, deliberate
+`tidy --markdown`, guarded pull, layered config, version 0.6.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
@@ -17,8 +18,8 @@ destination shape. Implemented versus pending:
 | --- | --- |
 | `springleaf-atproto` — retained identity resolution, XRPC, app-password sessions; `springleaf-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
 | `springleaf-web` — cookie-authenticated discovery, metadata and full editor pull; `springleaf-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
-| `springleaf-document` + `springleaf-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer and source-preserving updates (envelope, owned fields, changed bodies) | generalized authoring model and full formatting (Markdown-first body rendering is designed, not built) |
-| `springleaf-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, guarded `pull`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `publish`, `edit`, `tidy`, `export`, `keys`, `pubs`, `auth` commands |
+| `springleaf-document` + `springleaf-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
+| `springleaf-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -135,11 +136,16 @@ binding-based discovery recognizes repeated imports and renamed files.
 
 The implemented profile covers linear paragraphs/headings/quotes, strict Yrs
 rich-text marks/breaks, exact code text, images with native source/fallback/
-dimensions/alt, page links/definitions and watermark metadata. Ordinary prose
-uses Markdown; exact rich runs use `Run` components, with explicit typed block
-boundaries where Markdown would split or reinterpret them. Code uses an exact
-`Code` component. `check` validates this bounded profile, not every destination
-MDX feature. Images retain remote URLs; no offline binary asset cache is claimed.
+dimensions/alt, page links/definitions and watermark metadata. Ordinary prose,
+links, strong/emphasis/strikethrough and code spans render as **Markdown
+first**; each block's candidate is proven through the production parser
+before use, and anything not faithfully representable (underline/highlight
+marks, awkward edge whitespace, bare URLs that would autolink, conflicting
+link marks) keeps its exact `Run` component inside the same block, with
+explicit typed block wrappers only where a block's candidate fails
+validation. Code blocks use an exact `Code` component. `check` validates
+this bounded profile, not every destination MDX feature. Images retain
+remote URLs; no offline binary asset cache is claimed.
 
 Import verifies sibling-token publication linkage before selecting drafts.
 Unsupported content produces a per-document failure, not a truncated success.
@@ -199,6 +205,47 @@ equality across all files.
 Current implementation/verification handoff:
 [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md).
 
+## Markdown-first rich text and deliberate tidy
+
+```sh
+cargo run -p springleaf -- tidy --all --markdown --dry-run --json --root /home/rektide/l
+cargo run -p springleaf -- tidy drafts/chosen.mdx            # default: all implemented passes
+cargo run -p springleaf -- tidy drafts/chosen.mdx --markdown # this pass alone
+```
+
+Import and genuinely changed pull bodies now emit ordinary Markdown
+(`[label](destination)`, `**strong**`, `*em*`, `~~strike~~`, backtick code
+spans, backslash hard breaks) wherever the typed meaning survives the
+production parser unchanged. Each block's candidate is validated in its real
+Page/Key container through the same reader; ineligible runs stay exact `Run`
+atoms (underline/highlight, control or awkward-edge whitespace, bare URLs the
+GFM autolink pass would silently link, conflicting link marks, unescapable
+destinations), and a failing block keeps its literal typed wrapper without
+downgrading its neighbors. The composed document must still round-trip
+exactly or nothing is written.
+
+`tidy` normalizes **existing** files deliberately: parser-derived source
+spans only (frontmatter bytes, comments outside replaced spans, Key markers
+and Page boundaries are preserved; body MDX comments or unknown components
+make the file fail loudly rather than partially rewrite), inserted syntax
+keeps the file's line-ending convention, BOM/CRLF files work, witnesses and
+stale receipts are never touched (formatting never accepts local edits), a
+second tidy writes nothing, and writes are atomic under the original-byte
+guard. `--all` selects the workspace's managed files; unmanaged files are
+ignored. `--keys`, `--from` and `--accept` are not implemented yet and are
+rejected with exit 1 instead of half-running. Exit codes: 0 success/no-op,
+1 all failed, 4 mixed batches (2 usage).
+
+A read-only `tidy --all --markdown --dry-run` over the live 27-file
+workspace predicted 26 files normalizable (281 blocks) and 0 failures; one
+file was already clean and one block was kept exact as a candidate-mismatch.
+The user-indicated motivating link file converts its single href-only `Run`
+to bracket Markdown with frontmatter bytes, Key markers and semantics
+unchanged (verified on a scratch copy; no live file was rewritten).
+
+Current implementation/verification handoff:
+[`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md).
+
 ## Build and check
 
 ```
@@ -223,7 +270,8 @@ PDS or leaflet draft.
 - Implemented read-only slice: [`design/remote-reads0.gpt61s.md`](design/remote-reads0.gpt61s.md)
 - Config restoration and actual MDX checkout: [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md)
 - Guarded refresh of bound drafts: [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md)
-- Approved (unbuilt) Markdown-first body rendering: [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
+- Markdown-first rich text (approved design): [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
+- Markdown round-trip implementation receipt: [`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
 
 Never commit credentials or real response bodies; see

@@ -172,6 +172,8 @@ Run/typed fallback. The approved
 [Markdown-first body rendering](markdown-roundtrip0.gpt6a.md) lands next
 against these exact seams: `render_body_mode`/`verified_body` for its
 block-local candidate checks, `update`'s body-rewrite-only-when-changed
-scope, and pull's classification for its no-op guarantees. After that, the
+scope, and pull's classification for its no-op guarantees —
+[delivered here](markdown-roundtrip1.glm53m.md), including the `State`
+`deny_unknown_fields` correction above. After that, the
 smallest useful slice is `status`/`diff --edge editor` reusing pull's
 read-only classification, so divergence can be inspected before any decision.
