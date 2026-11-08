@@ -7,6 +7,9 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:zai-coding-plan/glm-5.3#max
+updated:
+  at: 2026-11-08
+  by: model:zai-coding-plan/glm-5.3#max
 sources:
   - resource: "opencode://ses_e435692e5ffeDnxWPnxYBrl26q"
     title: "g stage-1 independent draft for the corrected drafting/push brief: prior-wave and code evidence re-verified, pull closure and mutation shapes read from archived Leaflet source, architecture reconsidered from the complete user stories"
@@ -50,15 +53,26 @@ sources:
     title: "Read this session: pull full snapshot is a rooted recursive reference closure from the token's root entity — detached entities are absent"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/src/replicache/mutations.ts"
     title: "Read this session: addBlock/moveBlock/assertFact/retractFact/createEntity/updateLeafletMetadata argument shapes and list-flag representation"
+  - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/app/(app)/(identity)/new/route.ts"
+    title: "Read in the 1.1 correction: GET /new is a plain force-dynamic GET route calling createNewLeaflet with redirectUser: true"
+  - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/actions/createNewLeaflet.ts"
+    title: "Read in the 1.1 correction: createLeaflet seed shape, auth_token homepage-link CTE that inserts nothing when the cookie is invalid, and the 307 Location carrying the fresh permission token id"
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs
+    title: "Pre-reset mint client read in the 1.1 correction: GET /new with redirects disabled, liberal 3xx/Location harvest, auth-before-mint gating, offline loopback tests; live probe remained open"
+  - resource: /design/draft-extraction.glm53m.md
+    title: "Prior new-draft gap analysis: option (d) GET /new harvest verified in source; pre-reset client shipped it; live mint probe never executed"
+  - resource: /design/frontmatter0.gpt61s.md
+    title: "Accepted envelope shape checked in the 1.1 correction: flat author fields, state plus optional binding group; tagged binding.kind was the rejected alternative my first sketch wrongly copied"
 ---
 
 # Normal drafting and push — one keyed operation vocabulary
 
 ## Verdict
 
-**Author locally with optional keys and an implicit main page; on first push,
-bind an operator-supplied empty native draft and generate the whole desired
-body with caller-minted native IDs; on later pushes, express the supported
+**Author locally with optional keys and an implicit main page; on first
+push, mint a fresh native draft headlessly (authenticated `GET /new`
+harvest), bind it, and generate the whole desired body with caller-minted
+native IDs; on later pushes, express the supported
 desired document through one small keyed operation vocabulary on the live
 entry page — create, update-in-place, detach membership, normalize order,
 write editor-owned metadata — verifying by fresh read-back and promoting
@@ -82,6 +96,24 @@ itself.
 The rejected prior delivery was "edit one existing XmlText, ship it."
 Nothing below treats that as a milestone: the delivery unit is the union of
 user stories 1–6 in the [brief](drafting-push-brief0.gpt6a.md).
+
+## 1.1 — Parent correction (stage 1.1, before peer review)
+
+The parent review found my stage-one Story 2 in direct violation of the
+brief: I required the user to create an empty draft in the web UI and pass
+`--to <locator>`, demoting headless creation to a "separately gated
+enhancement." That repeats the exact failure the user rejected — removing a
+basic normal workflow to simplify implementation. Required story 2 is
+**push a locally written file into a NEW native draft with no native IDs
+obtained by hand**; automatic native creation and binding are part of the
+milestone. This revision corrects Story 2 around the source-verified
+`GET /new` harvest route, fixes uncertain-mint handling and publication
+deliberateness, and replaces a superseded frontmatter sketch (`binding:
+unlinked-draft`, the [rejected
+alternative](frontmatter0.gpt61s.md)) with the accepted envelope shape. The
+original stage-one text remains evidence at commit `6985d01f`
+(jj change `kkpyzwwx`); the sections below are the operative stance. The
+peer draft remains unread.
 
 ## 1. What exists today, verified against the code
 
@@ -148,10 +180,9 @@ source keys are minted once as `b-<uuidv4>` (human names still available via
 leafspring create drafts/garden.mdx --title "Garden notes"
 ```
 
-writes an unbound file — no binding, nodes, or sync rows; `binding:
-unlinked-draft` per the [handoff sketch](authoring-handoff0.gpt61s.md);
-`publication: null` is the explicit standalone intent (a URI would declare
-future association intent):
+writes an unbound file — no binding, nodes, or sync rows; `publication:
+null` is the explicit standalone intent (a URI would declare future
+association intent):
 
 ```mdx
 ---
@@ -162,7 +193,6 @@ publication: null
 "@leafspring":
   id: 9af05c1e-…
   state: draft
-  binding: unlinked-draft
 ---
 
 # Garden notes
@@ -172,61 +202,127 @@ publication: null
 The pile is **hot**. See [the guide](https://example.com/compost).
 ```
 
+Per the [accepted envelope](frontmatter0.gpt61s.md): flat author fields,
+`state: draft`, and **no binding group** — remote fields appear only after
+binding. `publication: null` is the explicit standalone intent (a URI would
+declare future association intent).
+
 The authoring parse profile accepts this: an implicit main page when no
 `<Page>` wrapper is present, `<Key>` markers optional (a block without one
 is simply a new block), ordinary Markdown inline content per the existing
 Markdown-first surface. `check` validates the supported profile offline —
 no network, no IDs. Nothing remote exists yet; nothing needs it.
 
-### Story 2 — first push
+### Story 2 — first push (browser-free, REQUIRED)
 
-The operator creates an empty native draft in the web UI (one click; seeded
-with a single empty h1 per `createLeaflet`) and passes its locator:
+**Product criterion: an initial push with no locator, no browser, and no
+hand-obtained native IDs is a required part of this milestone, not an
+enhancement.** The ordinary command is:
 
 ```sh
-leafspring push drafts/garden.mdx --yes --to https://leaflet.pub/<uuid>
+leafspring push drafts/garden.mdx --yes
 ```
+
+Creation route: the **`GET /new` harvest**, verified in upstream source and
+previously implemented with offline loopback tests in the pre-reset client
+([create.rs at `80436b61`](https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs),
+per the [new-draft gap analysis](draft-extraction.glm53m.md#the-new-draft-gap)
+option (d)):
+
+- `app/(app)/(identity)/new/route.ts` is a **plain `force-dynamic` GET
+  route** — no Next-Action id, no body — that calls `createNewLeaflet({
+  pageType: "doc", redirectUser: true, addToHome: true })`.
+- `actions/createNewLeaflet.ts` mints the full draft (entity set, entities,
+  permission token with full rights, h1 seed block, watermark root fact)
+  via one SQL statement and ends in
+  `redirect("/${permTokenId}?focusFirstBlock&addToHome")` — a **307 whose
+  Location header carries the fresh permission token id** in its first
+  path segment.
+- The client sends one authenticated GET with redirects disabled (the
+  Location *is* the payload) and harvests the token UUID with a liberal
+  parser (any 3xx; relative or absolute Location; query ignored). The
+  pre-reset implementation, its parser and its loopback tests are portable
+  to `leaflet/web` deliberately.
+- **Live-verification standing:** the Location shape is source-verified,
+  not live-captured; the pre-reset live probe never executed before the
+  scaffold reset. The first operator-gated live run is therefore an
+  explicit implementation probe *inside* this delivery (batch 2, §9) — not
+  a reason to omit creation from the milestone.
 
 Steps, with identities:
 
-1. **Prepare.** Parse desired document; validate profile. Mint source keys
+1. **Auth before mint.** The insert itself never consults the cookie — only
+   the homepage-link CTE does — so an unauthenticated `GET /new` would
+   still mint an orphan draft nobody lists. Push therefore performs an
+   authenticated discovery read first (the existing homepage `remote list`
+   surface) and refuses to mint when credentials are missing or invalid.
+2. **Prepare.** Parse desired document; validate profile. Mint source keys
    and insert `<Key id="b-K1"/> …` markers byte-preservingly (existing span
    machinery); re-read and re-parse to prove the plan input is unchanged.
    Write nothing else to the body, ever.
-2. **Resolve the target.** `get_leaflet_data` → verify observed state is a
-   draft, our token holds `write` on exactly the entity set, and the editor
-   is empty-or-seed (only the seeded h1 block). Anything else is not an
-   empty draft: refuse with pull/merge guidance rather than clobbering
-   existing content (story 6).
-3. **Mint and record pending.** For each desired block mint entity
+3. **Mint and record immediately.** Persist a pending marker (phase
+   `minting`), then `GET /new` → token `T`. Record `T` in the pending
+   envelope field immediately (atomic write under the original-byte guard)
+   *before* any content mutations, so a crash after minting never loses the
+   identity of the draft we created.
+4. **Resolve the new draft.** `get_leaflet_data(T)` → verify observed state
+   is a draft, our token holds `write` on exactly the entity set, and the
+   editor is seed-only (the h1 seed block and watermark fact; anything else
+   is not a fresh mint — refuse with guidance rather than clobbering, per
+   story 6). Collect root `R`, entity set `S`, entry fact `F`, entry page
+   `P`.
+5. **Mint and record pending node IDs.** For each desired block mint entity
    `E_i` and membership fact `M_i`; record them in the `pending` envelope
    field (accepted interface correction 5: planned creation IDs live in
    `pending` until verified, then promote to `nodes`). Text fact IDs are
    *not* minted: `block/text` is cardinality-one, the server assigns the
    fact on first assert, and we learn it from read-back. No fake confirmed
    native IDs anywhere.
-4. **Execute one push RPC** (mutations in dependency order):
+6. **Execute one push RPC** (mutations in dependency order):
    `addBlock(E1,M1,P,"heading",pos)` + `assertFact(E1, block/text, fresh1)`
    + `assertFact(E1, block/heading-level, 1)`; likewise for the `##`
    heading and the paragraph; `updateLeafletMetadata {title}`; then
    `retractFact(M0)` detaching the seed h1's membership (its entity and
    facts persist detached; no deletion). `fresh_i` are fresh initial v1
    updates on each new entity (experiment-13-verified encoding).
-5. **Verify and settle.** Fresh pull → `observe` → per-block typed equality
+7. **Verify and settle.** Fresh pull → `observe` → per-block typed equality
    against desired; collect the observed `block/text` fact IDs `T_i`; promote
-   pending rows into `nodes: {b-K1: {E1, {M1}, T1}, …}`; record the actual
-   `Binding` (token, root, entity set, entry fact) and observed publication
-   association (null here); settle `sync` receipts (profile
-   `leaflet-editor/2`). Envelope write is atomic against the original bytes.
+   pending rows into `nodes: {b-K1: {E1, {M1}, T1}, …}`; promote the pending
+   binding into the actual `Binding` group (base URL, token `T`, root `R`,
+   entity set `S`, entry fact `F`) and observed publication association;
+   settle `sync` receipts (profile `leaflet-editor/2`). Envelope write is
+   atomic against the original bytes.
 
 Exit 0. Save is not publish: no release receipts, no public output, the
 draft stays a draft. A second `push` now classifies `clean` and exits 0
 with zero mutations (story 5).
 
-Headless draft creation (Next-Action `createNewLeaflet` probe) is a
-separately gated enhancement, not part of this delivery; adopt-empty is
-fully within verified RPC surface. This is a product wart stated openly:
-first binding costs one browser click today.
+**Publication intent versus observed binding, deliberately.** A freshly
+minted draft is a pure draft: no publication linkage. The file's declared
+`publication` (null or URI) is *retained as release-domain intent* — never
+silently retargeted by ambient config, never conflated with the observed
+null association recorded in the binding. Association happens at publish
+time under the release domain's rules. Config (base URL, auth) resolves the
+*native context* — which Leaflet instance and identity mint the draft; it
+never chooses a publication for the file.
+
+**Uncertain mint responses — never auto-remint.** A timed-out or
+unparseable `GET /new` response may still have minted a draft we cannot
+identify. Rules: (a) never automatically re-GET `/new` (each retry risks
+another orphan); (b) because auth was verified first and `addToHome` is
+true, a successfully minted draft appears on the operator's homepage —
+recovery lists drafts and looks for a fresh pure-seed draft; exactly one
+candidate → propose adopting it explicitly (recorded, user-visible);
+ambiguous or none → report the uncertain mint with guidance (adopt by
+locator via `--to`, or authorize one deliberate re-mint), naming the orphan
+cost honestly. The same resolution covers a crash between mint and pending
+persist. This is the same resolve-don't-regenerate discipline as §7, applied
+to the mint itself.
+
+**`--to <locator>` remains optional convenience functionality** — adopting
+a draft that already exists (e.g. created in the browser, or resolving an
+uncertain mint) — with the same verify-seed/emptiness gate and the same
+binding promotion. It is not the required path and never was the story.
 
 ### Story 3 — continue drafting
 
@@ -349,11 +445,18 @@ native shape.
 
 ## 4. Minimum source/model changes
 
-1. **`State.binding` becomes the handoff's union** — `unlinked-draft` with
-   no `nodes`/`sync`, or the linked group. `nodes`/`sync` serialize only
-   when linked; a new `pending` field (creation IDs, attempt hashes, phase)
-   exists only while unsettled. No saved body, no CRDT snapshot, no JSON
-   master, no persisted mutation journal — receipts and IDs only.
+1. **Envelope follows the accepted interface, not the superseded sketch.**
+   Established: the [accepted
+   envelope](frontmatter0.gpt61s.md)/[interface](authoring-interface0.gpt6a.md)
+   uses flat author fields, a readable `state: draft|published`, and a
+   validated optional `binding` group that appears only once linked (a
+   partial group is not a usable binding); today's production `State`
+   struct requires binding/nodes/sync because parsing is import-only.
+   *Proposed by this design:* make binding/nodes/sync serialize only when
+   linked (the unbound local file carries just `id` + `state`), and add the
+   accepted interface's `pending` field (creation IDs, attempt hashes,
+   phase) existing only while unsettled. No saved body, no CRDT snapshot,
+   no JSON master, no persisted mutation journal — receipts and IDs only.
 2. **Authoring parse profile** (same parser, new mode): implicit main page
    without `<Page>` wrappers; `<Key>` markers optional; keys without node
    rows parse as pending; body blocks without keys parse as new. The
@@ -378,7 +481,10 @@ native shape.
    mutations)` per the experiment-02 contract; loopback responder tests
    (ordering, replay via `lastMutationID`, throw-skip-ack partial batches,
    lost responses); per-attempt stable client UUID + monotonic mutation ids
-   so an in-process retry resends exact bytes/ids.
+   so an in-process retry resends exact bytes/ids. Plus the **mint
+   transport**: port `create_draft` (GET /new, redirects disabled, liberal
+   Location harvest) with its loopback tests from the pre-reset client, and
+   the auth-before-mint gate.
 
 ## 5. Profile statement (honest, per the brief)
 
@@ -432,9 +538,16 @@ applied. Uncertain outcomes never loop-push until the file "wins".
 
 ## 8. Open seams and decisions for the parent/user
 
-1. **First-binding UX:** adopt-empty requires one browser click; headless
-   `createNewLeaflet` (Next-Action id discovery) is a separate gated probe
-   that would remove it. Product call, not architectural.
+1. **Mint route live verification:** the `GET /new` harvest is
+   source-verified and pre-implemented offline, but never executed live
+   (the pre-reset probe stayed open). The **browser-free initial push is a
+   required product criterion**; the live mint is an implementation probe
+   inside batch 2, not optional scope. If the deployed `/new` route shape
+   diverges (non-3xx, different Location), fallback routes are the
+   draft-extraction options: Next-Action POST (fragile, last resort) or —
+   only if creation were *impossible* with supported auth — an explicit
+   blocker report with proof, never a silent redefinition of story 2 as a
+   browser click.
 2. **Tags on drafts:** local tags cannot be written natively on a pure
    draft; push carries them as release intent. The editor receipt profile
    includes tags, so such a file reports `local-changed` until publish.
@@ -467,10 +580,13 @@ are never presented as the product.
 - **Batch 2 — write transport + first generation** (`leafspring-editor-bind`
   + creation half of `leafspring-editor-structure`; Sol high recommended —
   first native write boundary, identity/protocol judgment): web push
-  transport + loopback tests; fresh-text encoder promotion; fact builder
-  for a full desired document; first-binding flow end-to-end (adopt-empty,
-  seed detach, read-back, promotion, receipts). **Gated live probe #1** on
-  an operator-authorized throwaway draft completes it.
+  transport + loopback tests; mint transport ported from the pre-reset
+  client with auth-before-mint; fresh-text encoder promotion; fact builder
+  for a full desired document; first-binding flow end-to-end (mint via
+  `GET /new`, seed detach, read-back, promotion, receipts, uncertain-mint
+  resolution rules). **Gated live probe #1** on an operator-authorized
+  throwaway run completes it: browser-free `push --yes` from an unbound
+  local file through mint, generation and verified read-back.
 - **Batch 3 — revision engine** (`leafspring-editor-text` + remainder of
   `leafspring-editor-structure` + essential `leafspring-editor-conflicts`;
   g or Sol high): `edit_text` splice path with degradation seam, per-block
@@ -493,11 +609,18 @@ Every required story gets at least one automated scenario:
 1. **Start on disk:** create → author title/headings/paragraphs/marks/links
    as plain Markdown → `check` passes offline; no network, no IDs anywhere
    in the file.
-2. **First push:** push `--yes --to <empty draft>` → exit 0; file gains
-   keys (byte-diff: Key markers only), binding, confirmed nodes with real
-   text-fact IDs; pull → equal; second push → zero mutations (loopback
-   capture asserts an empty mutation list), no new draft (same token/root),
-   no release receipts; observed publication recorded null.
+2. **First push (browser-free, required):** `push --yes` with **no locator
+   and no browser** → auth-before-mint gate, `GET /new` harvest (loopback
+   responder asserts the 307/Location contract), pending token recorded
+   before content mutations, seed-verified, generation executed → exit 0;
+   file gains keys (byte-diff: Key markers only), binding, confirmed nodes
+   with real text-fact IDs; pull → equal; second push → zero mutations
+   (loopback capture asserts an empty mutation list), no second draft
+   (same token/root), no release receipts; observed publication recorded
+   null while the file's declared intent is retained unchanged. Include:
+   unauthenticated run refuses *before* any mint request (loopback asserts
+   no GET /new was sent); lost mint response → no auto-remint, homepage
+   list-discovery resolution or explicit user decision.
 3. **Continue drafting:** insert paragraph before old first block, insert
    heading mid-document, edit text + mark, split (first piece retains key),
    join (vanished key detached), delete, reorder, heading level change,
@@ -557,6 +680,10 @@ typed-equality and observation reuse, none free.
 
 ## 12. What would change this architecture
 
+- Deployed `/new` mint divergence (non-3xx, changed Location): transport
+  fallback per draft-extraction options (Next-Action POST, last resort);
+  if creation proves impossible with supported auth, an explicit blocker
+  report with proof — never silently shrinking story 2.
 - Live probe rejections of our batches (payload handling, position
   tolerance, metadata acceptance) → transport fixes only.
 - Pull observed to include detached facts → owned-projection allowance in
@@ -574,7 +701,10 @@ typed-equality and observation reuse, none free.
 
 ## Cross-review status
 
-Independent stage-one draft; the peer's `design/drafting-push0.gpt6a.md`
-has not been read. A cross-review addendum with revised stance follows on
-explicit parent dispatch after both drafts are committed, as a separately
-committed addendum preserving this text unchanged.
+Stage-one draft corrected once (§1.1) on parent review for a direct brief
+violation in Story 2; the correction is committed separately with its delta
+stated, and the original remains evidence in history. The peer's
+`design/drafting-push0.gpt6a.md` has not been read. A cross-review
+addendum with revised stance follows on explicit parent dispatch after both
+drafts are committed, as a separately committed addendum preserving this
+text unchanged.
