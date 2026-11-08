@@ -3523,7 +3523,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "base64 0.22.1",
  "clap",
@@ -3536,7 +3536,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-atproto"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "base64 0.22.1",
  "regex",
@@ -3550,7 +3550,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-document"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3559,7 +3559,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-editor"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3571,7 +3571,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-mdx"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "satteri-arena",
@@ -3586,7 +3586,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-records"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "jacquard-common",
  "jacquard-derive",
@@ -3599,7 +3599,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-web"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "jiff",
  "regex",
@@ -3613,7 +3613,7 @@ dependencies = [
 
 [[package]]
 name = "springleaf-workflow"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
