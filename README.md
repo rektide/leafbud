@@ -36,6 +36,9 @@ For the proposed local-MDX authoring redesign, see the
 [current recommendation with alternatives](design/authoring-recommendation0.gpt61s.md).
 The [preliminary design and implementation handoff](design/authoring-handoff0.gpt61s.md)
 connects those findings to the proposed production boundaries and landing plan.
+The [interface finalization proposal](design/authoring-interface0.gpt6a.md)
+narrows the remaining CLI, domain-grouped crate, and YAML decisions using the
+handoff's keyed bidirectional direction.
 Those are experimental/proposed directions, not changes to the implemented
 command surface below.
 
