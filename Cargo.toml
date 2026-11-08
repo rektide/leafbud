@@ -12,7 +12,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 
 [workspace.dependencies]
@@ -24,10 +24,14 @@ jacquard-lexicon = { version = "=0.12.1", default-features = false }
 base64 = "0.22.1"
 clap = { version = "4.6.7", features = ["derive"] }
 regex = "1.13.1"
+jiff = "0.2"
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "query", "rustls"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-springleaf-atproto = { version = "=0.2.0", path = "crates/atproto" }
+springleaf-atproto = { version = "=0.3.0", path = "crates/atproto" }
+springleaf-web = { version = "=0.3.0", path = "crates/leaflet/web" }
+springleaf-workflow = { version = "=0.3.0", path = "crates/workflow" }
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"
+uuid = { version = "1", features = ["serde"] }

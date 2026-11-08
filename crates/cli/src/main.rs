@@ -1,4 +1,4 @@
-//! springleaf — the CLI binary (scaffold).
+//! springleaf — thin CLI parsing/rendering; remote list/show are implemented.
 //!
 //! The command tree below mirrors the **accepted** authoring interface
 //! ([`design/authoring-interface0.gpt6a.md`](../../design/authoring-interface0.gpt6a.md) §1)
@@ -17,9 +17,8 @@
 //! - `list` inventories local managed files; `remote list`/`pubs list`
 //!   discover remote objects.
 //!
-//! **Nothing is implemented.** Every command reports
-//! `not implemented` on stderr and exits `1` (operational failure, per
-//! the accepted exit-code contract). Business policy will live in
+//! Other commands report `not implemented` on stderr and exit `1`.
+//! Business policy lives in
 //! `springleaf-workflow`; this binary stays a thin Clap/rendering layer.
 //! The pre-reset stage-5 client (auth status, drafts list/export/author,
 //! publish build/run, sync, config) is recoverable at revision
@@ -29,14 +28,20 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
+use springleaf_workflow::{LeafletState, RemoteOptions};
 
-#[derive(Debug, Parser)]
-#[command(
-    name = "springleaf",
-    version,
-    about = "Local-first MDX authoring for leaflet.pub (scaffold: no command is implemented yet)"
-)]
+mod remote;
+
+#[derive(Parser)]
+#[command(name = "springleaf", version, about = "Local-first MDX authoring for leaflet.pub (remote list/show implemented)")]
 struct Cli {
+    /// Leaflet origin (LEAFLET_BASE_URL; default https://leaflet.pub)
+    #[arg(long, global = true, value_name = "URL")]
+    base_url: Option<String>,
+    /// auth_token cookie value (LEAFLET_AUTH_TOKEN; else XDG springleaf/auth-token).
+    /// Prefer env/file to avoid shell history/process-list exposure.
+    #[arg(long, global = true, value_name = "TOKEN")]
+    token: Option<String>,
     #[command(subcommand)]
     command: Command,
 }
@@ -252,9 +257,18 @@ enum RemoteCommand {
     List {
         #[arg(long)]
         state: Option<State>,
+        /// Versioned JSON including raw per-Leaflet rows and discovery coverage
+        #[arg(long)]
+        json: bool,
     },
     /// Inspect one remote object and its native editing availability
-    Show { locator: String },
+    Show {
+        /// Same-origin native editor URL or permission-token UUID (AT URI not yet supported)
+        locator: String,
+        /// Versioned JSON including raw get_leaflet_data result and unknown fields
+        #[arg(long)]
+        json: bool,
+    },
     /// Retained additive plumbing; never the ordinary update path
     Append {
         locator: String,
@@ -290,9 +304,39 @@ enum ConfigCommand {
     },
 }
 
-fn main() -> ExitCode {
+#[tokio::main]
+async fn main() -> ExitCode {
     let cli = Cli::parse();
-    not_implemented(&cli.command)
+    let options = RemoteOptions {
+        base_url: cli.base_url,
+        token: cli.token,
+    };
+    let result = match &cli.command {
+        Command::Remote {
+            command: RemoteCommand::List { state, json },
+        } => {
+            remote::list(
+                options,
+                state.map(|s| match s {
+                    State::Draft => LeafletState::Draft,
+                    State::Published => LeafletState::Published,
+                }),
+                *json,
+            )
+            .await
+        }
+        Command::Remote {
+            command: RemoteCommand::Show { locator, json },
+        } => remote::show(options, locator, *json).await,
+        _ => return not_implemented(&cli.command),
+    };
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("springleaf: {error}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Every scaffold arm lands here: an honest operational failure that

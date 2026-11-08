@@ -3,3 +3,12 @@ name = "springleaf-workflow"
 description = "Application workflow for springleaf: local files, config, inventory, plan/execute/verify orchestration"
 version.workspace = true
 edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+springleaf-web.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+
+[dev-dependencies]
+serde_json.workspace = true
