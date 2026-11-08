@@ -4,7 +4,7 @@ Local-first MDX authoring for [leaflet.pub](https://leaflet.pub)
 documents, in Rust: one MDX file per document, durable identities,
 push saves the Leaflet editor, publish releases, pull adopts web edits.
 
-Status: **native draft checkout and layered config, version 0.4.0.** The accepted authoring interface
+Status: **guarded pull for bound drafts, layered config, version 0.5.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
@@ -15,10 +15,10 @@ destination shape. Implemented versus pending:
 
 | implemented | not implemented |
 | --- | --- |
-| `springleaf-atproto` — retained identity resolution, XRPC, app-password sessions; `springleaf-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push/pull |
+| `springleaf-atproto` — retained identity resolution, XRPC, app-password sessions; `springleaf-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
 | `springleaf-web` — cookie-authenticated discovery, metadata and full editor pull; `springleaf-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
-| `springleaf-document` + `springleaf-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse and loss-checked keyed MDX writer | generalized authoring model, source-preserving updates and full formatting |
-| `springleaf-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `pull`, `publish`, `edit`, `tidy`, `export`, `keys`, `pubs`, `auth` commands |
+| `springleaf-document` + `springleaf-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer and source-preserving updates (envelope, owned fields, changed bodies) | generalized authoring model and full formatting (Markdown-first body rendering is designed, not built) |
+| `springleaf-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, guarded `pull`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `publish`, `edit`, `tidy`, `export`, `keys`, `pubs`, `auth` commands |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -45,9 +45,9 @@ crates/
   atproto/     springleaf-atproto: hand-rolled ATProto surface — handle→DID→PDS
                identity resolution, XRPC client, sessions, public reads
   workflow/    springleaf-workflow: local files, config, inventory,
-                layered config, native reads and guarded draft import
+                layered config, native reads, guarded draft import and pull
   cli/         springleaf (binary): thin Clap/rendering layer;
-                reads/import/check/config implemented; authoring writes pending
+                reads/import/check/pull/config implemented; writes pending
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
@@ -158,6 +158,47 @@ unverified. No remote save or publication was performed.
 Current implementation/verification handoff:
 [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md).
 
+## Refresh bound drafts from their editors (guarded pull)
+
+```sh
+cargo run -p springleaf -- pull --all --root /home/rektide/l
+cargo run -p springleaf -- pull drafts/chosen.mdx --dry-run --json
+cargo run -p springleaf -- pull drafts/chosen.mdx --take remote
+```
+
+`pull` refreshes **existing bound local files** from their current native
+editors; `--all` selects the workspace's managed files for this origin
+(optionally filtered by local `--state`), never remote discovery — adopting
+new remote documents remains `import`. Each file is classified against its
+stored receipts using current endpoints only (no base snapshots, no CRDT
+history, no server CAS):
+
+| situation | outcome |
+| --- | --- |
+| Local and remote unchanged | `unchanged` — exact no-op (bytes and mtime untouched) |
+| Remote-only change (editor content or metadata) | `updated` — adopted; body rewritten only when page content actually changed |
+| Remote change outside the supported projection (e.g. latent inactive text) | `receipts-only` — witness settled, author text and body untouched |
+| Both changed to the same thing | `converged` — receipts settle without a body rewrite |
+| Local-only change, or diverged local and remote edits | `needs-decision` — file preserved verbatim |
+| Missing remote, published lifecycle, unsupported content, broken bindings | explicit per-file outcome; nothing is pruned or created |
+
+`--take remote` deliberately replaces differing **editor-owned** local content
+(keeping local-only metadata fields, comments and manual key renames); it never
+changes bindings or ignores unsupported content. Source identities are stable:
+imported deterministic keys are first-association choices, key renames survive
+refresh wherever the binding identifies the same remote object, and document
+IDs never re-mint. Writes re-verify remote identity after content acquisition
+and are atomic against the original local bytes (a concurrent user edit aborts
+the write). Exit codes follow the accepted contract: 0 success/no-op,
+1 operational failure, 3 needs-decision, 4 partial/diverged batches.
+
+The live 27-file workspace refreshes as an exact no-op: full repeat run after
+landing reported **27 unchanged, 0 writes**, with byte and nanosecond-mtime
+equality across all files.
+
+Current implementation/verification handoff:
+[`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md).
+
 ## Build and check
 
 ```
@@ -181,6 +222,8 @@ PDS or leaflet draft.
 - Reset inventory and next slice: [`design/scaffold-reset0.glm53m.md`](design/scaffold-reset0.glm53m.md)
 - Implemented read-only slice: [`design/remote-reads0.gpt61s.md`](design/remote-reads0.gpt61s.md)
 - Config restoration and actual MDX checkout: [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md)
+- Guarded refresh of bound drafts: [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md)
+- Approved (unbuilt) Markdown-first body rendering: [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
 
 Never commit credentials or real response bodies; see
