@@ -175,3 +175,45 @@ async fn uncommissioned_commands_remain_unimplemented_and_usage_is_two() {
     assert_eq!(output.status.code(), Some(2));
     assert!(server.requests().is_empty());
 }
+
+#[tokio::test]
+async fn restored_config_cli_preserves_settings_and_routes_workspace() {
+    let temp = tempfile::tempdir().unwrap();
+    let xdg = temp.path().join("config");
+    let global = xdg.join("springleaf/springleaf.toml");
+    std::fs::create_dir_all(global.parent().unwrap()).unwrap();
+    let ws = temp.path().join("workspace");
+    std::fs::create_dir(&ws).unwrap();
+    std::fs::write(&global, "# retained\npublication = 'global-pub'\nunknown-secret = 'synthetic-do-not-show'\n").unwrap();
+    let command = || {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_springleaf"));
+        cmd.env("XDG_CONFIG_HOME", &xdg).env_remove("LEAFLET_AUTH_TOKEN");
+        cmd
+    };
+    let output = command().args(["config", "set", "workspace", ws.to_str().unwrap()]).output().await.unwrap();
+    assert!(output.status.success());
+    std::fs::write(ws.join("springleaf.toml"), "publication = 'workspace-pub' # publication\n").unwrap();
+    let output = command().args(["config", "show", "--json"]).output().await.unwrap();
+    assert!(output.status.success());
+    let shown: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(shown["workspaceRoot"], ws.to_str().unwrap());
+    let publication = shown["values"].as_array().unwrap().iter().find(|v| v["key"] == "publication").unwrap();
+    assert_eq!(publication["value"], "workspace-pub");
+    assert_eq!(publication["source"], "workspace");
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("synthetic-do-not-show"));
+    let output = command()
+        .args(["--publication", "flag-pub", "config", "show", "--json"])
+        .output()
+        .await
+        .unwrap();
+    let shown: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(shown["values"][3]["value"], "flag-pub");
+    let output = command()
+        .args(["config", "set", "publication", "new-workspace-pub", "--workspace-file"])
+        .output()
+        .await
+        .unwrap();
+    assert!(output.status.success());
+    assert!(std::fs::read_to_string(ws.join("springleaf.toml")).unwrap().contains("# publication"));
+    assert!(std::fs::read_to_string(global).unwrap().contains("publication = 'global-pub'"));
+}

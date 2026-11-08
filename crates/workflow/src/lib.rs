@@ -4,6 +4,7 @@
 
 pub mod config;
 mod files;
+pub mod import;
 
 use std::path::PathBuf;
 
@@ -117,7 +118,7 @@ impl RemoteReader {
             version: 1,
             outcome: "observed",
             editor_url: self.client.editor_url(id),
-            state: data.metadata.state(),
+            state: data.observed_state(),
             data,
         })
     }

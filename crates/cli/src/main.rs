@@ -1,4 +1,5 @@
-//! springleaf — thin CLI parsing/rendering; remote list/show are implemented.
+//! springleaf — thin parsing/rendering for native reads/imports, bounded
+//! offline check, and layered configuration.
 //!
 //! The command tree below mirrors the **accepted** authoring interface
 //! ([`design/authoring-interface0.gpt6a.md`](../../design/authoring-interface0.gpt6a.md) §1)
@@ -31,10 +32,15 @@ use clap::{Parser, Subcommand, ValueEnum};
 use springleaf_workflow::{LeafletState, RemoteOptions};
 
 mod config;
+mod import;
 mod remote;
 
 #[derive(Parser)]
-#[command(name = "springleaf", version, about = "Local-first MDX authoring for leaflet.pub (remote list/show implemented)")]
+#[command(
+    name = "springleaf",
+    version,
+    about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, check and config)"
+)]
 struct Cli {
     /// Document workspace: explicit root > global workspace setting > cwd
     #[arg(long, global = true, value_name = "DIR")]
@@ -111,8 +117,11 @@ enum Command {
         #[arg(short, long)]
         title: String,
     },
-    /// Offline syntax, component, reference and identity validation
-    Check { files: Vec<PathBuf> },
+    /// Offline syntax, component, reference and identity validation (import profile)
+    Check {
+        #[arg(required = true)]
+        files: Vec<PathBuf>,
+    },
     /// Inventory local managed files in the selected workspace
     List {
         #[arg(long)]
@@ -180,14 +189,17 @@ enum Command {
     /// Adopt a remote document into one bound MDX file
     Import {
         /// Native editor URL, permission-token UUID, or document AT URI
+        #[arg(conflicts_with = "all", required_unless_present = "all")]
         locator: Option<String>,
-        #[arg(long, value_name = "FILE")]
+        #[arg(long, value_name = "FILE", conflicts_with = "all")]
         to: Option<PathBuf>,
         /// Discover and adopt remote documents; report per-item outcomes
         #[arg(long)]
         all: bool,
         #[arg(long, requires = "all")]
         state: Option<State>,
+        #[arg(long)]
+        json: bool,
     },
     /// Explicit local metadata edits (date alternatives are mutually exclusive)
     Edit {
@@ -332,6 +344,56 @@ async fn main() -> ExitCode {
         publication: cli.publication,
         ..Default::default()
     };
+    if let Command::Import { locator, to, all, state, json } = &cli.command {
+        return match import::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            springleaf_workflow::import::Request {
+                locator: locator.clone(),
+                to: to.clone(),
+                all: *all,
+                state: state.map(|s| match s {
+                    State::Draft => LeafletState::Draft,
+                    State::Published => LeafletState::Published,
+                }),
+            },
+            *json,
+        )
+        .await
+        {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("springleaf: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if let Command::Check { files } = &cli.command {
+        let context = match springleaf_workflow::config::load(cli.root.as_deref(), &flags, None) {
+            Ok(context) => context,
+            Err(e) => {
+                eprintln!("springleaf: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let mut failed = 0;
+        for file in files {
+            let path = if file.is_absolute() {
+                file.clone()
+            } else {
+                context.workspace_root.join(file)
+            };
+            match springleaf_workflow::import::check(&path) {
+                Ok((blocks, changed)) => println!("valid {} ({blocks} blocks; local changes: {changed})", path.display()),
+                Err(error) => {
+                    failed += 1;
+                    eprintln!("{}: {error:#}", path.display());
+                }
+            }
+        }
+        return if failed == 0 { ExitCode::SUCCESS } else { ExitCode::FAILURE };
+    }
     let result = match &cli.command {
         Command::Remote {
             command: RemoteCommand::List { state, json },

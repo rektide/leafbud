@@ -8,6 +8,23 @@ const DRAFT: &str = include_str!("../../../../experiments/02-draft-internals/fix
 const PUBLISHED: &str = include_str!("../../../../experiments/02-draft-internals/fixtures/get_leaflet_data-pub-linked.json");
 const ID: &str = "01999000-0000-7aaa-8000-000000000001";
 
+#[test]
+fn sibling_linkage_and_strict_full_snapshot() {
+    let mut value: Value = serde_json::from_str(DRAFT).unwrap();
+    value["result"]["data"]["permission_token_rights"][0]["entity_sets"]["permission_tokens"][0]["leaflets_to_documents"] =
+        json!([{"document":"at://synthetic/document/one"}]);
+    let data = parse_rpc(&value.to_string()).unwrap();
+    assert_eq!(data.metadata.state(), LeafletState::Draft);
+    assert_eq!(data.observed_state(), LeafletState::Published);
+    let fixture: Value = serde_json::from_str(include_str!("../../../../experiments/02-draft-internals/fixtures/pull-full-snapshot.json")).unwrap();
+    let snapshot = parse_pull(fixture["response"].clone()).unwrap();
+    assert_eq!(snapshot.facts.len(), 2);
+    assert_eq!(snapshot.raw, fixture["response"]);
+    assert!(parse_pull(json!({"patch":[]})).is_err());
+    assert!(parse_pull(json!({"patch":[{"op":"clear"}]})).is_err());
+    assert!(parse_pull(json!({"patch":[{"op":"clear"},{"op":"put","key":"initialized","value":true},{"op":"put","key":ID,"value":{}}]})).is_err());
+}
+
 fn html(identity: Value) -> String {
     format!("<script>self.__next_f.push({})</script>", json!([1, format!("0:{identity}")]))
 }

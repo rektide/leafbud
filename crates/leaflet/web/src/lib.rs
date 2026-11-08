@@ -12,13 +12,17 @@ use serde_json::Value;
 use uuid::Uuid;
 
 mod home;
+mod pull;
 pub use home::{DiscoveredLeaflet, Discovery, Identity, parse_home};
+pub use pull::{PullSnapshot, parse_pull};
 
 pub const DEFAULT_BASE_URL: &str = "https://leaflet.pub";
 
 /// Diagnostics intentionally exclude response bodies, credentials and input URLs.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("malformed full editor pull: {0}")]
+    Pull(&'static str),
     #[error("Leaflet transport failed")]
     Transport(#[source] reqwest::Error),
     #[error("{operation} returned HTTP {status}")]
@@ -114,6 +118,35 @@ impl LeafletData {
     fn from_raw(raw: Value) -> Result<Self, Error> {
         let metadata = serde_json::from_value(raw.clone()).map_err(|_| Error::Response("invalid metadata/rights/linkage shape"))?;
         Ok(Self { metadata, raw })
+    }
+
+    /// Native metadata can be associated through sibling permission tokens.
+    /// Inspect only the verified RPC's one-level entity-set token joins.
+    pub fn association_rows(&self) -> Vec<&Value> {
+        let mut rows = vec![&self.raw];
+        for right in self.raw["permission_token_rights"].as_array().into_iter().flatten() {
+            rows.extend(right["entity_sets"]["permission_tokens"].as_array().into_iter().flatten());
+        }
+        rows
+    }
+
+    pub fn observed_state(&self) -> LeafletState {
+        if self.association_rows().iter().any(|row| {
+            row["leaflets_in_publications"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|link| !link["doc"].is_null())
+                || row["leaflets_to_documents"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|link| !link["document"].is_null())
+        }) {
+            LeafletState::Published
+        } else {
+            LeafletState::Draft
+        }
     }
 }
 

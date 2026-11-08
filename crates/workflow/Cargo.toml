@@ -9,10 +9,16 @@ anyhow.workspace = true
 figment2.workspace = true
 tempfile.workspace = true
 toml_edit.workspace = true
+sha2.workspace = true
+springleaf-document.workspace = true
+springleaf-mdx.workspace = true
+springleaf-editor.workspace = true
+uuid.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 springleaf-web.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
-serde_json.workspace = true
+tokio = { workspace = true, features = ["io-util", "net"] }
