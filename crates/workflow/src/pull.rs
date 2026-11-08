@@ -10,17 +10,13 @@
 //! without content rewrites only after verified semantic correspondence.
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, ensure};
-use leafspring_document::{Block, BlockKind, Document, Node, PROFILE, Page, State, Sync};
 use leafspring_web::LeafletState;
 use serde::Serialize;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     path::{Path, PathBuf},
 };
 use uuid::Uuid;
-
-/// The only `extra` key the import profile currently treats as remote-owned.
-const REMOTE_OWNED_EXTRA: &[&str] = &["contributors"];
 
 #[derive(Default)]
 pub struct Request {
@@ -115,99 +111,6 @@ fn scan(root: &Path, base: &str) -> Result<Bound> {
     };
     visit(root, base, &mut bound)?;
     Ok(bound)
-}
-
-/// Source-key reconciliation: keep the existing local key whenever the fresh
-/// binding identifies the same remote object (same entity, and matching
-/// placements — exact membership set, or a unique entity when placements
-/// grew). Imported deterministic IDs are first-association choices, never
-/// permission to rekey an existing file on refresh.
-fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, String> {
-    let mut rename = BTreeMap::new();
-    let mut claimed = BTreeSet::new();
-    for key in fresh.state.nodes.keys().filter(|k| existing.state.nodes.contains_key(*k)) {
-        claimed.insert(key.clone());
-        rename.insert(key.clone(), key.clone());
-    }
-    for (key, node) in &fresh.state.nodes {
-        if rename.contains_key(key) {
-            continue;
-        }
-        let same_entity: Vec<(&String, &Node)> = existing.state.nodes.iter().filter(|(_, n)| n.entity == node.entity).collect();
-        let memberships: BTreeSet<_> = node.memberships.keys().collect();
-        let exact: Vec<&String> = same_entity
-            .iter()
-            .filter(|(_, n)| n.memberships.keys().collect::<BTreeSet<_>>() == memberships)
-            .map(|(k, _)| *k)
-            .collect();
-        let chosen = if exact.len() == 1 {
-            exact[0].clone()
-        } else if same_entity.len() == 1 {
-            same_entity[0].0.clone()
-        } else {
-            key.clone()
-        };
-        if claimed.insert(chosen.clone()) {
-            rename.insert(key.clone(), chosen);
-        } else {
-            claimed.insert(key.clone());
-            rename.insert(key.clone(), key.clone());
-        }
-    }
-    rename
-}
-
-/// Merge the fresh remote observation into the local document's identity:
-/// remote-owned fields and content from `fresh`, existing document id and
-/// binding, preserved manual key renames, and local-only `extra` metadata.
-fn adopt(existing: &Document, fresh: &Document) -> Document {
-    let rename = reconcile_keys(existing, fresh);
-    let key = |k: &str| rename.get(k).cloned().unwrap_or_else(|| k.to_owned());
-    let block = |block: &Block| Block {
-        key: key(&block.key),
-        kind: match &block.kind {
-            BlockKind::PageLink { page } => BlockKind::PageLink { page: key(page) },
-            other => other.clone(),
-        },
-    };
-    let nodes = fresh.state.nodes.iter().map(|(k, node)| (key(k), node.clone())).collect::<BTreeMap<_, _>>();
-    let pages = fresh
-        .pages
-        .iter()
-        .map(|page| Page {
-            key: key(&page.key),
-            blocks: page.blocks.iter().map(block).collect(),
-        })
-        .collect::<Vec<_>>();
-    let mut extra = fresh.extra.clone();
-    for (name, value) in &existing.extra {
-        if !REMOTE_OWNED_EXTRA.contains(&name.as_str()) && !extra.contains_key(name) {
-            extra.insert(name.clone(), value.clone());
-        }
-    }
-    let mut document = Document {
-        format: fresh.format.clone(),
-        title: fresh.title.clone(),
-        description: fresh.description.clone(),
-        tags: fresh.tags.clone(),
-        publication: fresh.publication.clone(),
-        theme: fresh.theme.clone(),
-        extra,
-        pages,
-        state: State {
-            id: existing.state.id,
-            state: existing.state.state.clone(),
-            binding: existing.state.binding.clone(),
-            nodes,
-            sync: Sync {
-                profile: PROFILE.into(),
-                local_hash: String::new(),
-                remote_hash: fresh.state.sync.remote_hash.clone(),
-            },
-        },
-    };
-    document.state.sync.local_hash = crate::import::hash(&document.semantic_value());
-    document
 }
 
 /// What one guarded refresh decided for a file.
@@ -337,73 +240,41 @@ impl RemoteReader {
         if bound_here.len() != 1 {
             return fail(anyhow::anyhow!("duplicate local bindings for this remote require resolution; file preserved"));
         }
-        let data = match self.client.get(token).await {
-            Ok(data) => data,
-            Err(leafspring_web::Error::NotFound) => {
-                return Outcome::Failure("remote object missing or inaccessible (token not found); local file preserved".into());
+        let observed = match self.observe_editor(&existing).await {
+            Ok(observed) => observed,
+            Err(error) if error.kind == "identity-changed" || (error.kind == "unsupported" && error.remote_hash.is_none()) => {
+                return Outcome::Decision(error.message);
             }
-            Err(other) => return Outcome::Failure(format!("fetching remote metadata: {other}")),
+            Err(error) => return Outcome::Failure(error.message),
         };
-        if data.observed_state() != LeafletState::Draft {
-            return Outcome::Decision("remote lifecycle changed (published); this refresh profile only adopts draft editors".into());
-        }
-        let pull_snapshot = match self.client.pull(token).await.context("fetching remote editor content") {
-            Ok(pull) => pull,
-            Err(error) => return fail(error),
-        };
-        let fresh = match crate::import::build(self.client.base_url(), &data, &pull_snapshot)
-            .context("remote content is unsupported for the refresh profile; local file preserved")
-        {
-            Ok(fresh) => fresh,
-            Err(error) => return fail(error),
-        };
-        // Identity, rights, lifecycle and association guards: pull never mints
-        // another object, retargets a binding or adopts a different native
-        // structure silently.
         let binding = &existing.state.binding;
-        let changed = |what: &str| Outcome::Decision(format!("remote {what} changed; identity/binding decision required (file preserved)"));
-        if fresh.state.id != existing.state.id {
-            return changed("document identity");
-        }
-        if fresh.state.binding.root != binding.root {
-            return changed("root entity");
-        }
-        if fresh.state.binding.entity_set != binding.entity_set {
-            return changed("entity set (rights)");
-        }
-        if fresh.state.binding.entry_fact != binding.entry_fact {
-            return changed("entry placement");
-        }
-        if fresh.state.binding.publication != binding.publication {
-            return changed("publication association");
-        }
-        let merged = adopt(&existing, &fresh);
-        // Classify against current endpoints using receipts only.
-        let local_unchanged = crate::import::hash(&existing.semantic_value()) == existing.state.sync.local_hash;
-        let remote_unchanged = fresh.state.sync.remote_hash == existing.state.sync.remote_hash;
-        let endpoints_equal = existing.semantic_value() == merged.semantic_value();
-        let outcome = if endpoints_equal {
-            if local_unchanged && remote_unchanged {
-                "unchanged"
-            } else if local_unchanged {
+        let data = observed.data;
+        let merged = observed.merged;
+        let agreement = observed.agreement;
+        let outcome = if agreement.state == "clean" {
+            "unchanged"
+        } else if agreement.endpoints_equal {
+            if agreement.baseline == "scoped" && agreement.local == crate::editor_state::Change::Unchanged {
                 "receipts-only"
             } else {
                 "converged"
             }
-        } else if local_unchanged {
+        } else if agreement.state == "remote-changed" {
             "updated"
         } else if take_remote {
             "take-remote"
-        } else if remote_unchanged {
+        } else if agreement.state == "local-changed" {
             return Outcome::Decision(
                 "local edits preserved (remote unchanged); nothing to adopt — keep editing locally or rerun with --take remote to replace local editor-owned content"
                     .into(),
             );
-        } else {
+        } else if agreement.state == "both-changed" {
             return Outcome::Decision(
                 "local and remote edits diverge; file preserved — rerun with --take remote to adopt current remote content (local-only metadata fields survive)"
                     .into(),
             );
+        } else {
+            return Outcome::Decision("editor baseline unverified for this receipt profile; differing current endpoints preserved. Equal current endpoints can be settled by an explicit pull; otherwise make an explicit content decision".into());
         };
         if outcome == "unchanged" || dry_run {
             return Outcome::Success(outcome);

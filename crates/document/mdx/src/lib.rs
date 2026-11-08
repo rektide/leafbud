@@ -835,7 +835,7 @@ pub fn parse_with_spans(source: &str) -> Result<(Document, Vec<BlockSpan>)> {
     ensure!(reader.kind(first) == MdastNodeType::Yaml, "YAML frontmatter required");
     let mut document: Document = frontmatter(reader.value(first))?;
     ensure!(
-        document.format == "leafspring-mdx/1" && document.state.sync.profile == PROFILE && document.state.state == "draft",
+        document.format == "leafspring-mdx/1" && matches!(document.state.sync.profile.as_str(), PROFILE | EDITOR_PROFILE) && document.state.state == "draft",
         "unsupported managed format/profile/lifecycle"
     );
     ensure!(!document.title.trim().is_empty(), "empty document title");

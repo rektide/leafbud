@@ -3,6 +3,7 @@
 //! Native credentials remain separate from restored TOML authoring defaults.
 
 pub mod config;
+pub mod editor_state;
 mod files;
 pub mod import;
 pub mod pull;

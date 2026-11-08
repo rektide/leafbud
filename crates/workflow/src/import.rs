@@ -3,7 +3,7 @@
 //! equal observations are no-ops, differing files are preserved for explicit pull.
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, bail, ensure};
-use leafspring_document::{Binding, Document, PROFILE, State, Sync};
+use leafspring_document::{Binding, Document, EDITOR_PROFILE, PROFILE, State, Sync};
 use leafspring_web::{LeafletData, LeafletState, PullSnapshot};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -73,7 +73,7 @@ pub(crate) fn association(data: &LeafletData) -> Result<Option<String>> {
     Ok(associations.into_iter().next())
 }
 
-fn witness(data: &LeafletData, pull: &PullSnapshot) -> Value {
+fn legacy_witness(data: &LeafletData, pull: &PullSnapshot) -> Value {
     // Include every fact's meaningful payload (including opaque unknown data),
     // but exclude server indexes, transport CVR cookies and row timestamps.
     let mut facts: Vec<_> = pull
@@ -83,6 +83,18 @@ fn witness(data: &LeafletData, pull: &PullSnapshot) -> Value {
         .collect();
     facts.sort_by_key(|f| f["id"].as_str().map(str::to_owned));
     json!({"profile":PROFILE,"facts":facts,"extras":pull.extras,"root":data.metadata.root_entity,"title":data.metadata.title,"description":data.metadata.description,"associations":data.association_rows().iter().map(|r|json!({"publication":r["leaflets_in_publications"],"standalone":r["leaflets_to_documents"]})).collect::<Vec<_>>()})
+}
+
+pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot, profile: &str) -> String {
+    if profile == PROFILE {
+        return hash(&legacy_witness(data, pull));
+    }
+    hash(&leafspring_editor::witness(
+        &pull.facts,
+        &pull.extras,
+        json!({"root":data.metadata.root_entity,"title":data.metadata.title,"description":data.metadata.description,
+            "associations":data.association_rows().iter().map(|r|json!({"publication":r["leaflets_in_publications"],"standalone":r["leaflets_to_documents"]})).collect::<Vec<_>>()}),
+    ))
 }
 
 pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Result<Document> {
@@ -156,13 +168,13 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
             },
             nodes: content.nodes,
             sync: Sync {
-                profile: PROFILE.into(),
+                profile: EDITOR_PROFILE.into(),
                 local_hash: String::new(),
-                remote_hash: hash(&witness(data, pull)),
+                remote_hash: remote_hash(data, pull, EDITOR_PROFILE),
             },
         },
     };
-    document.state.sync.local_hash = hash(&document.semantic_value());
+    document.state.sync.local_hash = hash(&document.editor_value());
     Ok(document)
 }
 
@@ -204,7 +216,12 @@ pub fn check(path: &Path) -> Result<(usize, bool)> {
     let source = std::fs::read_to_string(path).context("reading MDX source")?;
     let document = leafspring_mdx::parse(&source)?;
     let blocks = document.pages.iter().map(|p| p.blocks.len()).sum();
-    Ok((blocks, hash(&document.semantic_value()) != document.state.sync.local_hash))
+    let value = if document.state.sync.profile == EDITOR_PROFILE {
+        document.editor_value()
+    } else {
+        document.semantic_value()
+    };
+    Ok((blocks, hash(&value) != document.state.sync.local_hash))
 }
 
 fn destination(root: &Path, title: &str, id: Uuid, to: Option<&Path>) -> Result<PathBuf> {
@@ -291,10 +308,15 @@ impl RemoteReader {
                     let source = std::fs::read_to_string(path)?;
                     let existing = leafspring_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
                     ensure!(
-                        existing.state.sync.remote_hash == document.state.sync.remote_hash,
+                        existing.state.sync.remote_hash == remote_hash(&data, &pull, &existing.state.sync.profile),
                         "remote changed since import; explicit pull/refresh support required (existing file preserved)"
                     );
-                    let outcome = if hash(&existing.semantic_value()) == existing.state.sync.local_hash {
+                    let value = if existing.state.sync.profile == EDITOR_PROFILE {
+                        existing.editor_value()
+                    } else {
+                        existing.semantic_value()
+                    };
+                    let outcome = if hash(&value) == existing.state.sync.local_hash {
                         "unchanged"
                     } else {
                         "kept-local-changes"

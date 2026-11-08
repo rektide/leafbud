@@ -6,6 +6,9 @@ use std::collections::BTreeMap;
 pub use uuid::Uuid;
 
 pub const PROFILE: &str = "leaflet-import/1";
+/// Editor agreement only; independent of full-document serialization fidelity.
+pub const EDITOR_PROFILE: &str = "leaflet-editor/2";
+pub const EDITOR_OWNED_EXTRA: &[&str] = &["contributors"];
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -147,6 +150,34 @@ pub struct Sync {
 }
 
 impl Document {
+    /// Supported editor meaning and object/occurrence associations. Source-key
+    /// spelling, non-entry page definition order and local-only author metadata
+    /// are not editor changes. Block order and native associations are.
+    /// Call after validating that every source key has exactly one node row.
+    pub fn editor_value(&self) -> Value {
+        let node = |key: &str| serde_json::to_value(self.state.nodes.get(key)).expect("node JSON");
+        let page = |page: &Page| {
+            let blocks: Vec<_> = page
+                .blocks
+                .iter()
+                .map(|block| {
+                    let mut kind = serde_json::to_value(&block.kind).expect("block JSON");
+                    if let BlockKind::PageLink { page } = &block.kind {
+                        kind["page"] = node(page);
+                    }
+                    serde_json::json!({"association":node(&block.key),"content":kind})
+                })
+                .collect();
+            serde_json::json!({"association":node(&page.key),"blocks":blocks})
+        };
+        let mut definitions: Vec<_> = self.pages.iter().skip(1).map(page).collect();
+        definitions.sort_by_key(Value::to_string);
+        let extra: BTreeMap<_, _> = self.extra.iter().filter(|(key, _)| EDITOR_OWNED_EXTRA.contains(&key.as_str())).collect();
+        serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":self.description,
+            "tags":self.tags,"publication":self.publication,"theme":self.theme,"extra":extra,
+            "entry":self.pages.first().map(page),"definitions":definitions})
+    }
+
     /// Current semantic projection only. Excludes binding bookkeeping and all
     /// receipt hashes; includes source identities/order and represented meaning.
     pub fn semantic_value(&self) -> Value {

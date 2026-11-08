@@ -9,6 +9,26 @@ use uuid::Uuid;
 mod text;
 pub use text::read as read_text;
 
+/// Conservative current editor evidence, not a representable-content digest.
+/// Unknown fact fields/payloads and extras remain witnessed even when observe
+/// refuses them. Transport timestamps, row versions and indexes are excluded.
+pub fn witness(facts: &[Value], extras: &BTreeMap<String, Value>, metadata: Value) -> Value {
+    let mut facts: Vec<_> = facts
+        .iter()
+        .map(|row| {
+            let mut row = row.clone();
+            if let Some(row) = row.as_object_mut() {
+                for key in ["created_at", "updated_at", "indexes", "version"] {
+                    row.remove(key);
+                }
+            }
+            row
+        })
+        .collect();
+    facts.sort_by_key(Value::to_string);
+    serde_json::json!({"profile":leafspring_document::EDITOR_PROFILE,"facts":facts,"extras":extras,"metadata":metadata})
+}
+
 pub struct Content {
     pub pages: Vec<Page>,
     pub nodes: BTreeMap<String, Node>,
@@ -208,6 +228,13 @@ pub fn observe(facts: &[Value], root: &str, namespace: Uuid) -> Result<Content> 
         visiting: BTreeSet::new(),
     };
     for row in facts {
+        ensure!(
+            row.as_object().is_some_and(|row| row.keys().all(|k| matches!(
+                k.as_str(),
+                "id" | "entity" | "attribute" | "data" | "author_did" | "created_at" | "updated_at" | "indexes" | "version"
+            ))),
+            "unknown native fact fields"
+        );
         ensure!(
             row["id"].as_str().is_some() && row["entity"].as_str().is_some() && row["attribute"].as_str().is_some(),
             "invalid fact shape"

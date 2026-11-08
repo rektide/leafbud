@@ -1,8 +1,9 @@
 use super::*;
 use crate::import;
+use leafspring_document::BlockKind;
 use leafspring_web::{LeafletClient, LeafletData, parse_pull, parse_rpc};
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, RwLock};
 
 // The loopback responder is already a module of this crate's test build
@@ -160,6 +161,86 @@ fn keys_of(source: &str) -> BTreeSet<String> {
 }
 
 #[tokio::test]
+async fn local_only_intent_and_key_spelling_never_conflict_with_remote_editor_edits() {
+    let (server, current) = server_current().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    let source = std::fs::read_to_string(&path).unwrap();
+    let old_key = leafspring_mdx::parse(&source).unwrap().pages[0].blocks[0].key.clone();
+    let source = source.replace(&format!("\"{old_key}\""), "\"friendly-key\"").replacen(
+        "\n\"@leafspring\":",
+        "\n# preserve intent\npublishedAt: '2030-01-01'\ncustomField: {nested: [1, 2]}\n\"@leafspring\":",
+        1,
+    );
+    std::fs::write(&path, &source).unwrap();
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!(report.unchanged, 1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    set_paragraph_text(current.write().unwrap().get_mut(TOKEN).unwrap(), &yrs_payload("Remote update", None));
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!((report.updated, report.needs_decision, report.failed), (1, 0, 0));
+    let after = std::fs::read_to_string(&path).unwrap();
+    assert!(after.contains("Remote update"));
+    assert!(after.contains("friendly-key"));
+    assert!(after.contains("# preserve intent\npublishedAt: '2030-01-01'\ncustomField: {nested: [1, 2]}"));
+}
+
+#[tokio::test]
+async fn legacy_receipts_require_current_agreement_to_settle_and_unknown_profiles_never_mutate() {
+    use leafspring_document::{EDITOR_PROFILE, PROFILE};
+    let (server, current) = server_current().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    let source = std::fs::read_to_string(&path).unwrap();
+    let mut legacy = leafspring_mdx::parse(&source).unwrap();
+    legacy.state.sync.profile = PROFILE.into();
+    legacy.state.sync.local_hash = import::hash(&legacy.semantic_value());
+    let fixture = fixture();
+    legacy.state.sync.remote_hash = import::remote_hash(&data(&fixture), &parse_pull(fixture["response"].clone()).unwrap(), PROFILE);
+    let source = leafspring_mdx::update(&source, &legacy).unwrap();
+    std::fs::write(&path, &source).unwrap();
+    set_paragraph_text(
+        current.write().unwrap().get_mut(TOKEN).unwrap(),
+        &yrs_payload("Different current endpoint", None),
+    );
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!(report.needs_decision, 1);
+    assert!(report.items[0].error.as_ref().unwrap().contains("baseline unverified"));
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    *current.write().unwrap().get_mut(TOKEN).unwrap() = fixture.clone();
+    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
+    assert_eq!(report.converged, 1);
+    let after = std::fs::read_to_string(&path).unwrap();
+    assert_eq!(after.split_once("---\n\n").unwrap().1, source.split_once("---\n\n").unwrap().1);
+    assert_eq!(leafspring_mdx::parse(&after).unwrap().state.sync.profile, EDITOR_PROFILE);
+    assert_eq!(
+        reader(&server)
+            .pull(&context(temp.path()), request(vec![path.clone()]))
+            .await
+            .unwrap()
+            .unchanged,
+        1
+    );
+    let unknown = after.replace(EDITOR_PROFILE, "future-editor/99");
+    std::fs::write(&path, &unknown).unwrap();
+    let report = reader(&server)
+        .pull(
+            &context(temp.path()),
+            Request {
+                files: vec![path.clone()],
+                take_remote: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.failed, 1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), unknown);
+}
+
+#[tokio::test]
 async fn pull_noop_is_an_exact_byte_and_mtime_noop() {
     let (server, _current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();
@@ -243,7 +324,7 @@ async fn pull_adopts_remote_text_mark_move_and_metadata_preserving_identities() 
     let now = current.read().unwrap().get(TOKEN).unwrap().clone();
     let fresh = import::build(&server.base_url, &data(&now), &parse_pull(now["response"].clone()).unwrap()).unwrap();
     assert_eq!(document.state.sync.remote_hash, fresh.state.sync.remote_hash);
-    assert_eq!(document.state.sync.local_hash, import::hash(&document.semantic_value()));
+    assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
 }
 
 #[tokio::test]
@@ -286,7 +367,7 @@ async fn pull_witness_only_change_settles_receipts_without_content_rewrite() {
     assert!(changed[0].1.contains("remoteHash"));
     assert!(after.contains("visible current code"));
     let document = leafspring_mdx::parse(&after).unwrap();
-    assert_eq!(document.state.sync.local_hash, import::hash(&document.semantic_value()));
+    assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
 }
 
 #[tokio::test]
@@ -337,6 +418,7 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
         "\n# author note\ncustomField: {\"meaning\": \"retained\"}\n\n\"@leafspring\":",
         1,
     );
+    renamed = renamed.replace("Synthetic body copy", "Genuine local editor edit");
     std::fs::write(&path, renamed).unwrap();
     {
         let mut fixtures = current.write().unwrap();
@@ -388,7 +470,7 @@ async fn pull_converged_settles_receipts_without_body_rewrite() {
     assert_eq!(before_body, after_body, "converged endpoints never rewrite the body");
     assert_ne!(before_fm, after_fm, "receipts settle");
     let document = leafspring_mdx::parse(&after).unwrap();
-    assert_eq!(document.state.sync.local_hash, import::hash(&document.semantic_value()));
+    assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
     // A repeat is now an exact no-op.
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
     assert_eq!(report.unchanged, 1);

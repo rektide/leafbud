@@ -27,7 +27,7 @@ fn fixture_content_to_real_mdx_and_back_without_loss() {
     assert!(!source.contains("AQPY"));
     let parsed = leafspring_mdx::parse(&source).unwrap();
     assert_eq!(parsed.semantic_value(), document.semantic_value());
-    assert_eq!(parsed.state.sync.local_hash, hash(&parsed.semantic_value()));
+    assert_eq!(parsed.state.sync.local_hash, hash(&parsed.editor_value()));
     assert_eq!(parsed.state.binding.token, data.metadata.id);
     let mut altered = parsed.clone();
     altered
@@ -39,7 +39,7 @@ fn fixture_content_to_real_mdx_and_back_without_loss() {
         .memberships
         .insert("changed".into(), "changed".into());
     assert_ne!(
-        hash(&altered.semantic_value()),
+        hash(&altered.editor_value()),
         parsed.state.sync.local_hash,
         "source associations are fingerprinted, not only prose"
     );
