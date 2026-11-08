@@ -13,3 +13,6 @@ satteri-arena.workspace = true
 satteri-ast.workspace = true
 satteri-pulldown-cmark.workspace = true
 springleaf-document.workspace = true
+
+[dev-dependencies]
+uuid.workspace = true

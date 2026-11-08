@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
-use uuid::Uuid;
+pub use uuid::Uuid;
 
 pub const PROFILE: &str = "leaflet-import/1";
 

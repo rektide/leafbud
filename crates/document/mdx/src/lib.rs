@@ -1,10 +1,11 @@
-//! Initial keyed MDX import writer and semantic validation using real Satteri.
-//! New files only: no source-preserving rewrite/formatter is claimed.
-//! Plain prose stays Markdown; exact rich runs/whitespace use proven Run JSX.
+//! Keyed MDX writer, semantic validation and bounded source-preserving updates
+//! using real Satteri. Plain prose stays Markdown; exact rich runs/whitespace
+//! use proven Run JSX. Updates patch owned fields and the reserved envelope;
+//! unrelated author text, comments and unknown fields survive.
 use anyhow::{Context, Result, bail, ensure};
 use satteri_arena::{Arena, Mdast, decode_string_ref_data};
 use satteri_ast::mdast::*;
-use serde_json::Value;
+use serde_json::{Value, json};
 use springleaf_document::*;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -66,10 +67,17 @@ fn inline(content: &[Inline]) -> String {
     out
 }
 
-fn render_mode(document: &Document, literal_blocks: bool) -> Result<String> {
+fn render_frontmatter(document: &Document) -> Result<String> {
     let mut out = "---\n".to_owned();
     yaml(&serde_json::to_value(document)?, 0, &mut out);
-    out.push_str("---\n\n");
+    out.push_str("---\n");
+    Ok(out)
+}
+
+fn render_body_mode(document: &Document, literal_blocks: bool) -> String {
+    // The blank line after the closing fence is part of the body part, so
+    // `frontmatter + body` reproduces the original single-writer format.
+    let mut out = "\n".to_owned();
     for page in &document.pages {
         let _ = writeln!(out, "<Page name={} kind=\"linear\">\n", json(&page.key));
         for block in &page.blocks {
@@ -140,23 +148,30 @@ fn render_mode(document: &Document, literal_blocks: bool) -> Result<String> {
         }
         out.push_str("</Page>\n\n");
     }
-    Ok(out)
+    out
 }
 
-pub fn render(document: &Document) -> Result<String> {
-    let mut out = render_mode(document, false)?;
-    // Standard Markdown may introduce automatic links or split a flow JSX run
-    // from a paragraph. Use explicit typed block/run boundaries only when needed;
-    // both representations must prove exact semantic equality through Satteri.
-    if !parse(&out).is_ok_and(|p| p.semantic_value() == document.semantic_value()) {
-        out = render_mode(document, true)?;
+/// Choose and verify the body representation against the composed source.
+/// Standard Markdown may introduce automatic links or split a flow JSX run
+/// from a paragraph; explicit typed block/run boundaries are the fallback.
+/// Both representations must prove exact semantic equality through Satteri.
+fn verified_body(document: &Document, frontmatter: &str) -> Result<String> {
+    let mut body = render_body_mode(document, false);
+    if !parse(&format!("{frontmatter}{body}")).is_ok_and(|p| p.semantic_value() == document.semantic_value()) {
+        body = render_body_mode(document, true);
     }
-    let parsed = parse(&out).context("generated MDX validation")?;
+    let parsed = parse(&format!("{frontmatter}{body}")).context("generated MDX validation")?;
     ensure!(
         parsed.semantic_value() == document.semantic_value() && parsed.state == document.state,
         "MDX semantic round-trip would lose content/associations"
     );
-    Ok(out)
+    Ok(body)
+}
+
+pub fn render(document: &Document) -> Result<String> {
+    let frontmatter = render_frontmatter(document)?;
+    let body = verified_body(document, &frontmatter)?;
+    Ok(frontmatter + &body)
 }
 
 struct Reader {
@@ -437,4 +452,280 @@ pub fn header(source: &str) -> Result<Value> {
     );
     let value = arena.get_str(decode_string_ref_data(arena.get_type_data(first)));
     frontmatter(value)
+}
+
+/// Split a managed source into its frontmatter lines (fences excluded) and
+/// the exact body text following the closing fence. The MDX frontmatter
+/// block ends at the first `---` line, matching the native parser's view.
+fn split_managed(source: &str) -> Result<(Vec<String>, String)> {
+    ensure!(source.starts_with("---\n"), "managed frontmatter opening fence missing");
+    let mut lines = Vec::new();
+    let mut cursor = "---\n".len();
+    loop {
+        let Some(nl) = source[cursor..].find('\n') else {
+            bail!("managed frontmatter closing fence missing");
+        };
+        let line = &source[cursor..cursor + nl + 1];
+        if line == "---\n" {
+            return Ok((lines, source[cursor + line.len()..].to_owned()));
+        }
+        lines.push(line.to_owned());
+        cursor += line.len();
+    }
+}
+
+/// Top-level mapping key of a column-0 line, quoted or plain. Comment lines,
+/// nested content and flow continuations (always indented in valid block
+/// mappings) yield None; a multiline scalar therefore cannot impersonate a key.
+fn column_key(line: &str) -> Option<&str> {
+    let line = line.strip_suffix('\n').unwrap_or(line);
+    if line.is_empty() || line.starts_with([' ', '\t', '#']) {
+        return None;
+    }
+    if let Some(q) = line.chars().next().filter(|c| *c == '"' || *c == '\'') {
+        let close = line[1..].find(q)? + 1;
+        let name = &line[1..close];
+        line[close + 1..].trim_start().starts_with(':').then_some(name)
+    } else {
+        let colon = line.find(':')?;
+        let name = line[..colon].trim_end();
+        (!name.is_empty() && !name.starts_with('[') && !name.starts_with('{')).then_some(name)
+    }
+}
+
+/// Locate the single column-0 definition of `key`.
+fn find_key(lines: &[String], key: &str) -> Result<Option<usize>> {
+    let mut found = None;
+    for (index, line) in lines.iter().enumerate() {
+        if column_key(line) == Some(key) {
+            ensure!(found.replace(index).is_none(), "duplicate frontmatter key {key:?} cannot be patched");
+        }
+    }
+    Ok(found)
+}
+
+/// Exclusive end of a key's value extent: the key line plus following indented
+/// or blank lines, with trailing blank separators excluded.
+fn value_extent(lines: &[String], key_line: usize) -> usize {
+    let mut end = key_line + 1;
+    while end < lines.len() && (lines[end].starts_with([' ', '\t']) || lines[end].trim().is_empty()) {
+        end += 1;
+    }
+    while end > key_line + 1 && lines[end - 1].trim().is_empty() {
+        end -= 1;
+    }
+    end
+}
+
+fn key_lines(key: &str, value: &Value) -> Vec<String> {
+    let mut out = String::new();
+    yaml(&json!({ key.to_owned(): value }), 0, &mut out);
+    out.split_inclusive('\n').map(str::to_owned).collect()
+}
+
+/// Replace, insert or remove one owned top-level key. An unchanged value
+/// touches nothing; a removed value (null) deletes the extent; an absent key
+/// with a value is inserted before the reserved envelope.
+fn patch_key(lines: &mut Vec<String>, key: &str, new: &Value) -> Result<()> {
+    match find_key(lines, key)? {
+        Some(index) => {
+            let end = value_extent(lines, index);
+            if new.is_null() {
+                lines.splice(index..end, []);
+            } else {
+                lines.splice(index..end, key_lines(key, new));
+            }
+        }
+        None if new.is_null() => {}
+        None => {
+            let at = find_key(lines, "@springleaf")?.context("reserved @springleaf envelope not found for source-preserving patch")?;
+            lines.splice(at..at, key_lines(key, new));
+        }
+    }
+    Ok(())
+}
+
+/// Source-preserving update for guarded refresh. `document` is the reviewed
+/// next state of THIS document (same format, id and binding token). Owned
+/// author fields that changed are rewritten in normalized form; unchanged
+/// fields, comments, blank lines and unknown/local-only fields keep their
+/// bytes; the reserved `@springleaf` envelope is regenerated. The body is
+/// re-serialized only when page content actually changed. The result is
+/// verified to parse back to exactly `document`.
+pub fn update(source: &str, document: &Document) -> Result<String> {
+    let existing = parse(source)?;
+    ensure!(existing.format == document.format, "update cannot change the document format");
+    ensure!(
+        existing.state.id == document.state.id && existing.state.binding.token == document.state.binding.token,
+        "update cannot change document identity"
+    );
+    let (mut lines, body) = split_managed(source)?;
+    for (key, old, new) in [
+        ("title", json!(existing.title), json!(document.title)),
+        ("description", json!(existing.description), json!(document.description)),
+        ("tags", json!(existing.tags), json!(document.tags)),
+        ("publication", json!(existing.publication), json!(document.publication)),
+        ("theme", json!(existing.theme), json!(document.theme)),
+        (
+            "contributors",
+            json!(existing.extra.get("contributors")),
+            json!(document.extra.get("contributors")),
+        ),
+    ] {
+        if old == new {
+            continue;
+        }
+        patch_key(&mut lines, key, &new)?;
+    }
+    let envelope = find_key(&lines, "@springleaf")?.context("reserved @springleaf envelope not found for source-preserving patch")?;
+    let end = value_extent(&lines, envelope);
+    let mut regenerated = String::new();
+    yaml(&json!({"@springleaf": &document.state}), 0, &mut regenerated);
+    lines.splice(envelope..end, regenerated.split_inclusive('\n').map(str::to_owned));
+    let frontmatter = "---\n".to_owned() + &lines.join("") + "---\n";
+    let body = if existing.pages == document.pages {
+        body
+    } else {
+        verified_body(document, &frontmatter)?
+    };
+    let result = frontmatter + &body;
+    let parsed = parse(&result).context("source-preserving update validation")?;
+    ensure!(
+        parsed.semantic_value() == document.semantic_value() && parsed.state == document.state,
+        "source-preserving update would lose content/associations"
+    );
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    fn node(entity: &str) -> Node {
+        Node {
+            entity: entity.into(),
+            memberships: BTreeMap::new(),
+            text_fact: None,
+            inactive_text_fact: None,
+        }
+    }
+
+    fn document() -> Document {
+        let state = State {
+            id: Uuid::nil(),
+            state: "draft".into(),
+            binding: Binding {
+                base_url: "https://leaflet.pub".into(),
+                token: Uuid::nil(),
+                root: "e-root".into(),
+                entity_set: "es".into(),
+                entry_fact: "f-entry".into(),
+                publication: None,
+            },
+            nodes: BTreeMap::from([("p-main".into(), node("e-main")), ("b-1".into(), node("e-b1"))]),
+            sync: Sync {
+                profile: PROFILE.into(),
+                local_hash: "sha256:old-local".into(),
+                remote_hash: "sha256:old-remote".into(),
+            },
+        };
+        Document {
+            format: "springleaf-mdx/1".into(),
+            title: "T".into(),
+            description: None,
+            tags: vec![],
+            publication: None,
+            theme: None,
+            extra: BTreeMap::new(),
+            pages: vec![Page {
+                key: "p-main".into(),
+                blocks: vec![Block {
+                    key: "b-1".into(),
+                    kind: BlockKind::Paragraph {
+                        content: vec![Inline::Run {
+                            text: "hello".into(),
+                            marks: vec![],
+                        }],
+                    },
+                }],
+            }],
+            state,
+        }
+    }
+
+    /// Hand-shaped variant of a rendered file: author comments, an unquoted
+    /// key, blank separators and an unknown local-only field.
+    fn authored(source: &str) -> String {
+        source
+            .replacen("\"title\": \"T\"", "title: T # chosen by the author", 1)
+            .replacen("\"format\": \"springleaf-mdx/1\"\n", "\"format\": \"springleaf-mdx/1\"\n# author note\n", 1)
+            .replacen("\n\"@springleaf\":", "\ncustomField: {\"meaning\": \"retained\"}\n\n\"@springleaf\":", 1)
+    }
+
+    #[test]
+    fn update_settles_receipts_preserving_author_text_and_body() {
+        let original = authored(&render(&document()).unwrap());
+        let mut next = parse(&original).unwrap();
+        next.state.sync.remote_hash = "sha256:new-remote".into();
+        let updated = update(&original, &next).unwrap();
+        assert!(updated.contains("title: T # chosen by the author"));
+        assert!(updated.contains("# author note"));
+        assert!(updated.contains("customField: {\"meaning\": \"retained\"}"));
+        assert!(updated.contains("sha256:new-remote"));
+        assert!(!updated.contains("sha256:old-remote"));
+        assert_eq!(body_of(&updated), body_of(&original));
+        assert_eq!(parse(&updated).unwrap(), next);
+    }
+
+    #[test]
+    fn update_patches_changed_fields_and_rewrites_only_changed_bodies() {
+        let original = authored(&render(&document()).unwrap());
+        let mut next = parse(&original).unwrap();
+        next.title = "Remote title".into();
+        next.description = Some("From the editor".into());
+        next.tags = vec!["one".into()];
+        let updated = update(&original, &next).unwrap();
+        assert!(updated.contains("\"title\": \"Remote title\""));
+        assert!(!updated.contains("chosen by the author"));
+        assert!(updated.contains("\"description\": \"From the editor\""));
+        assert!(updated.contains("customField: {\"meaning\": \"retained\"}"));
+        assert_eq!(body_of(&updated), body_of(&original));
+        // A truly changed body is re-serialized; unchanged frontmatter lines stay.
+        next.pages[0].blocks[0].kind = BlockKind::Paragraph {
+            content: vec![Inline::Run {
+                text: "edited remotely".into(),
+                marks: vec![],
+            }],
+        };
+        let updated = update(&updated, &next).unwrap();
+        assert!(updated.contains("edited remotely"));
+        assert_ne!(body_of(&updated), body_of(&original));
+        assert!(updated.contains("customField: {\"meaning\": \"retained\"}"));
+        let mut removed = next.clone();
+        removed.description = None;
+        removed.tags = vec![];
+        let updated = update(&updated, &removed).unwrap();
+        assert!(!updated.contains("\"description\""));
+        assert!(updated.contains("\"tags\": []"));
+    }
+
+    #[test]
+    fn update_refuses_foreign_identity_and_verifies_output() {
+        let original = render(&document()).unwrap();
+        let mut foreign = document();
+        foreign.state.id = Uuid::new_v5(&Uuid::NAMESPACE_URL, b"foreign");
+        assert!(update(&original, &foreign).is_err());
+        // A body change that cannot round-trip (duplicate key) is caught.
+        let mut broken = document();
+        broken.pages[0].blocks.push(Block {
+            key: "b-1".into(),
+            kind: BlockKind::Rule,
+        });
+        assert!(update(&original, &broken).is_err());
+    }
+
+    fn body_of(source: &str) -> &str {
+        source.split_once("---\n\n").expect("fence").1
+    }
 }
