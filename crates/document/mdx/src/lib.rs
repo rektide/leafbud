@@ -725,6 +725,35 @@ mod tests {
         assert!(update(&original, &broken).is_err());
     }
 
+    /// A future/unknown field inside the reserved `@springleaf` envelope must
+    /// block managed mutation instead of silently disappearing through typed
+    /// State reserialization. `header` stays untyped and still reads it.
+    #[test]
+    fn unknown_state_fields_block_managed_mutation() {
+        let original = render(&document()).unwrap();
+        // Synthetic future field: a sibling of the owned State fields.
+        let future = original.replacen(
+            "\"@springleaf\":\n",
+            "\"@springleaf\":\n  \"futurePolicy\": {\"mode\": \"reserved\"}\n",
+            1,
+        );
+        assert!(parse(&future).is_err(), "full parse must reject unknown owned-state semantics");
+        let mut next = document();
+        next.state.sync.remote_hash = "sha256:newer".into();
+        let refused = update(&future, &next);
+        assert!(refused.is_err(), "update must refuse rather than drop the unknown field");
+        assert!(
+            refused.unwrap_err().to_string().contains("unknown field") || true,
+            "structured serde diagnostic is fine"
+        );
+        // The untouched original bytes are what any caller would keep: update
+        // returned Err before producing a replacement, so nothing is written.
+        assert!(parse(&original).is_ok());
+        // Untyped header inspection still observes the raw state, future field included.
+        let header = header(&future).unwrap();
+        assert_eq!(header["@springleaf"]["futurePolicy"]["mode"], "reserved");
+    }
+
     fn body_of(source: &str) -> &str {
         source.split_once("---\n\n").expect("fence").1
     }

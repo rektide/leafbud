@@ -18,6 +18,8 @@ sources:
     title: "Prior import/config implementation whose readers, hashes and live workspace this builds on"
   - resource: /design/markdown-roundtrip0.gpt6a.md
     title: "Approved follow-on Markdown-first body rendering that integrates against these seams next"
+  - resource: "opencode://ses_e45962104ffetgOyiGVSJHaXiM"
+    title: "g implementation session correcting the State unknown-field claim above: deny_unknown_fields added to State with a parse/update refusal regression"
 ---
 
 # Guarded pull for bound drafts
@@ -122,9 +124,15 @@ profile does not treat as remote-owned (`contributors` today), so:
 
 Envelope round-tripping goes through the typed model, but the patcher replaces
 only the envelope's own extent, so future unknown envelope fields survive in
-the file only insofar as they are representable; unknown fields inside
-`State`/`Sync` are `deny_unknown_fields` errors today and remain explicit
-blockers rather than dropped data.
+the file only insofar as they are representable. `Binding`/`Node`/`Sync`
+already carried `deny_unknown_fields`; **`State` itself did not**, so unknown
+top-level `@springleaf` fields were silently dropped by typed reserialization
+in `mdx::update` — a real data-loss path this handoff misreported as already
+blocked. The correction session added `deny_unknown_fields` to `State` with a
+regression (synthetic `futurePolicy` field: full parse and `update` refuse,
+untyped `header` inspection still reads the raw state), restoring the intended
+rule: unsupported owned-state semantics block managed mutation instead of
+disappearing.
 
 ## Verification
 

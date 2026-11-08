@@ -109,7 +109,7 @@ pub struct Theme {
     pub leaflet_watermark: bool,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct State {
     pub id: Uuid,
     pub state: String,
