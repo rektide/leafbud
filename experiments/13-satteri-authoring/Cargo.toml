@@ -1,0 +1,20 @@
+[package]
+name = "satteri-authoring-experiment"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# No changes to the production dependency graph.
+[workspace]
+
+[dependencies]
+anyhow = "=1.0.103"
+base64 = "=0.22.1"
+satteri-arena = "=0.4.3"
+satteri-ast = "=0.6.3"
+satteri-pulldown-cmark = { version = "=0.6.7", features = ["mdx", "serde"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde-saphyr = "=2.1.1"
+serde_json = "=1.0.154"
+uuid = { version = "=1.23.0", features = ["v5", "serde"] }
+yrs = { git = "https://github.com/y-crdt/y-crdt", rev = "e0b476b0ce613453c70d0bb477b955808aa79a07", version = "0.28.1", default-features = false }

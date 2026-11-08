@@ -1,0 +1,14 @@
+{
+  "name": "satteri-authoring-oracle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node reference.mjs"
+  },
+  "dependencies": {
+    "prosemirror-model": "1.25.0",
+    "y-prosemirror": "1.2.5",
+    "yjs": "13.6.15"
+  }
+}
