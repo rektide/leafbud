@@ -293,7 +293,10 @@ pub fn build(doc: &Document<'_>, context: BuildContext) -> Result<Plan> {
 }
 
 impl Plan {
-    /// Low-level native mutation argument shapes, not a signed push envelope.
+    /// Initial EMPTY-generation mutation argument shapes, not a signed push
+    /// envelope or retry batch. A resumed writer must inspect existing text and
+    /// omit equal payloads, as Store::stage does; never send independently
+    /// re-encoded initial updates over existing text entities.
     pub fn staged_mutations(&self) -> Vec<Value> {
         self.entities
             .iter()

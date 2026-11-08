@@ -1,0 +1,24 @@
+{
+  "satteri": {
+    "repository": "https://github.com/bruits/satteri",
+    "inspectedArchiveHead": "7d1297b7e4551a1c5124fa07bd2d1d05f66236e6",
+    "note": "Exact registry pins, unchanged from experiments 07/10; archive HEAD verified locally, not a claim about latest remote HEAD.",
+    "packages": [
+      { "name": "satteri-pulldown-cmark", "version": "0.6.7", "publishedGitRevision": "7d1297b7e4551a1c5124fa07bd2d1d05f66236e6", "registryChecksum": "4233d41e98cf2dffde8f8356a7e3d582688ce2e5c9192164193a2ae217faf697" },
+      { "name": "satteri-ast", "version": "0.6.3", "publishedGitRevision": "7d1297b7e4551a1c5124fa07bd2d1d05f66236e6", "registryChecksum": "ee1ee3790fa38c5604d9c986be504005123d1aa8c99ccbeeccc1d6833ff1698c" },
+      { "name": "satteri-arena", "version": "0.4.3", "publishedGitRevision": "7d1297b7e4551a1c5124fa07bd2d1d05f66236e6", "registryChecksum": "b73729378f2c3e040b49e73cc7205fdf10dd19fc5f99217149e73437d6a28fbe" },
+      { "name": "satteri-property-info", "version": "0.2.1", "publishedGitRevision": "3498bad3f330de74c355637426ad165da8af9ee0", "registryChecksum": "521f594e1150aa0b0a4b6e6319527d2ef2e880f0054638383bf8c71fea530518" }
+    ],
+    "selectedRegistryFilesMatchingArchive": {
+      "crates/satteri-pulldown-cmark/src/arena_build.rs": "63fb82338e0a93e30c0ad2a300956b89bfcb1afec4ead47935d4c9f6d8c2683d",
+      "crates/satteri-ast/src/mdast/codec.rs": "aa7f7e2dc9f6ec274c4eaef4253beebec7fa33a263506cee082a33a9b92c53c0",
+      "crates/satteri-arena/src/arena.rs": "f2c3b85b047667a397b5fc585e37a49ff1e7fdc69d7597409bfc07d5ddb7518e"
+    }
+  },
+  "yrs": { "repository": "https://github.com/y-crdt/y-crdt", "revision": "e0b476b0ce613453c70d0bb477b955808aa79a07", "version": "0.28.1" },
+  "leafletSourceContract": { "repository": "https://github.com/hyperlink-academy/leaflet", "inspectedArchiveHead": "600c7b5f1f7b31b66fb626c293cc104312a12caf", "executedServer": false },
+  "oracleDirectVersions": { "yjs": "13.6.15", "y-prosemirror": "1.2.5", "prosemirror-model": "1.25.0" },
+  "rustLockSha256": "d3f4b7acdbbf15ef2637adad4e120a1e053a561caedabf5176360549ecd2d95a",
+  "patches": [],
+  "toolchain": { "rustc": "1.101.0-nightly (822182db4 2026-10-13)", "cargo": "1.101.0-nightly (29c5daa1a 2026-10-07)", "node": "26.6.0", "pnpm": "12.16.1", "platform": "x86_64-unknown-linux-gnu" }
+}
