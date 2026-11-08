@@ -36,11 +36,11 @@ For the proposed local-MDX authoring redesign, see the
 [current recommendation with alternatives](design/authoring-recommendation0.gpt61s.md).
 The [preliminary design and implementation handoff](design/authoring-handoff0.gpt61s.md)
 connects those findings to the proposed production boundaries and landing plan.
-The [interface finalization proposal](design/authoring-interface0.gpt6a.md)
-narrows the remaining CLI, domain-grouped crate, and YAML decisions using the
-handoff's keyed bidirectional direction.
-Those are experimental/proposed directions, not changes to the implemented
-command surface below.
+The [accepted authoring interface](design/authoring-interface0.gpt6a.md)
+settles root CLI verbs, all-applicable `tidy` with selective `--keys`, eight
+domain-grouped crates, and operation-specific YAML preservation using the
+handoff's keyed bidirectional direction. These design decisions do not yet change
+the implemented command surface below.
 
 ## Layout
 

@@ -45,11 +45,20 @@ sources:
     title: "Recovered independent command sketch, identity/import behavior, explicit loss and resolution concerns"
   - resource: /design/frontmatter0.gpt61s.md
     title: "Subsequent consolidated YAML candidate with current-content/binding/witness ownership and subsection alternatives"
+  - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
+    title: "Linked subsequent user acceptance of root verbs, tidy, crate grouping and scoped YAML policy"
 ---
 
 # Preliminary design and implementation handoff
 
 ## Read this first
+
+**Interface decisions are now accepted in the
+[authoring interface finalization](authoring-interface0.gpt6a.md):** root verbs,
+all-applicable `tidy` with `--keys` for key assignment alone, eight grouped crates,
+and operation-specific YAML preservation/normalization. That decision record
+controls those choices over the earlier sketches here; its first integration
+fixtures resolve the remaining mapping/schema details.
 
 **Goal: let someone author a document locally in MDX and make Leaflet match it,
 then publish or update it through Leaflet.**

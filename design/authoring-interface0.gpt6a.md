@@ -1,9 +1,9 @@
 ---
 type: Design
 title: "Authoring interface finalization — CLI, crates, and frontmatter"
-description: "A focused decision proposal joining the keyed bidirectional handoff to a document-first CLI, domain-grouped Rust workspace and scoped YAML receipts."
+description: "Accepted authoring interface: root CLI verbs, all-applicable tidy with selective key assignment, eight domain-grouped Rust crates and scoped YAML preservation/receipts."
 resource: /design/authoring-interface0.gpt6a.md
-status: proposal
+status: accepted
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Proposed the interface/crate/YAML decisions; user selected automatic-or-manual keying and eight grouped crates, and requested concrete CLI and nuanced YAML-preservation examples"
+    title: "User accepted root verbs, eight grouped crates and operation-specific YAML preservation, with all-applicable tidy and tidy --keys replacing manual keys assign"
   - resource: /design/authoring-handoff0.gpt61s.md
     title: "Controlling keyed bidirectional addendum and CLI capability inventory"
   - resource: /design/frontmatter0.gpt61s.md
@@ -46,20 +46,20 @@ The parser recommendation is Satteri. The destination includes all current
 Leaflet content; the first integrated profile can be smaller and must report
 unsupported content explicitly.
 
-This document proposes the remaining interface decisions for human review.
-It is not an implementation report or evidence that native publication and the
-combined bidirectional loop have been exercised end-to-end.
+The user accepted this interface direction on 2026-11-08, with the `tidy`
+refinement recorded below. It is not an implementation report or evidence that
+native publication and the combined bidirectional loop have been exercised
+end-to-end. Exact mapping schemas still require the named integration fixtures.
 
 ### Review selections
 
-The user selected **key insertion on push/publish with an optional manual step**
-and **the eight grouped crates** below. CLI organization remains open pending
-concrete workflow examples. For YAML, the user leans toward preserving author
-text but requested an operation-specific account of useful normalization;
-blanket byte preservation has not been selected. These selections concern design,
-not authorization to begin the build.
+Accepted: **root-level document verbs**, **key insertion on push/publish with
+optional `tidy --keys`**, **eight grouped crates**, and **operation-specific
+YAML preservation/normalization**. `tidy FILE` runs all applicable supported
+tidying/normalization passes by default; selectors narrow the work. These are
+design selections preparing the build orchestration.
 
-## 1. Recommended CLI
+## 1. Accepted CLI
 
 ### Main document loop
 
@@ -77,8 +77,8 @@ stay the same for draft and published files. Publication updates the same bound
 document and leaves its filename alone. Paths are explicit file operands;
 filenames never select remote identities.
 
-Recommend automatic missing-key assignment during executed push/publish, plus
-`keys assign FILE` for local preparation. A normal author need not run a separate
+Use automatic missing-key assignment during executed push/publish, plus
+`tidy FILE --keys` for local preparation. A normal author need not run a separate
 preparation command. `check`, status/diff and an unexecuted push do not write keys.
 Execution persists the assigned identities before remote creation or mutation;
 subsequent retries use those identities. Source changes during planning invalidate
@@ -98,9 +98,10 @@ the plan. No-op keyed input stays byte-identical.
 | `publish FILE... [--yes]` | Plan/execute editor synchronization and native release |
 | `import LOCATOR [--to FILE]` | Adopt a remote document into one bound MDX file |
 | `import --all [--state draft\|published]` | Discover and adopt remote documents into the workspace; report per-item outcomes and discovery completeness |
-| `keys assign FILE` | Add missing source identities locally |
 | `keys rename FILE OLD NEW` | Rename a source key and its references/binding together, retaining remote identity |
 | `edit FILE --title TEXT / --description TEXT / --published-at TIME / --now` | Explicit local metadata edits; date alternatives are mutually exclusive |
+| `tidy FILE...` | Run all applicable supported local tidying/normalization passes, including missing-key assignment |
+| `tidy FILE... --keys` | Assign missing source identities only |
 | `tidy FILE --from filename\|path` | Deliberately reconcile file name and path intent |
 | `tidy FILE --accept` | Witness an intentional name/path mismatch |
 | `export FILE --format mdx\|markdown\|record-json` | Emit a representation, with explicit loss reporting; stdout unless `--to FILE` |
@@ -111,7 +112,39 @@ the plan. No-op keyed input stays byte-identical.
 
 This is a destination map, not a requirement to implement every command in the
 first slice. `keys` groups occasional identity operations; there is no separate
-mandatory `prepare` verb. There is one ordinary save verb, `push`.
+mandatory `prepare` verb or duplicate `keys assign` command. There is one ordinary
+save verb, `push`.
+
+### Tidy: all by default, selectors narrow the passes
+
+```sh
+springleaf tidy essay.mdx                 # all applicable supported passes
+springleaf tidy essay.mdx --keys          # missing-key assignment only
+springleaf tidy essay.mdx --dry-run       # preview all applicable passes
+springleaf tidy essay.mdx --from path     # naming: filename follows path
+springleaf tidy essay.mdx --from filename # naming: path intent follows filename
+springleaf tidy essay.mdx --accept        # naming: accept the present pair
+```
+
+The default includes key assignment and the YAML/MDX normalization passes we
+implement, together with applicable naming reconciliation. Calling `tidy` is the
+explicit request for that broader local rewrite; ordinary push does not run a
+formatter as a side effect. `--keys` selects key assignment alone, preserving
+unrelated text. Existing keys are retained, and duplicates are diagnosed rather
+than silently rekeyed. Repeating tidy on already-tidy input writes nothing.
+
+Naming uses its independent witnesses to establish direction where unambiguous.
+If it cannot determine a direction, report the choice and use `--from` or
+`--accept`; the default does not guess which conflicting name should win.
+An unassigned public path need not be invented to tidy a new local document.
+`--from` and `--accept` select naming work; `--keys` can be combined with a naming
+selection to request both. They remain local operations: path-intent editing
+does not change the bound URI or bypass native publication's path constraints.
+
+Additional normalization selectors should follow the same convention: no pass
+selectors means all applicable passes; supplying selectors means their union.
+`--all` continues to mean workspace file selection, not pass selection. Exact
+formatter options belong with the implemented normalization capabilities.
 
 Bulk bound-file operations use `--all` instead of file operands, with the same
 optional state filter. For import, `--all` selects discovered remotes; for
@@ -148,7 +181,7 @@ There is no persistent resolution document and no automatic historical merge.
 Execution reads current endpoints, displays its scope, rechecks observed witnesses
 before applying and verifies afterward. This is not server-enforced CAS.
 
-Recommend `push FILE --recreate KEY` (repeatable), or `--recreate-body`, for
+Use `push FILE --recreate KEY` (repeatable), or `--recreate-body`, for
 explicit recreation. Neither flag resolves remote drift automatically. The plan
 names the selected scope and lost associations. Recreation of interactive objects
 still follows their separate identity/meaning policy.
@@ -160,7 +193,7 @@ those operations. Existing destination collisions need `--overwrite`; that flag
 does not bypass a tracked document's pull conflict. `--force-downconvert` applies
 only to reported export loss, never to an ordinary managed push or pull.
 
-Recommend exit codes: **0** successful report/plan/no-op/completed operation;
+Exit codes: **0** successful report/plan/no-op/completed operation;
 **1** operational failure; **2** CLI usage error; **3** requested operation needs
 a decision or supported representation; **4** partial/diverged/uncertain execution.
 Status/diff succeed when they successfully describe a conflict; action commands
@@ -168,9 +201,9 @@ blocked by that conflict use 3. Machine output carries a version and per-item
 outcomes, with diagnostics on stderr. Offline status labels remote state unknown
 and can report only local changes relative to stored receipts.
 
-## 2. Recommended domain-grouped workspace
+## 2. Accepted domain-grouped workspace
 
-Prefer a **document domain, Leaflet integration domain, protocol client, and
+Use a **document domain, Leaflet integration domain, protocol client, and
 application workflow**, with the CLI as a thin caller:
 
 ```text
@@ -220,12 +253,12 @@ current `FactData::Other { kind }` drops the payload and cannot establish the
 conservative opaque-content witness described in the designs. A typed semantic
 view can coexist with those raw current observations without saving a snapshot.
 
-**Smaller plausible alternative:** six crates at
+**Considered alternative, not selected:** six crates at
 `crates/{authoring,editor,web,records,atproto,cli}`, with model/MDX modules inside
 authoring and workflow modules inside a library target of the CLI package.
 It reduces crate administration but gives weaker parser-dependency isolation and
-an awkward home for reusable application operations. Prefer the eight-crate
-domain-grouped form for the intended full bidirectional product. Assets, hashing,
+an awkward home for reusable application operations. The eight-crate
+domain-grouped form was selected for the bidirectional product. Assets, hashing,
 keys, publication and configuration begin as modules in their owning domains.
 
 Existing `drafts` splits into editor/web responsibilities; existing `leaflet`
@@ -303,7 +336,7 @@ receipt; an imported public document may have an unknown release baseline.
    The exact `delivery`, `cover`, `theme` and asset descriptor vocabularies need
    their real mapping contracts before those fields are accepted for application.
 
-### YAML writing recommendation
+### YAML writing contract
 
 Preserve the body and author frontmatter text during routine tool-state updates;
 replace or insert only the reserved envelope. Explicit metadata edits patch their
@@ -311,7 +344,7 @@ selected author fields. The generated envelope itself can use stable normalized
 formatting. This gives useful comment/style preservation without promising a
 general MDX formatter or byte-preserving editor for every YAML construct.
 
-Use the proposed restricted YAML profile: string mapping keys, ordinary scalar
+Use the restricted YAML profile: string mapping keys, ordinary scalar
 types and sequences, no duplicate keys, aliases/anchors, custom tags or merge
 keys. Whole-file validation precedes patching. Locate ranges through a parser or
 token/source-position facility, not regex boundary guesses that can misread a
@@ -331,17 +364,17 @@ it must not overwrite an intervening user edit to record a remote success.
 
 Selection status:
 
-1. **Proposed:** root-level push/pull/publish, local `list` versus `remote list`,
-   and `keys` helpers; retain preview-by-default remote execution. User requested
-   concrete alternatives before deciding the grouping.
+1. **Selected:** root-level push/pull/publish, local `list` versus `remote list`,
+   and preview-by-default remote execution. `tidy` runs all applicable supported
+   passes by default, with selectors such as `--keys` narrowing the work.
 2. **Selected:** automatic key insertion on executed push/publish, with optional
-   local assignment.
+   local assignment through `tidy FILE --keys`.
 3. **Selected:** eight domain-grouped crates with reusable workflow outside the CLI.
-4. **Leaning, still under review:** preserve author YAML during unrelated tool
+4. **Selected:** preserve author YAML during unrelated tool
    updates; permit normalization within the scope of explicit edits, accepted
    remote changes or deliberate formatting. See the operation table below.
 
-Once selected, the first integration joins the existing MDX/keying and Yrs proofs:
+The first integration joins the existing MDX/keying and Yrs proofs:
 editor fixture -> keyed MDX -> prose/mark/move edit -> same remote objects -> pull.
 Add frontmatter presence, scoped fingerprints, no-op and local-edit-race cases,
 and one nested/repeated-placement binding fixture. This fixes the remaining
@@ -349,13 +382,13 @@ data-shape details from executable evidence before broad implementation fans out
 Native publication and full content/media expansion then have explicit owners
 and seams. Their current evidence gaps remain visible in the original handoff.
 
-### CLI alternatives through the same lifecycle
+### CLI alternatives considered through the same lifecycle
 
 Each example creates locally, saves a draft, publishes it, then retrieves and
 saves an edit to that now-published document. Publishing does not move the file.
 
 ```sh
-# A. Root-level document verbs (recommended)
+# A. Root-level document verbs (selected)
 springleaf create essay.mdx --title "An essay"
 springleaf push essay.mdx --yes
 springleaf publish essay.mdx --yes
@@ -387,7 +420,7 @@ three can use the same libraries; this choice does not change the crate map.
 
 ### Operation-specific preservation and normalization
 
-Recommended principle: **normalize what the operation owns or intentionally
+Accepted principle: **normalize what the operation owns or intentionally
 changes; preserve unrelated author text.** Byte preservation is not absolute.
 
 | Operation | Intended rewrite scope |
@@ -399,7 +432,8 @@ changes; preserve unrelated author text.** Byte preservation is not absolute.
 | Change a title/description/tags through a helper | Rewrite that field as valid YAML; quote/escape as needed; do not reorder tags or trim authored meaning implicitly |
 | Publish with accepted date/path normalization | Patch those author values to the confirmed result and update receipts; preserve unrelated author fields |
 | Pull changed editor content | Update fields/body owned by the supported editor projection; retain local-only and unknown author metadata. Changed body serialization may normalize Markdown |
-| Explicit formatting, if offered | Normalize the requested author-frontmatter/body scope; keep this independent of routine synchronization |
+| `tidy FILE` | Run all applicable implemented normalization passes, including keys; preserve meaning and unknown values |
+| `tidy FILE --keys` | Insert missing identities only; preserve unrelated author text and existing keys |
 
 A first pull writer may serialize the whole changed body rather than preserving
 every untouched paragraph's wrapping. That is a separate fidelity choice from
@@ -417,10 +451,10 @@ editing API.
 ### Connections
 
 - [Main handoff](authoring-handoff0.gpt61s.md): governing intent and experimental
-  reuse; this proposal supplies one receiving interface rather than reviving its
+  reuse; this accepted design supplies one receiving interface rather than reviving its
   superseded recreation default.
 - [YAML candidate](frontmatter0.gpt61s.md): retained envelope and lifecycle,
   refined here for projection-specific hashes, placement identity and writing.
 - [Earlier sync design](document-sync1.gpt61s.md): precedent for independent
   naming/editor/release witnesses and explicit current-endpoint resolution.
-- [Current README](../README.md): implemented CLI, distinct from this proposal.
+- [Current README](../README.md): implemented CLI, distinct from this accepted design.

@@ -26,11 +26,20 @@ sources:
     title: "Entity/membership/text identity, transient CRDT state and resource representation obligations"
   - resource: /design/records-canonical2.glm53m.md
     title: "Existing global/workspace configuration layering, distinct from per-document frontmatter"
+  - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
+    title: "Linked accepted interface refinements for scoped hashes, presence semantics, placement identity and YAML normalization"
 ---
 
 # Proposed YAML frontmatter
 
 ## Recommendation in brief
+
+**Subsequent acceptance:** the [authoring interface decision](authoring-interface0.gpt6a.md)
+accepts this overall envelope with refinements to hash scopes, missing/null
+semantics, binding validation and operation-specific preservation. Explicit
+normalization lives under `tidy`, all applicable passes by default; `tidy --keys`
+assigns missing identities alone. Read that decision before freezing the schema;
+relationship fixtures and rich-content mappings still supply exact field details.
 
 **Use ordinary YAML frontmatter: author-facing document fields at the top level,
 one quoted `"@springleaf"` mapping for tool-maintained state, and durable block
