@@ -7,11 +7,16 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-08
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e43700700ffezpESdrhZMD98I1"
-    title: "Independent Astra stage-one design, pinned source inspection and offline Yrs/Yjs replacement/concurrency probe; peer draft not read"
+    title: "Independent stage-one design and probes, followed by authorized review of g's committed initial draft, wire/replay probe and separately committed revised stance; original argument preserved"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "User authority via parent commission: low-volume product, bounded complexity, independent Astra/g drafts then cross-review; separate external human diff; subsequent Leafbud rename steering"
+  - resource: https://github.com/rektide/leafspring/blob/ff2f4a7b858e99625d3496e55aa97f32559bde0c/design/native-edit0.glm53m.md
+    title: "Stage-two review target: g's initial independent draft, read through git show at this exact commit, not its concurrent cross-review addendum"
   - resource: /AGENTS.md
     title: "Current product-fit and collaboration instructions read before inquiry"
   - resource: /design/status-witnesses0.gpt61s.md
@@ -502,3 +507,256 @@ the complete live loop; no such writes were performed here.
 The architectural center is a small adapter from **desired current content plus
 fresh native state** into verified native edits. Its improvement seams are the
 text-edit helper and supported block mappings, not a new general planning system.
+
+## 10. Cross-review and revised stance — after the independent join
+
+**Review target:** g's initial draft at
+[`ff2f4a7b858e99625d3496e55aa97f32559bde0c`](https://github.com/rektide/leafspring/blob/ff2f4a7b858e99625d3496e55aa97f32559bde0c/design/native-edit0.glm53m.md),
+read with `git show`, compared with my initial `4ab29da3`. This addendum preserves
+sections 1–9 as independent evidence. I have not read g's stage-two addendum.
+The stance below controls my recommendation where it narrows the original.
+
+### Revised recommendation: land a single-container save first
+
+**Start with existing bound draft text whose changed native paragraph contains
+one XmlText child, and whose desired content contains only supported text/marks.**
+Retain that paragraph and XmlText; use a single prefix/suffix splice plus desired
+formatting. Preserve unchanged other blocks, including supported blocks with hard
+breaks. Permit multiple eligible changed blocks in one document, but reject a
+mixed unsupported edit before any write. Do not implement general per-block
+create/delete/move/type-change planning or XML child matching in this first slice.
+
+This narrows my initial same-topology pairing/coarse-topology branch. G's emphasis
+on a simple mechanism is persuasive; however, deleting whole XML children is not
+merely a simpler implementation of character overwrite with identical effects.
+Removing that branch from the first landing avoids both a topology matcher and
+an additional replacement-semantics decision. Hard-break/topology editing remains
+a credible next coarse capability, not a requirement for a general diff engine.
+
+I retain the complete edited-existing-state wire default, but now state more
+precisely that **g's single-transaction delta is also technically valid** under
+the verified merge assumptions. I retain a stop-and-observe recovery boundary;
+I reject automatic re-pull/replan as a sufficient idempotency argument.
+
+### A. Single splice versus coarse overwrite: real costs and gains
+
+There are three distinct mechanisms to compare:
+
+| Mechanism | Extra work / continuity |
+| --- | --- |
+| Delete all characters in the retained XmlText; insert desired runs with attributes | Simplest retained-container writer. No old/new text correspondence or format clearing pass. All replaced character anchors are traded, even for a mark-only change. |
+| Single splice in that XmlText; apply desired formatting ranges | Adds common prefix/suffix calculation, UTF-16 position conversion and clearing of obsolete owned marks. Retains prefix/suffix character items; mark-only edits retain all character items. |
+| Delete paragraph children and rebuild them | Simple fresh child emitter, but deletes containers as well as characters. Distinct anchor/concurrency effects; not equivalent to either row above. |
+
+My splice recommendation is **not free**. Reusing characters means old marks must
+be removed where absent from the desired runs. A small implementation can set the
+supported mark keys to their desired values or `Any::Null` over each desired
+range, without optimizing unchanged formatting operations. Coarse insertion
+instead supplies the complete desired attributes on newly inserted runs. Both
+need the same mark-value encoding and semantic read-back; only the retained path
+needs the clearing logic. Current unknown-mark refusal remains in force, so this
+is not permission to erase unknown annotations under a broad mark reset.
+
+The correspondence calculation itself is small: compare Unicode scalars from
+both ends without overlapping the retained ranges; convert their lengths to
+UTF-16 for Yrs. It needs no tokenization, LCS, grapheme normalization, source-span
+alignment or per-character persisted IDs. Literal whitespace/newlines stay exact
+within XmlText. MDX soft-wrap normalization already occurred during parsing;
+hard-break XML is outside this first changed-block profile. Formatting boundaries
+do not decide character correspondence: compare strings, then apply marks.
+
+This preserves useful continuity for everyday edits but not maximum continuity.
+Two distant edits replace the whole intervening middle, including unchanged words
+between them. Equal-looking repeated text does not prove intended historical
+correspondence. Explain the guarantee as retained outer text/container identity
+and limited character retention, never “all comments survive.” Current production
+does not support comment marks anyway.
+
+**New lean:** the modest splice is worth its bounded helper and format pass; the
+existing y-prosemirror `updateYText`/lib0 approach corroborates that scale. If the
+implementation reveals substantially more machinery than this, use all-character
+overwrite **within the same XmlText** for the first slice. That is an acceptable
+product trade, not a correctness failure. Neither option requires an XML matcher.
+
+### B. Delta versus complete edited state: valid alternatives, not fresh replacement
+
+Both proposals load the real base and edit it through Yrs. An independently
+generated fresh document is a different operation and remains wrong for an
+existing text fact: merging it can add another paragraph rather than replace one.
+
+I re-read the pinned server's `assertFact` and flush implementation. It captures
+the stored base, retains the last submitted value per request client for the
+entity/attribute, and merges those values with `Y.mergeUpdates`. Therefore:
+
+- One edit transaction's `encode_update_v1` includes that transaction's insertions
+  and deletions. Given the real prerequisite base at the receiver, **one such
+  payload per changed fact/client is sufficient**. G is right about this. My
+  original suggestion that full state uniquely avoids accumulation work was too
+  strong for this one-transaction/one-payload design: there is no delta chain to
+  accumulate in that case.
+- Several incremental deltas sent as separate writes from the same client in one
+  request can lose earlier prerequisites through the last-write cache. Both
+  proposals should simply emit one payload per fact. A transaction delta is
+  cumulative over its own transaction, not automatically over earlier transactions.
+- Full edited state includes loaded prerequisites and the document delete set;
+  transaction encoding includes the edit's deletes. Delete-only changes work with
+  both. Neither should use state-vector equality as a no-op test.
+- Complete state matches native full-state convention and can be decoded without
+  separately supplying the base. It retransmits more accumulated history, which
+  can matter for a long-lived heavily edited block even with few users. It does
+  not recover local offline history or strengthen conflict resolution.
+
+The stage-two scratch probe used the same pinned Yrs and real Yjs `mergeUpdates`:
+for both retained-XmlText and replaced-child edits, delta and full edited-state
+payloads produced equal concurrent results after merging with the base. Full
+state decoded on its own; the delta had pending prerequisites until the base was
+applied. Duplicate delivery of either exact payload was harmless. Commands:
+`cargo build --offline`, `node wire-probe.mjs`; all assertions passed. This is
+synthetic engine evidence, not deployed-server verification.
+
+**New lean:** keep full edited state as a simple native-shaped default, without
+selling it as necessary for correctness. Encoding choice is one private helper,
+not a public mode or separate plan type. A measured payload/history problem or
+stronger deployed delta evidence could switch it without changing the edit
+architecture. Missing/deleted remote facts still require an identity decision;
+self-contained state is not permission to resurrect them. The server's malformed-
+merge fallback is not a recovery mechanism either format may rely on.
+
+### C. Concurrency and retry claims that need correction
+
+G's claim that unseen concurrent content survives its stated **child deletion**
+algorithm is contradicted by the stage-one probe. The exact distinction is:
+
+- Retain paragraph **and XmlText**; delete only observed characters: a concurrent
+  insertion into that retained text can survive, as experiment 05 and my `Rnew`
+  probe show. This does not protect against an independent deletion of a parent.
+- Retain paragraph but delete its **XmlText child**: a concurrent insertion inside
+  that child can become invisible when the child is removed. My probe converged
+  to `new`, exactly the desired content, despite the lost visible `R`.
+- Delete a paragraph or replace a larger body: the same container-removal concern
+  extends to that larger scope. Detached old content remaining in storage does
+  not mean its annotations/edits remain attached to the visible replacement.
+
+The delete set need not list the unseen character for its visible contribution
+to disappear. Thus “we delete only seen items” is an insufficient survival proof.
+Read-back can detect a visible merged divergence; it cannot establish that no
+concurrent content became hidden under a deleted container. Preflight checks
+remain best effort, with no invented caller CAS or lock across the read/write
+gap. This is a limit to describe, not a reason to build multiplayer machinery.
+
+G's recovery sentence—re-pull/replan because the same plan converges—also needs a
+boundary. **An identical encoded update/request is idempotent; an independently
+compiled edit expressing the same desired prose need not be.** The stage-two
+probe compiled `old → new` twice from the same base using fresh Yrs clients.
+Applying both yielded `newnew`, with either retained-text or replaced-child
+editing. That models the essential hazard when a timed-out request remains in
+flight while a new attempt reads a not-yet-updated server and recompiles.
+
+Fresh observation after a completed save can of course discover equality and
+produce no write. That is different from proving a pending request can no longer
+arrive. Retain exact bytes/IDs for same-process retries; after restart inspect
+attempt acknowledgments and current content, settle if established, otherwise
+report unresolved/partial. Do not repeatedly overwrite merged divergence. Both
+full state and deltas share this obligation; neither encoding solves recovery.
+
+### D. Equality is reusable; a structural planner is additional machinery
+
+I reject the peer's claim that the conflict contract already requires “exactly”
+the per-key comparison needed for all mutations, making the incremental cost
+merely an op builder. `editor_value`/`Agreement` answer whole-document equality
+and change direction. A generated-body implementation can use that gate without
+matching every old block to its replacement or deriving moves/deletions.
+
+Per-block editing additionally needs correct association lookup, desired/current
+field ownership, handling of shared entities and occurrences, retained versus new
+bindings, and validation/read-back of each operation family. Existing structures
+make these jobs feasible; they do not make them implemented or costless. The
+current parser's exact source-key/node-table coverage also excludes casually
+adding/removing blocks. A flat operation enum does not eliminate those semantics.
+
+Consequently fresh-subtree generation deserves a fairer comparison. It can
+substantially simplify broad heterogeneous authoring, at the cost of staging,
+rebinding, visible-anchor changes and stable interactive-object exceptions.
+It does not automatically destroy comment entities, and its explanation can name
+preserved public identity, replaced pages/blocks and retained polls rather than
+only say “body replaced.” If the user selects generated-body ownership, those
+effects are an explicit trade, not inherently silent destruction.
+
+I still prefer the small existing-text path **for today's bound imports**, not
+because a full structural planner is almost free. I also retract any implication
+that every later unsupported operation must immediately offer an implemented
+recreation fallback. An unsupported operation can stop with an accurate reason.
+Building both general keyed updates and general stage/switch now doubles the
+important paths before either has deployment evidence.
+
+For later ordering, g's “never renumber unchanged memberships” is stronger than
+the user's product requirement. Moving all desired unique occurrences in order
+can be acceptable. A human summary should report the semantic reorder, not expose
+every incidental position write as a separate user change. Choose minimal moves
+only if the existing native helpers make that simpler; do not build a fractional
+indexing optimizer to improve operation counts. Repeated/shared occurrences still
+need explicit handling regardless of which order algorithm wins.
+
+### E. Concrete revised first slice and flat explanation
+
+Join `leafspring-editor-text` with its essential conflict/read-back protections
+in one coherent end-to-end delivery, rather than first building a general planner
+for create/delete/move/type-change. Preconditions:
+
+1. Existing verified draft binding, complete confirmed node rows, one unambiguous
+   target per changed text entity, supported current/desired representation.
+2. Each changed block has an existing text fact, paragraph and single XmlText;
+   desired change is text/marks only. No create/delete/type/placement/metadata
+   change may ride along. If derived-title behavior would alter document metadata,
+   block that case unless its native mapping is handled in this slice.
+3. Reuse scoped drift classification, recheck source/remote evidence, compile one
+   edit per target, locally decode/verify, issue one native request, and read back
+   desired full supported meaning plus protected identities/scope.
+4. Persist a small pending marker before effects; an uncertain outcome may stop
+   for observation/recovery. No autonomous replan-until-equal behavior. Patch only
+   verified receipts while guarding local file bytes.
+
+**Automatic key assignment is accepted interface intent, not an implemented
+dependency to assume.** This slice uses already imported/keyed/bound files; it
+does not need to implement key insertion or pretend an empty imported draft can
+already accept newly authored blocks. New-source parsing, missing-key assignment,
+new associations and first binding are subsequent work. G's first-generation
+suggestion remains useful once those actual dependencies exist.
+
+The first preparation result can be a flat list of target text facts with encoded
+updates and brief effect labels, plus borrowed desired/observed inputs for
+verification. No generic `ScopeOp` covering future structure is needed. Preview:
+“Save 2 text blocks to the existing draft; retain their block and text containers;
+public content unchanged.” Include blockers/uncertainty when present. Optional
+human Markdown diff remains independent. No runtime toggle between splice and
+overwrite, no second comparison tree, no persisted plan.
+
+Retain the initial fixtures for marks, Unicode, exact no-op, unsupported mixed
+edits, stale observation, ignored writes, local race and uncertain retry; replace
+the first-slice topology fixture with **refusal before writes**, and retain the
+coarse concurrency probe as evidence for the later topology decision. Do not
+describe a closed text-only loop as full structural authoring.
+
+### Decisions still belonging to the parent/user
+
+- Select single-splice retention versus simpler all-character overwrite inside
+  the retained XmlText. My new recommendation remains the splice; a materially
+  larger implementation than the bounded calculation/mark pass would change it.
+- Decide whether later hard-break/topology changes normally rebuild children or
+  require deliberate recreation. The prototype demonstrates the trade; it cannot
+  decide the user's acceptable continuity policy.
+- Select broad keyed structure versus generated-body ownership when expanding
+  beyond existing text. Measured implementation burden, shared references/polls
+  and actual desired authoring scope should decide, not edit counts or presumed
+  free reuse of equality.
+- Verify deployed native writes/read-back and request recovery in an authorized
+  throwaway editor. Source inspection and these synthetic probes do not establish
+  deployment parity. Full edited state is my default, with delta a valid alternate
+  encoding rather than a competing architecture.
+
+This revised stance **keeps** keyed outer identity, existing Yrs, small splice and
+full-state defaults; **changes** the first landing to a narrower single-container
+operation and grants genuine savings to the generation alternative; **rejects**
+universal unseen-edit survival, automatic replan idempotency, free structural
+planning and automatic-key-assignment-as-existing-code claims. No implementation
+or remote write is commissioned by this review.
