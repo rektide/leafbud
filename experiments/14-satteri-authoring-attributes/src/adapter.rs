@@ -31,6 +31,7 @@ pub struct Annotation {
 pub struct Prepared {
     pub parser_source: String,
     pub annotations: Vec<Annotation>,
+    /// Discovery-only errors, rebased to absolute original UTF-8 bytes.
     pub discovery_errors: Vec<(usize, String)>,
 }
 
@@ -157,10 +158,11 @@ impl Discovery<'_> {
 /// unchanged MDX/parser/schema compiler before any result can be returned.
 pub fn prepare(source: &str) -> Result<Prepared, Vec<Diagnostic>> {
     let (arena, discovery_errors) = satteri_pulldown_cmark::parse(source, satteri_pulldown_cmark::MDX_OPTIONS);
+    let base = if source.starts_with('\u{feff}') { 3 } else { 0 };
     let mut discovery = Discovery {
         source,
         arena,
-        base: if source.starts_with('\u{feff}') { 3 } else { 0 },
+        base,
         annotations: vec![],
     };
     discovery.walk(0).map_err(|d| vec![d])?;
@@ -173,7 +175,7 @@ pub fn prepare(source: &str) -> Result<Prepared, Vec<Diagnostic>> {
     Ok(Prepared {
         parser_source: String::from_utf8(bytes).expect("only ASCII annotation bytes changed"),
         annotations: discovery.annotations,
-        discovery_errors,
+        discovery_errors: discovery_errors.into_iter().map(|(offset, message)| (base + offset, message)).collect(),
     })
 }
 

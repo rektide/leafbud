@@ -25,5 +25,5 @@ pub fn stock(source: &str, attributes: bool) -> Value {
     }
     let options = if attributes { MDX_OPTIONS | Options::ENABLE_ATTRIBUTES } else { MDX_OPTIONS };
     let (arena, errors) = satteri_pulldown_cmark::parse(source, options);
-    json!({"attributes":attributes,"errors":errors,"tree":node(&arena,0)})
+    json!({"attributes":attributes,"positionSourceStart":if source.starts_with('\u{feff}') {3} else {0},"errors":errors,"tree":node(&arena,0)})
 }

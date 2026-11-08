@@ -129,6 +129,18 @@ fn byte_identity_source_map_and_bom_crlf_unicode_ranges_are_honest() {
 }
 
 #[test]
+fn recovered_discovery_errors_also_use_absolute_original_bom_offsets() {
+    let input = format!("\u{feff}{}", source("## Café 🦀 {#heading}\n"));
+    let (_, native) = satteri_pulldown_cmark::parse(&input, satteri_pulldown_cmark::MDX_OPTIONS);
+    assert!(!native.is_empty());
+    let prepared = prepare(&input).unwrap();
+    assert_eq!(
+        prepared.discovery_errors,
+        native.into_iter().map(|(offset, message)| (offset + 3, message)).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn nested_quote_list_and_page_tails_name_paragraphs_not_nearby_containers() {
     let input =
         source("> Quoted **prose**.\n> {#quote}\n\n- List paragraph.\n  {#item}\n- Other item.\n\n<Page name=\"p\">\n\nPage prose.\n{#page-body}\n\n</Page>\n");
