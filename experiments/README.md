@@ -48,6 +48,10 @@ what remains unproved. They are not all implemented product capabilities.
 - **Current recommendation:** [local MDX authoring with Satteri, with
   alternatives](../design/authoring-recommendation0.gpt61s.md). This incorporates
   the later compiler evidence, not just the initial parser comparison.
+- **What is stored in the file?** The [YAML frontmatter proposal](../design/frontmatter0.gpt61s.md)
+  gives concrete author/state examples and alternatives for identity, sync,
+  publication receipts and source writing. It is not implemented by the small
+  experimental metadata parser yet.
 - **Does Satteri actually fit the workflow?** Start with
   [13 — source to Leaflet facts and interoperable text](13-satteri-authoring/REPORT.md).
 - **Can we also write `{#key}`?** Read

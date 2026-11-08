@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e4900b8d7ffeDT9QuFwmKRAB7t"
-    title: "Authoring experiments and handoff; clarified keyed bidirectional Yrs intent, then audited remake decisions and preserved the CLI design arena"
+    title: "Authoring experiments and handoff; keyed bidirectional Yrs intent, CLI design arena and linked concrete frontmatter proposal"
   - resource: /design/authoring-recommendation0.gpt61s.md
     title: "Current Satteri recommendation with alternatives and adoption boundaries"
   - resource: /design/mdx-recreate0.gpt6a.md
@@ -43,6 +43,8 @@ sources:
     title: "Recovered earlier CLI ideas: symmetric push/pull, import, status, diff, resolve, tidy, conversion and metadata editing"
   - resource: /design/document-sync1.gpt6a.md
     title: "Recovered independent command sketch, identity/import behavior, explicit loss and resolution concerns"
+  - resource: /design/frontmatter0.gpt61s.md
+    title: "Subsequent consolidated YAML candidate with current-content/binding/witness ownership and subsection alternatives"
 ---
 
 # Preliminary design and implementation handoff
@@ -75,6 +77,11 @@ Before choosing the public interface, read the
 collects capabilities previously scattered across designs and distinguishes
 established intent from unresolved spelling/grouping choices. The original
 `--replace` examples below are not the default for identity-preserving updates.
+
+For one concrete storage candidate, read the
+[YAML frontmatter proposal](frontmatter0.gpt61s.md). It consolidates the original
+metadata sketch and later node/sync requirements, with examples and subsection
+alternatives. Its field names are proposed, not an already implemented schema.
 
 ## 1. Direction, assumptions, and boundaries
 
@@ -199,6 +206,10 @@ Use a versioned typed structure, not arbitrary fields copied from old sidecars:
     kind, phase, generation, inputHash, knownTargetIds
 ```
 
+The [dedicated frontmatter proposal](frontmatter0.gpt61s.md) develops this sketch
+and section 12's node associations into one reviewable format. It discusses
+state/binding tags, document versus per-node witnesses, and format versioning;
+do not implement this earlier field outline independently of that proposal.
 The exact YAML schema is not frozen. The important distinction is **current
 author content versus operation receipts**. No receipt contains another body,
 full fact graph, encoded Yjs history or serialized mutation batch.

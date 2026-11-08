@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e4900b8d7ffeDT9QuFwmKRAB7t"
-    title: "Authoring redesign, experiment review and recommendation; subsequent handoff/addendum restores intended keyed bidirectional Yrs editing"
+    title: "Authoring recommendation, keyed bidirectional handoff/CLI clarification, and linked YAML frontmatter proposal"
   - resource: /experiments/13-satteri-authoring/REPORT.md
     title: "Real compiler slice, independent Yjs consumption, and bounded replacement simulator"
   - resource: /experiments/14-satteri-authoring-attributes/REPORT.md
@@ -285,6 +285,9 @@ Its [CLI design arena](authoring-handoff0.gpt61s.md#remake-and-cli-arena) preser
 the document-first/scoped command alternatives, directional synchronization,
 automatic keying, bulk adoption and effect/confirmation distinctions rather than
 leaving the public interface implicit in compiler work.
+The [YAML frontmatter proposal](frontmatter0.gpt61s.md) supplies the concrete
+single-file field design and subsection alternatives that earlier sketches left
+open, including current-content IDs versus tool-maintained remote associations.
 
 **Recommended next decision:** select Satteri and this source-authoritative
 authoring direction for an explicitly commissioned integration slice, with the
