@@ -9,10 +9,12 @@ generated:
   by: model:openai/gpt-6-astra#high
 updated:
   at: 2026-11-08
-  by: model:openai/gpt-6-astra#high
+  by: model:zai-coding-plan/glm-5.3#max
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "User accepted root verbs, eight grouped crates and operation-specific YAML preservation, with all-applicable tidy and tidy --keys replacing manual keys assign"
+  - resource: "opencode://ses_e464771dfffe6czx6QEC8Qryue"
+    title: "Post-reset source correction: pre-reset crate citations bound to their revision permalink after the scaffold reset removed those paths"
   - resource: /design/authoring-handoff0.gpt61s.md
     title: "Controlling keyed bidirectional addendum and CLI capability inventory"
   - resource: /design/frontmatter0.gpt61s.md
@@ -21,16 +23,16 @@ sources:
     title: "Independent naming/editor/release evidence and current-endpoint resolution"
   - resource: /design/authoring-recommendation0.gpt61s.md
     title: "Satteri recommendation and declarative MDX language"
-  - resource: /Cargo.toml
-    title: "Current four-crate workspace"
-  - resource: /crates/cli/src/main.rs
-    title: "Current command tree and lifecycle orchestration in the binary"
-  - resource: /crates/cli/src/config.rs
-    title: "Existing Figment workspace/global layering"
-  - resource: /crates/drafts/src/lib.rs
-    title: "Web client already serves both draft and published Leaflets"
-  - resource: /crates/drafts/src/facts.rs
-    title: "Current fact decoder discards opaque payloads, requiring deliberate replacement for robust witnesses"
+  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/Cargo.toml
+    title: "Four-crate workspace as it stood when this design was written (pre-reset revision 80436b61)"
+  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/main.rs
+    title: "Command tree and lifecycle orchestration in the pre-reset binary"
+  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config.rs
+    title: "Figment workspace/global layering as it stood pre-reset"
+  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/lib.rs
+    title: "Web client serving both draft and published Leaflets, pre-reset"
+  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/facts.rs
+    title: "Fact decoder that discards opaque payloads, requiring deliberate replacement for robust witnesses"
   - resource: /experiments/13-satteri-authoring/src/model.rs
     title: "Existing transient model includes nested lists and keyed content, but not a complete production binding schema"
 ---

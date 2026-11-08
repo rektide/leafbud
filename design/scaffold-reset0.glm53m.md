@@ -7,11 +7,14 @@ status: final
 generated:
   at: 2026-11-08
   by: model:zai-coding-plan/glm-5.3#max
+updated:
+  at: 2026-11-08
+  by: model:zai-coding-plan/glm-5.3#max
 sources:
   - resource: "opencode://ses_e464771dfffe6czx6QEC8Qryue"
-    title: "Commissioned scaffold/reset execution: crate moves, retention decisions, CLI skeleton, verification"
+    title: "Commissioned scaffold/reset execution: crate moves, retention decisions, CLI skeleton, verification; correction stage revising the text-architecture direction to Yrs promotion and fixing history navigation"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Parent session accepting the authoring interface and commissioning the reset"
+    title: "Parent session accepting the authoring interface, commissioning the reset, and reviewing the correction stage"
   - resource: /design/authoring-interface0.gpt6a.md
     title: "Accepted destination: root verbs, tidy semantics, eight-crate map, YAML preservation"
   - resource: /design/authoring-handoff0.gpt61s.md
@@ -22,6 +25,12 @@ sources:
     title: "Reset workspace manifest: eight members, version 0.2.0, trimmed dependency pins"
   - resource: /crates/leaflet/records/LEAFLET-PIN.md
     title: "Generated-tree pin procedure updated for the records crate path"
+  - resource: /experiments/05-yrs-conversion/README.md
+    title: "Rust↔real-Yjs conversion proof named as the promotion source for the editor text path"
+  - resource: /experiments/13-satteri-authoring/README.md
+    title: "Keyed-MDX→native-mutation experiment whose modules are the promotion candidates"
+  - resource: /experiments/14-satteri-authoring-attributes/README.md
+    title: "Explicit {#key}/brace adapter seam named as a promotion source"
 ---
 
 # Scaffold reset
@@ -37,8 +46,14 @@ stubs. This document records what was done so the next slice starts
 from verified ground.
 
 **Pre-reset revision: `80436b61`** ("Accept authoring interface and
-unify local normalization under tidy"). Every deleted file below is
-recoverable there; `jj diff -r 80436b61` shows the full stage-5 client.
+unify local normalization under tidy", full git commit
+`80436b61cf69a2e41d157684b24c6cf2fd4674da`). Every deleted file below
+is recoverable there. Accurate navigation (verified):
+`jj diff --from 80436b61 --to @ --summary` shows the full reset delta
+(`jj diff -r 80436b61` alone shows only that revision's own change);
+`jj file show -r 80436b61 crates/drafts/src/yjs.rs` prints one deleted
+file's contents; remote browsing:
+`https://github.com/rektide/springleaf/tree/80436b61cf69a2e41d157684b24c6cf2fd4674da`.
 
 ## Workspace shape (as built)
 
@@ -84,7 +99,7 @@ in LEAFLET-PIN.md now names this test.
 | --- | --- | --- |
 | Old CLI command tree (`main.rs` modules: publish, sync, author, create, export, workspace, config*) | ~3,800 | `config.rs`/`config_cmd.rs` (figment2 + toml_edit layering) → `workflow`'s first slice; the rest dies with the sidecar lifecycle. |
 | `springleaf-drafts` web client (`lib.rs`, `create.rs`) | ~1,580 | `LeafletClient` core (`/home` RSC parse, `get_leaflet_data`, `/new`) → `web` when discovery/`remote list` lands. |
-| Yjs codec (`yjs.rs`), fractional positioning (`fractional.rs`) | ~2,520 | Proven byte-parity wire codec → `editor`'s first slice (text decoding/encoding); re-evaluate against Yrs-generated updates then. |
+| Hand-rolled Yjs codec (`yjs.rs`), fractional positioning (`fractional.rs`) | ~2,520 | **Historical oracle/fixture evidence only**: the codec's byte-parity encoder/decoder stays the wire-shape reference for tests, not the production text architecture — that is Yrs-based per the accepted keyed direction (handoff §12: load current remote text into Yrs, apply identity-preserving edits, emit one cumulative delta per text fact). Fractional ordering and the push transport *shape* are the selectively recoverable pieces. |
 | Fact decoding (`facts.rs`) | ~490 | `editor`, but **not as-is**: `FactData::Other { kind }` drops payloads; the accepted design requires raw-payload-retaining observations. |
 | Extraction ⇄ authoring converters (`extract.rs`, `author.rs`, `pull.rs`, `push.rs`) | ~4,050 | Not recovered: they convert between records and the editor via the reset lifecycle. The new path is document model ↔ editor facts. The Replicache push transport shape returns to `web` for `remote append`. |
 | Markdown→blocks converter, frontmatter parser, record builder, slug policy (`markdown.rs`, `record.rs` builder half) | ~1,150 | Not recovered: local record assembly is replaced by the MDX document model and a future document-to-public projection. |
@@ -93,10 +108,17 @@ in LEAFLET-PIN.md now names this test.
 
 Experiments were verified to have **no path dependencies** on
 `crates/*` (each is an independent Cargo project); `experiments/`,
-`design/`, `.beads/`, and root metadata are untouched. Historical
-citations of `crates/drafts`/`crates/leaflet` in earlier design
-documents and reports intentionally remain: they are revision-bound
-evidence, recoverable at `80436b61`.
+`design/`, `.beads/`, and root metadata are untouched. Citations of
+`crates/drafts`/`crates/leaflet` in earlier design documents and
+reports are **root-relative paths that the reset broke locally** — they
+are not intrinsically revision-bound. Independent historical documents
+are preserved substantively (no broad rewrites). The one *active* doc
+whose sources stopped resolving — the accepted
+[authoring interface](authoring-interface0.gpt6a.md) — now binds its
+pre-reset crate citations to canonical revision permalinks
+(`https://github.com/rektide/springleaf/blob/80436b61cf69…/<path>`)
+instead of dangling local paths; remaining historical mentions stay as
+prose, recoverable through the navigation commands above.
 
 ## CLI skeleton contract
 
@@ -149,9 +171,19 @@ The accepted design's first build join (§4) is the right next
 commission: editor fixture → keyed MDX → prose/mark/move edit → same
 remote objects → pull, plus frontmatter presence, scoped fingerprints,
 and one nested-placement binding fixture. Concretely from this
-scaffold: (a) give `springleaf-editor` the Yrs dependency and recover
-`yjs.rs`/`fractional.rs`/a payload-retaining `facts.rs` from
-`80436b61`; (b) give `springleaf-mdx` Satteri and the YAML profile;
-(c) let the document model emerge from that fixture rather than
-pre-designing it here. Workflow/config recovery and any web transport
-follow after the loop is proven.
+scaffold, **promote proven Yrs-based paths deliberately from the
+isolated experiments** — 05 (Rust↔real-Yjs/y-prosemirror conversion on
+a pinned upstream Yrs), 13 (keyed MDX model, planned native mutation
+arguments, fresh-Yrs text decode, fact scanning), 14 (the explicit
+`{#key}`/brace adapter seam). Promotion is a reviewed lift of
+experiment code into production crates, distinct from production path
+dependencies: the `yrs` and Satteri crates land only when promoted code
+needs them. The pre-reset hand-rolled codec serves as the byte-parity
+oracle for those tests, not as code to recover into the editor;
+fractional ordering and the push transport shape are selectively
+recoverable from `80436b61` where the promoted paths need them; any
+recovered fact scanning must retain raw payloads. Then (b) give
+`springleaf-mdx` Satteri and the YAML profile; (c) let the document
+model emerge from that fixture rather than pre-designing it here.
+Workflow/config recovery and any web transport follow after the loop
+is proven.
