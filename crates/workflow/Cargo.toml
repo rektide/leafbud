@@ -1,0 +1,5 @@
+[package]
+name = "springleaf-workflow"
+description = "Application workflow for springleaf: local files, config, inventory, plan/execute/verify orchestration"
+version.workspace = true
+edition.workspace = true

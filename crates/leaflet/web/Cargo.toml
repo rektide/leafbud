@@ -1,0 +1,5 @@
+[package]
+name = "springleaf-web"
+description = "Leaflet web effects for springleaf: cookie auth, discovery, RPC/actions, uploads, native publication"
+version.workspace = true
+edition.workspace = true

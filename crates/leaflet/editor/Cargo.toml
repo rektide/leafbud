@@ -1,0 +1,5 @@
+[package]
+name = "springleaf-editor"
+description = "Leaflet editor surface for springleaf: fact graph, Yrs text state, bidirectional mapping, pure edit planning"
+version.workspace = true
+edition.workspace = true

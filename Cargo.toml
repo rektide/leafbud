@@ -3,34 +3,31 @@ resolver = "3"
 members = [
     "crates/atproto",
     "crates/cli",
-    "crates/drafts",
-    "crates/leaflet",
+    "crates/document/mdx",
+    "crates/document/model",
+    "crates/leaflet/editor",
+    "crates/leaflet/records",
+    "crates/leaflet/web",
+    "crates/workflow",
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [workspace.dependencies]
+# jacquard pins (springleaf-records): exact-pinned to the codegen binary's
+# workspace version — see crates/leaflet/records/LEAFLET-PIN.md.
 jacquard-common = { version = "=0.12.1", default-features = false, features = ["std"] }
 jacquard-derive = "=0.12.1"
 jacquard-lexicon = { version = "=0.12.1", default-features = false }
-anyhow = "1.0.104"
 base64 = "0.22.1"
-clap = { version = "4.6.7", features = ["derive", "env"] }
-figment2 = { version = "0.11.5", default-features = false, features = ["toml"] }
-jiff = "0.2.39"
+clap = { version = "4.6.7", features = ["derive"] }
 regex = "1.13.1"
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "query", "rustls"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-sha2 = "0.10.9"
-toml_edit = "0.25.19"
-springleaf-atproto = { version = "0.1.0", path = "crates/atproto" }
-springleaf-drafts = { version = "0.1.0", path = "crates/drafts" }
-springleaf-leaflet = { version = "0.1.0", path = "crates/leaflet" }
+springleaf-atproto = { version = "0.2.0", path = "crates/atproto" }
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-uuid = "1.29.1"

@@ -1,0 +1,5 @@
+[package]
+name = "springleaf-mdx"
+description = "MDX reading/writing for springleaf: Satteri parsing, YAML frontmatter, key insertion"
+version.workspace = true
+edition.workspace = true

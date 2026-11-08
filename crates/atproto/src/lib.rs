@@ -4,7 +4,7 @@
 //! (`experiments/04-jacquard/REPORT.md` §6): four XRPC calls over reqwest,
 //! identity resolution following the chain proven by
 //! `experiments/03-post-builder/REPORT.md` §1, typed errors, and no client
-//! machinery beyond that. Record types live in `springleaf-leaflet`
+//! machinery beyond that. Record types live in `springleaf-records`
 //! (jacquard-generated); this crate stays lexicon-agnostic JSON.
 //!
 //! # Identity resolution

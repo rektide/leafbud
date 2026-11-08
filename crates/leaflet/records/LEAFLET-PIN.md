@@ -34,7 +34,7 @@ cp com/atproto/label/defs.json      "$IN/com__atproto__label__defs.json"
 "$JQ/target/release/jacquard-codegen" -i "$IN" -o "$OUT"
 
 cp "$OUT"/*.rs "$OUT"/com_atproto* "$OUT"/pub_leaflet* "$OUT"/site_standard* \
-   <springleaf>/crates/leaflet/src/
+   <springleaf>/crates/leaflet/records/src/
 # then re-sync the "Generated lexicon bindings" declaration block in
 # src/lib.rs from $OUT/lib.rs (the only hand-merged part)
 ```
@@ -73,14 +73,16 @@ workspace version — see the design doc's jacquard dependency-risk note
   the generated module declarations only.
 - Single-variant lexicon unions (e.g. `Document.content`) collapse to the
   bare struct in jacquard's codegen, dropping the `$type` discriminator.
-  `record::build_record` re-injects the two wire-required discriminators
-  (`pub.leaflet.content`, `pub.leaflet.pages.linearDocument#block`) after
-  serialization; deserialization captures them via `extra_data`.
+  `record::reinject_type_discriminators` re-injects the two wire-required
+  discriminators (`pub.leaflet.content`,
+  `pub.leaflet.pages.linearDocument#block`) after serialization;
+  deserialization captures them via `extra_data`.
 
 ## Regeneration checklist
 
 1. Verify/advance the leaflet checkout SHA; update this file.
 2. Run the invocation above; copy the tree; re-sync `lib.rs` declarations.
-3. `cargo nextest run -p springleaf-leaflet` — the golden test against
-   `experiments/03-post-builder/built-record.json` fails loudly on drift.
+3. `cargo nextest run -p springleaf-records` — the fixture round-trip
+   test against `experiments/03-post-builder/built-record.json` (decode +
+   validate + discriminator re-inject equality) fails loudly on drift.
 4. Review the diff like any hand-written change; commit as its own stage.
