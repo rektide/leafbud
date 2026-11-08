@@ -71,6 +71,20 @@ enum NameFrom {
     Path,
 }
 
+/// `push`/`publish` deliberate-content-replacement side (accepted surface:
+/// `--take local`).
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum TakeSide {
+    Local,
+}
+
+/// `pull` deliberate-content-replacement side (accepted surface:
+/// `--take remote`).
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum TakeFrom {
+    Remote,
+}
+
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Create one local MDX source; no remote creation
@@ -111,9 +125,9 @@ enum Command {
         /// Execute the displayed plan (preview by default)
         #[arg(long)]
         yes: bool,
-        /// Deliberately replace differing current remote content
+        /// Deliberately replace differing current remote content (local wins)
         #[arg(long, value_name = "TAKE")]
-        take: Option<String>,
+        take: Option<TakeSide>,
         /// Explicitly recreate the named source key (repeatable)
         #[arg(long = "recreate", value_name = "KEY")]
         recreate: Vec<String>,
@@ -128,9 +142,9 @@ enum Command {
         all: bool,
         #[arg(long, requires = "all")]
         state: Option<State>,
-        /// Deliberately adopt differing current remote content
-        #[arg(long = "take", value_name = "TAKE")]
-        take: Option<String>,
+        /// Deliberately adopt differing current remote content (remote wins)
+        #[arg(long, value_name = "TAKE")]
+        take: Option<TakeFrom>,
     },
     /// Plan/execute editor synchronization and native release
     /// (saves as needed, then releases)
@@ -142,8 +156,9 @@ enum Command {
         state: Option<State>,
         #[arg(long)]
         yes: bool,
-        #[arg(long = "take", value_name = "TAKE")]
-        take: Option<String>,
+        /// Deliberately replace differing current remote content in the editor-save phase (local wins)
+        #[arg(long, value_name = "TAKE")]
+        take: Option<TakeSide>,
     },
     /// Adopt a remote document into one bound MDX file
     Import {
