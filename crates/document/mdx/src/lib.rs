@@ -10,6 +10,9 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
+mod view;
+pub use view::render_comparison;
+
 fn json(value: &(impl serde::Serialize + ?Sized)) -> String {
     serde_json::to_string(value).expect("serializable import model")
 }
@@ -513,43 +516,47 @@ fn render_body(document: &Document, literal_blocks: bool) -> String {
         let _ = writeln!(out, "<Page name={} kind=\"linear\">\n", json(&page.key));
         for block in &page.blocks {
             let _ = writeln!(out, "<Key id={} />", json(&block.key));
-            let line = match &block.kind {
-                BlockKind::Paragraph { .. } | BlockKind::Heading { .. } | BlockKind::Quote { .. } => {
-                    if literal_blocks {
-                        literal_block(block)
-                    } else {
-                        verified_block_line(document, &page.key, block)
-                    }
-                }
-                // Exact trailing whitespace/newline semantics; no fence normalization.
-                BlockKind::Code { language, text } => {
-                    format!("<Code language={{{}}} text={{{}}} />", json(language), json(text))
-                }
-                BlockKind::Rule => "***".into(),
-                BlockKind::PageLink { page } => format!("<PageLink page={} />", json(page)),
-                BlockKind::Image {
-                    src,
-                    fallback,
-                    width,
-                    height,
-                    alt,
-                } => {
-                    format!(
-                        "<Image src={{{}}} fallback={{{}}} width={{{}}} height={{{}}} alt={{{}}} />",
-                        json(src),
-                        json(fallback),
-                        json(width),
-                        json(height),
-                        json(alt)
-                    )
-                }
-            };
+            let line = block_line(document, page, block, literal_blocks);
             let _ = writeln!(out, "{line}");
             out.push('\n');
         }
         out.push_str("</Page>\n\n");
     }
     out
+}
+
+fn block_line(document: &Document, page: &Page, block: &Block, literal_blocks: bool) -> String {
+    match &block.kind {
+        BlockKind::Paragraph { .. } | BlockKind::Heading { .. } | BlockKind::Quote { .. } => {
+            if literal_blocks {
+                literal_block(block)
+            } else {
+                verified_block_line(document, &page.key, block)
+            }
+        }
+        // Exact trailing whitespace/newline semantics; no fence normalization.
+        BlockKind::Code { language, text } => {
+            format!("<Code language={{{}}} text={{{}}} />", json(language), json(text))
+        }
+        BlockKind::Rule => "***".into(),
+        BlockKind::PageLink { page } => format!("<PageLink page={} />", json(page)),
+        BlockKind::Image {
+            src,
+            fallback,
+            width,
+            height,
+            alt,
+        } => {
+            format!(
+                "<Image src={{{}}} fallback={{{}}} width={{{}}} height={{{}}} alt={{{}}} />",
+                json(src),
+                json(fallback),
+                json(width),
+                json(height),
+                json(alt)
+            )
+        }
+    }
 }
 
 /// Prefer Markdown-first blocks, prove the composed source through Satteri,
@@ -1175,6 +1182,132 @@ mod tests {
             }],
             state,
         }
+    }
+
+    #[test]
+    fn human_comparison_is_readable_exact_and_free_of_bookkeeping() {
+        let mut doc = document();
+        doc.description = Some("A description".into());
+        doc.tags = vec!["one".into(), "two".into()];
+        doc.theme = Some(Theme { leaflet_watermark: false });
+        doc.extra.insert("contributors".into(), json!(["did:plc:author"]));
+        doc.extra.insert("privateLocalOnly".into(), json!("not editor content"));
+        doc.pages[0].blocks[0].kind = BlockKind::Paragraph {
+            content: vec![
+                Inline::Run {
+                    text: "Read".into(),
+                    marks: vec![Mark::Strong],
+                },
+                Inline::Run {
+                    text: " the ".into(),
+                    marks: vec![],
+                },
+                Inline::Run {
+                    text: "docs".into(),
+                    marks: vec![Mark::Link {
+                        href: "https://example.org/".into(),
+                    }],
+                },
+            ],
+        };
+        let before = doc.clone();
+        let view = render_comparison(&doc).unwrap();
+        assert!(view.contains("**Read** the [docs](https://example.org/)"), "{view}");
+        assert!(view.contains("\"description\": \"A description\""));
+        assert!(view.contains("\"tags\": [\"one\",\"two\"]"));
+        assert!(view.contains("\"contributors\": [\"did:plc:author\"]"));
+        assert!(view.contains("\"leafletWatermark\": false"));
+        assert!(view.contains("<Page name=\"page-1\" kind=\"linear\">"));
+        for absent in ["@leafspring", "sha256:", "p-main", "b-1", "e-root", "<Key", "privateLocalOnly", "00000000-"] {
+            assert!(!view.contains(absent), "unexpected {absent}: {view}");
+        }
+        assert_eq!(doc, before);
+        doc.pages[0].blocks[0].kind = BlockKind::Quote {
+            content: vec![
+                Inline::Run {
+                    text: "underlined".into(),
+                    marks: vec![Mark::Underline],
+                },
+                Inline::HardBreak,
+            ],
+        };
+        let view = render_comparison(&doc).unwrap();
+        assert!(view.contains("<Run text={\"underlined\"} marks={[{\"kind\":\"underline\"}]} />"));
+        assert!(view.contains("<HardBreak />"));
+    }
+
+    #[test]
+    fn human_views_normalize_serialization_keys_and_page_definition_order() {
+        let mut doc = document();
+        for (key, entity) in [("z-page", "second"), ("a-page", "third"), ("link", "link-entity")] {
+            doc.state.nodes.insert(key.into(), node(entity));
+        }
+        doc.pages[0].blocks.push(Block {
+            key: "link".into(),
+            kind: BlockKind::PageLink { page: "z-page".into() },
+        });
+        doc.pages.push(Page {
+            key: "a-page".into(),
+            blocks: vec![],
+        });
+        doc.pages.push(Page {
+            key: "z-page".into(),
+            blocks: vec![],
+        });
+        let expected = render_comparison(&doc).unwrap();
+        assert!(expected.contains("<PageLink page=\"page-2\" />"));
+        doc.pages.swap(1, 2);
+        let source = render(&doc)
+            .unwrap()
+            .replace("p-main", "renamed-main")
+            .replace("b-1", "renamed-block")
+            .replace("z-page", "renamed-target");
+        let source = source.replace(
+            "<Key id=\"renamed-block\" />\nhello",
+            "<Key id=\"renamed-block\" />\n<Paragraph>\n<Run text={\"hello\"} marks={[]} />\n</Paragraph>",
+        );
+        let parsed = parse(&source).unwrap();
+        assert_eq!(render_comparison(&parsed).unwrap(), expected);
+        let mut changed = parsed;
+        changed.pages[0].blocks[0].kind = BlockKind::Heading {
+            level: 2,
+            content: vec![Inline::Run {
+                text: "hello".into(),
+                marks: vec![],
+            }],
+        };
+        assert!(render_comparison(&changed).unwrap().contains("## hello"));
+        assert_ne!(render_comparison(&changed).unwrap(), expected);
+    }
+
+    #[test]
+    fn human_views_keep_exact_code_image_and_empty_block_meaning() {
+        let mut doc = document();
+        doc.pages[0].blocks[0].kind = BlockKind::Code {
+            language: "rust".into(),
+            text: "let x = 1;\n\n".into(),
+        };
+        assert!(
+            render_comparison(&doc)
+                .unwrap()
+                .contains("<Code language={\"rust\"} text={\"let x = 1;\\n\\n\"} />")
+        );
+        doc.pages[0].blocks[0].kind = BlockKind::Image {
+            src: "https://example.org/image".into(),
+            fallback: Some("fallback".into()),
+            width: Some(42),
+            height: None,
+            alt: Some("meaning".into()),
+        };
+        assert!(
+            render_comparison(&doc)
+                .unwrap()
+                .contains("<Image src={\"https://example.org/image\"} fallback={\"fallback\"} width={42} height={null} alt={\"meaning\"} />")
+        );
+        doc.pages[0].blocks[0].kind = BlockKind::Paragraph { content: vec![] };
+        assert!(render_comparison(&doc).unwrap().contains("<Run text={\"\"} />"));
+        doc.state.nodes.clear();
+        assert!(render_comparison(&doc).is_err());
     }
 
     /// Hand-shaped variant of a rendered file: author comments, an unquoted
