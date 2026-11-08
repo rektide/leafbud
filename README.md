@@ -31,6 +31,12 @@ and the record builder by
 [`experiments/03-post-builder/REPORT.md`](experiments/03-post-builder/REPORT.md)
 (the reports supersede the design doc where they conflict).
 
+For the proposed local-MDX authoring redesign, see the
+[experiment reading map](experiments/README.md) and
+[current recommendation with alternatives](design/authoring-recommendation0.gpt61s.md).
+Those are experimental/proposed directions, not changes to the implemented
+command surface below.
+
 ## Layout
 
 ```
