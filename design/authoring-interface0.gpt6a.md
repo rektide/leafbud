@@ -7,9 +7,12 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-08
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Recovered the authoring handoff and proposed the remaining interface, crate and YAML decisions before build orchestration"
+    title: "Proposed the interface/crate/YAML decisions; user selected automatic-or-manual keying and eight grouped crates, and requested concrete CLI and nuanced YAML-preservation examples"
   - resource: /design/authoring-handoff0.gpt61s.md
     title: "Controlling keyed bidirectional addendum and CLI capability inventory"
   - resource: /design/frontmatter0.gpt61s.md
@@ -46,6 +49,15 @@ unsupported content explicitly.
 This document proposes the remaining interface decisions for human review.
 It is not an implementation report or evidence that native publication and the
 combined bidirectional loop have been exercised end-to-end.
+
+### Review selections
+
+The user selected **key insertion on push/publish with an optional manual step**
+and **the eight grouped crates** below. CLI organization remains open pending
+concrete workflow examples. For YAML, the user leans toward preserving author
+text but requested an operation-specific account of useful normalization;
+blanket byte preservation has not been selected. These selections concern design,
+not authorization to begin the build.
 
 ## 1. Recommended CLI
 
@@ -317,13 +329,17 @@ it must not overwrite an intervening user edit to record a remote success.
 
 ## 4. Decisions and the first build join
 
-Recommended human selections:
+Selection status:
 
-1. Root-level push/pull/publish, local `list` versus `remote list`, and `keys`
-   helpers; retain preview-by-default remote execution.
-2. Automatic key insertion on executed push/publish, with optional local assignment.
-3. Eight domain-grouped crates with reusable workflow outside the CLI.
-4. Source-preserving author YAML patches with a normalized tool envelope.
+1. **Proposed:** root-level push/pull/publish, local `list` versus `remote list`,
+   and `keys` helpers; retain preview-by-default remote execution. User requested
+   concrete alternatives before deciding the grouping.
+2. **Selected:** automatic key insertion on executed push/publish, with optional
+   local assignment.
+3. **Selected:** eight domain-grouped crates with reusable workflow outside the CLI.
+4. **Leaning, still under review:** preserve author YAML during unrelated tool
+   updates; permit normalization within the scope of explicit edits, accepted
+   remote changes or deliberate formatting. See the operation table below.
 
 Once selected, the first integration joins the existing MDX/keying and Yrs proofs:
 editor fixture -> keyed MDX -> prose/mark/move edit -> same remote objects -> pull.
@@ -332,6 +348,71 @@ and one nested/repeated-placement binding fixture. This fixes the remaining
 data-shape details from executable evidence before broad implementation fans out.
 Native publication and full content/media expansion then have explicit owners
 and seams. Their current evidence gaps remain visible in the original handoff.
+
+### CLI alternatives through the same lifecycle
+
+Each example creates locally, saves a draft, publishes it, then retrieves and
+saves an edit to that now-published document. Publishing does not move the file.
+
+```sh
+# A. Root-level document verbs (recommended)
+springleaf create essay.mdx --title "An essay"
+springleaf push essay.mdx --yes
+springleaf publish essay.mdx --yes
+springleaf pull essay.mdx
+springleaf push essay.mdx --yes
+springleaf publish essay.mdx --yes
+
+# B. A document command group
+springleaf doc create essay.mdx --title "An essay"
+springleaf doc push essay.mdx --yes
+springleaf doc publish essay.mdx --yes
+springleaf doc pull essay.mdx
+springleaf doc push essay.mdx --yes
+springleaf doc publish essay.mdx --yes
+
+# C. Lifecycle-scoped groups
+springleaf drafts create essay.mdx --title "An essay"
+springleaf drafts push essay.mdx --yes
+springleaf drafts publish essay.mdx --yes
+springleaf posts pull essay.mdx
+springleaf posts push essay.mdx --yes
+springleaf posts publish essay.mdx --yes
+```
+
+A and B differ mainly in namespace and typing: B puts all file operations under
+`doc`, leaving top-level account/discovery groups. C makes lifecycle a command
+selection as well as file metadata, and divides mixed draft/post batches. All
+three can use the same libraries; this choice does not change the crate map.
+
+### Operation-specific preservation and normalization
+
+Recommended principle: **normalize what the operation owns or intentionally
+changes; preserve unrelated author text.** Byte preservation is not absolute.
+
+| Operation | Intended rewrite scope |
+| --- | --- |
+| Read-only check/status/diff or a genuine no-op | No file rewrite |
+| Update sync/release/pending receipts | Normalize the generated `@springleaf` envelope; retain author-field text and body |
+| Assign missing keys | Insert annotations; retain existing prose, keys and author-field text |
+| `edit --published-at TIME` / `--now` | Emit the selected date in the supported datetime spelling; preserve unrelated fields/comments |
+| Change a title/description/tags through a helper | Rewrite that field as valid YAML; quote/escape as needed; do not reorder tags or trim authored meaning implicitly |
+| Publish with accepted date/path normalization | Patch those author values to the confirmed result and update receipts; preserve unrelated author fields |
+| Pull changed editor content | Update fields/body owned by the supported editor projection; retain local-only and unknown author metadata. Changed body serialization may normalize Markdown |
+| Explicit formatting, if offered | Normalize the requested author-frontmatter/body scope; keep this independent of routine synchronization |
+
+A first pull writer may serialize the whole changed body rather than preserving
+every untouched paragraph's wrapping. That is a separate fidelity choice from
+retaining author frontmatter during receipt writes. Semantic equality is not a
+reason to rewrite an unchanged body. A changed scalar's old YAML quoting may be
+inappropriate for its new value, so preserving its exact scalar token is not
+required; surrounding unrelated author text still deserves preservation.
+
+Unknown values survive semantic transformations. Formatting must not silently
+sort meaningful sequences, change literal text, or reinterpret types. The
+restricted YAML profile and source-position-aware writer still need proof; this
+policy does not assume the current parser provides a complete comment-preserving
+editing API.
 
 ### Connections
 
