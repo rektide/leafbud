@@ -34,6 +34,8 @@ and the record builder by
 For the proposed local-MDX authoring redesign, see the
 [experiment reading map](experiments/README.md) and
 [current recommendation with alternatives](design/authoring-recommendation0.gpt61s.md).
+The [preliminary design and implementation handoff](design/authoring-handoff0.gpt61s.md)
+connects those findings to the proposed production boundaries and landing plan.
 Those are experimental/proposed directions, not changes to the implemented
 command surface below.
 

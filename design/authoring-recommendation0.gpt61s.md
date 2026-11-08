@@ -266,6 +266,11 @@ precedent; the [Yrs conversion design](yrs-conversion0.gpt6a.md) remains useful 
 wire/inline/content obligations, not a requirement to implement character-level
 synchronization first.
 
+The [preliminary design and handoff](authoring-handoff0.gpt61s.md) develops this
+recommendation into source/state contracts, production module boundaries,
+experimental-code reuse, failure handling and a capability-gated landing plan.
+Its open-decision list is the starting point for an implementation commission.
+
 **Recommended next decision:** select Satteri and this source-authoritative
 authoring direction for an explicitly commissioned integration slice, with the
 modern mdxjs fork as the bounded fallback if that integration reveals a concrete

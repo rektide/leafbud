@@ -36,6 +36,9 @@ what remains unproved. They are not all implemented product capabilities.
 
 ## Start here
 
+- **Implementation handoff:** [preliminary local-MDX design](../design/authoring-handoff0.gpt61s.md)
+  connects the recommended workflow to module boundaries, reusable experimental
+  code, remaining decisions and production/remote verification gates.
 - **Current recommendation:** [local MDX authoring with Satteri, with
   alternatives](../design/authoring-recommendation0.gpt61s.md). This incorporates
   the later compiler evidence, not just the initial parser comparison.
