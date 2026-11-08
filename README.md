@@ -5,7 +5,7 @@ documents, in Rust: one MDX file per document, durable identities,
 push saves the Leaflet editor, publish releases, pull adopts web edits.
 
 Status: **Markdown-first rich text with checked fallbacks, deliberate
-`tidy --markdown`, guarded pull, layered config, version 0.6.0.** The accepted authoring interface
+`tidy --markdown`, guarded pull, layered config, version 0.7.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
