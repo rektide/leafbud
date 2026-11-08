@@ -7,9 +7,14 @@ status: proposal
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#medium
+updated:
+  at: 2026-11-08
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e45c7f589ffeP5t82bqsQ23mlI"
     title: "Independent commissioned design; narrow redacted inspection of the user-indicated link, source review and proposed implementation slice"
+  - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
+    title: "Parent reviewed and approved the bounded Markdown-first implementation under the user's commission, to follow the active guarded-pull build"
   - resource: /design/authoring-interface0.gpt6a.md
     title: "Accepted operation-specific preservation, scoped fingerprints and all-applicable tidy"
   - resource: /design/authoring-handoff0.gpt61s.md
@@ -37,6 +42,10 @@ sources:
 # Markdown-first rich text
 
 ## Recommendation and standing
+
+**Parent implementation review:** the bounded slice below is approved under the
+user's commission to review this plan and dispatch g if it is sound. The original
+proposal is retained; see [review and implementation sequencing](#parent-review-and-implementation-sequencing).
 
 **Prefer ordinary Markdown for supported inline meaning, then prove the emitted
 block through the production compiler before using it.** Keep `Run` and typed
@@ -426,3 +435,27 @@ scope of the first slice, then commission implementation separately.
 
 Reciprocal links and index updates are left to the parent after the concurrent
 build joins; this commission owns this new design file only.
+
+## Parent review and implementation sequencing
+
+Reviewed on 2026-11-08 by the parent Astra high session. The user explicitly
+commissioned a design followed by g implementation if the parent agrees, **after
+the existing guarded-pull build finishes**. The parent agrees with the bounded
+implementation in this proposal:
+
+- Prefer ordinary links and common marks through the existing typed model and
+  production parser. The motivating href-only link must become ordinary Markdown.
+- Keep exact block-local fallback and final document validation. Representability
+  must not be gained by changing text, mark coverage, breaks, keys or bindings.
+- Adopt `tidy --markdown` as the explicit pass selector; default tidy includes
+  applicable implemented normalization, and `--keys` remains keys-only.
+- Preserve comments/frontmatter and stored witnesses during formatting, including
+  when there are existing unaccepted semantic edits. Preserve byte-identical no-op
+  pull and repeated import.
+- Integrate against the finished pull implementation's actual seams; do not race
+  its ongoing source-writing work. No new parser, CRDT editing algorithm or
+  unrelated content expansion is required.
+
+This approval selects the implementation direction, not a claim that the renderer
+or tidy pass is already built. Dispatch the new implementation agent after the
+guarded-pull session returns and its receiving interfaces have been reviewed.
