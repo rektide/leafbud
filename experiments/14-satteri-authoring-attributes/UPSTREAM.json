@@ -1,0 +1,38 @@
+{
+  "reusedCompiler": {
+    "package": "satteri-authoring-experiment",
+    "version": "0.1.0",
+    "path": "../13-satteri-authoring",
+    "sourceCommit": "24b6dfc7c38fd3d190c83d9b296f1b453b9e8e50",
+    "note": "Relative path dependency, not a Cargo Git pin. Reproduce this repository's committed source; no edits to experiment 13. Hashes below record the actual reused runtime/fixture sources.",
+    "filesSha256": {
+      "Cargo.toml": "db02eb8c24954d72a441e025197f6244ff868a82b7f038da69a7adb07cc518ec",
+      "Cargo.lock": "d3f4b7acdbbf15ef2637adad4e120a1e053a561caedabf5176360549ecd2d95a",
+      "src/lib.rs": "d54990616d439d67a0cd514a9edd436c7bad2482aba4023c68ae7b23fa54473d",
+      "src/author.rs": "835ca88810eb31a4411ab385b5b08cd22f4ef90dff5d775cd3c0bb6a2f8cf95f",
+      "src/facts.rs": "2a01fdec094258a053d4fa77b84e392fd0007987fc75ca771aea8424653c6cd8",
+      "src/literal.rs": "64cefe17d7ecc4fe9fb2b5f62514939d1bce65f0c0efed0941a05623023ad636",
+      "src/model.rs": "7305dceb8592a07f3ab650c67d1fc62cd4a25608d2238181c13f26ad8f87b01f",
+      "src/simulator.rs": "5b61bb6770a6c32f4db2883c38c17cdc2c7fb7968059d09c88d6042d747761ed",
+      "src/text.rs": "f24628512be07d649011d99261880d5039ad101fa0fad76dddc2cc2a14925b8e",
+      "fixtures/garden.mdx": "a27caa4f3b9bd8595ab10788b7ee9f283c36b5f99ee1644fab7f4411cc18aa75"
+    }
+  },
+  "satteri": {
+    "repository": "https://github.com/bruits/satteri",
+    "verifiedArchiveHead": "7d1297b7e4551a1c5124fa07bd2d1d05f66236e6",
+    "parser": "0.6.7",
+    "ast": "0.6.3",
+    "arena": "0.4.3",
+    "publishedCoreRevision": "7d1297b7e4551a1c5124fa07bd2d1d05f66236e6",
+    "registryChecksums": {
+      "satteri-pulldown-cmark": "4233d41e98cf2dffde8f8356a7e3d582688ce2e5c9192164193a2ae217faf697",
+      "satteri-ast": "ee1ee3790fa38c5604d9c986be504005123d1aa8c99ccbeeccc1d6833ff1698c",
+      "satteri-arena": "b73729378f2c3e040b49e73cc7205fdf10dd19fc5f99217149e73437d6a28fbe"
+    },
+    "patches": []
+  },
+  "experiment14LockSha256": "c464b62738dbf4f8e3b50acafe6dbb65ba239357d1f1fa7801b0661bc7ceac08",
+  "lockComparison": "Every package identity/source/checksum from experiment 13 is retained; the only added package identity is experiment 14 itself.",
+  "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13), cargo 1.101.0-nightly (29c5daa1a 2026-10-07), x86_64-unknown-linux-gnu"
+}
