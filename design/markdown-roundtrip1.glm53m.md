@@ -11,7 +11,7 @@ sources:
   - resource: "opencode://ses_e45962104ffetgOyiGVSJHaXiM"
     title: "g implementation session: State correction, Markdown-first renderer, tidy pass and CLI, tests, live read-only dry-run evidence"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Parent commission, code review finding the State gap, and approval of the bounded implementation"
+    title: "Parent commission, State-gap code review, implementation review and correction of the test-count account"
   - resource: /design/markdown-roundtrip0.gpt6a.md
     title: "Approved design and bounded first-implementation slice this delivers"
   - resource: /design/guarded-pull0.glm53m.md
@@ -110,9 +110,10 @@ destination.
 
 - `cargo fmt --all` / `--check`; `cargo clippy --workspace --all-targets --
   -D warnings` — clean; `cargo nextest run --workspace` — **115/115 passed**
-  (101 from the guarded-pull baseline plus 14 new: 12 mdx reader/writer and
-  tidy tests, 7 workflow tidy tests, 6 CLI subprocess tests, 1 pull
-  adoption regression; all offline).
+  (the guarded-pull handoff reported 84 tests; 101 was an intermediate count
+  during this implementation, not the preceding slice's baseline). Coverage
+  includes MDX reader/writer and tidy cases, workflow tidy, CLI subprocesses
+  and the pull adoption regression; all offline.
 - Reader/writer synthetics assert **independent expected typed values**, not
   only round-trip equality: the motivating href-only link and link-in-prose
   cases, strong/em/strike/code/nested/crossing marks, a destination matrix
