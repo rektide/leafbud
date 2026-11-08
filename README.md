@@ -5,7 +5,7 @@ documents, in Rust: one MDX file per document, durable identities,
 push saves the Leaflet editor, publish releases, pull adopts web edits.
 
 Status: **Markdown-first rich text with checked fallbacks, deliberate
-`tidy --markdown`, guarded pull, layered config, version 0.7.0.** The accepted authoring interface
+`tidy --markdown`, scoped read-only status, guarded pull, layered config, version 0.8.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
@@ -19,7 +19,7 @@ destination shape. Implemented versus pending:
 | `leafspring-atproto` — retained identity resolution, XRPC, app-password sessions; `leafspring-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
 | `leafspring-web` — cookie-authenticated discovery, metadata and full editor pull; `leafspring-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
 | `leafspring-document` + `leafspring-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
-| `leafspring-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
+| `leafspring-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, read-only `status [FILE...] --offline/--json`, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `diff`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -48,7 +48,7 @@ crates/
   workflow/    leafspring-workflow: local files, config, inventory,
                 layered config, native reads, guarded draft import and pull
   cli/         leafspring (binary): thin Clap/rendering layer;
-                reads/import/check/pull/config implemented; writes pending
+                 reads/import/check/status/pull/config implemented; native writes pending
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
@@ -164,6 +164,77 @@ unverified. No remote save or publication was performed.
 Current implementation/verification handoff:
 [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md).
 
+## Read-only local/editor status
+
+```sh
+cargo run -p leafspring -- status                         # configured workspace
+cargo run -p leafspring -- --root /home/rektide/l status --offline --json
+cargo run -p leafspring -- status drafts/chosen.mdx --json
+```
+
+No operands selects local managed MDX files, not remote discovery or a new
+`list` command. Operands resolve against the workspace; absolute operands are
+also supported. Status never writes bodies, keys, receipts or remotes—even
+when current endpoints have converged. It does not compare text or explain
+an operation plan; `diff` remains unimplemented/deferred.
+
+For supported bound drafts, status reports `clean`, `local-changed`,
+`remote-changed`, `both-changed`, `converged` or `unverified`, with independent
+local/remote change evidence. Missing/inaccessible native objects, unbound or
+unmanaged operands, unsupported profiles/lifecycles/content, identity changes,
+invalid files, duplicate document IDs/bindings and local read races are explicit
+per-file outcomes. Missing does not prove deletion. Other origins are not
+retargeted: select the bound `--base-url` explicitly.
+
+Offline status requires no credentials or network and **never says clean**:
+remote change/equality remain unknown, even when the stored local input matches.
+Online `current` means fetched during this invocation, not a transaction/CAS;
+metadata-only, checked-missing, unavailable and not-requested evidence are
+distinguished. Naming witnesses are `not-tracked`; release equality is
+`unknown-not-implemented`. Local-only author metadata is not compared to the editor.
+
+JSON schema `version: 1` has `workspace`, `offline`, `selected`, `failed`,
+`ignored_unmanaged`, `names`, `release` and `items`. Each item carries its
+`path`, `outcome`, safe `detail`, `local` (`unchanged`/`changed`/`unknown`),
+`baseline`, `receipt_profile`, nullable `endpoints_equal`/`document_id`, and
+`remote` (`freshness`, `change`, nullable `observed_profile`/`observed_hash`).
+Current observation hashes name their scope; change evidence uses the stored
+receipt's interpretation. Neither human nor JSON reports include document
+bodies, raw remote responses or credentials. Exit 0 includes successfully
+described conflicts, uncertainty, missing remotes and unsupported profiles;
+unreadable/invalid/ambiguous/racing files or failed remote reads give 1 when all
+items fail, 4 when mixed. Usage errors give 2.
+
+**Editor receipts:** new imports and verified pull settlements use
+`leaflet-editor/2`. Local hashes cover supported editor content/metadata and
+object/occurrence associations—not custom author fields, publication date,
+delivery/naming intent, source-key spelling or non-entry page-definition layout.
+Title, description, tags, publication association, watermark and contributors
+remain editor-owned. Remote hashes conservatively cover current meaningful
+fact payloads/unknown fields, extras and mapped metadata; unsupported conversion
+does not erase observed evidence. Unknown content still blocks adoption.
+
+Existing `leaflet-import/1` hashes keep their old whole-document interpretation.
+They cannot supply a new scoped historical baseline: differing endpoints are
+`unverified`; verified equal supported endpoints are `converged`. An explicit
+`pull` can settle that current correspondence into the new profile without
+rewriting the body; status cannot. Unknown profiles block managed mutation.
+No saved body, ancestor, sidecar or CRDT snapshot was added.
+
+**Actual live rename gap:** the 27 files in `~/l` still use
+`springleaf-mdx/1`/`@springleaf`, and config/auth stores remain under the old
+`springleaf` name. Online/offline status with explicit `--root ~/l` accounts
+for all 27 as unsupported legacy managed files, with remote evidence
+not-requested/offline—not a false clean report. Import refuses to create
+duplicates alongside that namespace. No live file/store conversion or receipt
+settlement was performed; all 27 byte hashes and nanosecond mtimes stayed equal.
+Resolve namespace and store conversion explicitly before expecting fresh
+editor status over those files. Configured workspace defaults are independently
+tested with the current namespace.
+
+Implementation/verification handoff:
+[`design/status-witnesses0.gpt61s.md`](design/status-witnesses0.gpt61s.md).
+
 ## Refresh bound drafts from their editors (guarded pull)
 
 ```sh
@@ -181,10 +252,11 @@ history, no server CAS):
 
 | situation | outcome |
 | --- | --- |
-| Local and remote unchanged | `unchanged` — exact no-op (bytes and mtime untouched) |
+| Scoped local and remote unchanged | `unchanged` — exact no-op (bytes and mtime untouched) |
 | Remote-only change (editor content or metadata) | `updated` — adopted; body rewritten only when page content actually changed |
 | Remote change outside the supported projection (e.g. latent inactive text) | `receipts-only` — witness settled, author text and body untouched |
 | Both changed to the same thing | `converged` — receipts settle without a body rewrite |
+| Legacy receipt, differing current endpoints | `needs-decision` — no scoped historical baseline inferred |
 | Local-only change, or diverged local and remote edits | `needs-decision` — file preserved verbatim |
 | Missing remote, published lifecycle, unsupported content, broken bindings | explicit per-file outcome; nothing is pruned or created |
 
@@ -198,9 +270,12 @@ and are atomic against the original local bytes (a concurrent user edit aborts
 the write). Exit codes follow the accepted contract: 0 success/no-op,
 1 operational failure, 3 needs-decision, 4 partial/diverged batches.
 
-The live 27-file workspace refreshes as an exact no-op: full repeat run after
+Before the project rename, the live 27-file workspace refreshed as an exact no-op: full repeat run after
 landing reported **27 unchanged, 0 writes**, with byte and nanosecond-mtime
 equality across all files.
+The current live namespace/store gap and new receipt interpretation are recorded
+in [status](#read-only-localeditor-status); that historical no-op is not a claim
+that the renamed binary has migrated live data.
 
 Current implementation/verification handoff:
 [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md).
@@ -270,6 +345,7 @@ PDS or leaflet draft.
 - Implemented read-only slice: [`design/remote-reads0.gpt61s.md`](design/remote-reads0.gpt61s.md)
 - Config restoration and actual MDX checkout: [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md)
 - Guarded refresh of bound drafts: [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md)
+- Scoped editor witnesses and read-only status: [`design/status-witnesses0.gpt61s.md`](design/status-witnesses0.gpt61s.md)
 - Markdown-first rich text (approved design): [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
 - Markdown round-trip implementation receipt: [`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
