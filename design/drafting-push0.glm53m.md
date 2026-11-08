@@ -63,6 +63,18 @@ sources:
     title: "Prior new-draft gap analysis: option (d) GET /new harvest verified in source; pre-reset client shipped it; live mint probe never executed"
   - resource: /design/frontmatter0.gpt61s.md
     title: "Accepted envelope shape checked in the 1.1 correction: flat author fields, state plus optional binding group; tagged binding.kind was the rejected alternative my first sketch wrongly copied"
+  - resource: https://github.com/rektide/leafspring/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md
+    title: "Stage-2 review target: peer Astra initial corrected draft, read via git show at this exact commit before any peer addendum"
+  - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/actions/createPublicationDraft.ts"
+    title: "Read in stage 2: owner/confirmed-contributor check, text-seeded mint, leaflets_in_publications insert with doc null, contributor default, plain return"
+  - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/src/utils/publishLeaflet.ts"
+    title: "Read in stage 2: publishing to a publication requires an existing association row for this leaflet; association is creation-time-only"
+  - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/src/replicache/mutations.ts"
+    title: "Stage-2 re-verification: updatePublicationDraft title/description/tags on association rows; createEntity array args; list flag attributes"
+  - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/src/replicache/getBlocks.ts"
+    title: "Read in stage 2: computeDisplayNumbers exists; ordered-list display semantics for the adopted flat-list profile"
+  - resource: /design/draft-checkout0.gpt61s.md
+    title: "Receipts-based corpus facts for the eligibility comparison: initial 12 blockers were latent block/text on image/code plus exact JSX; all 27 import with inactiveTextFact locators preserved"
 ---
 
 # Normal drafting and push — one keyed operation vocabulary
@@ -708,3 +720,247 @@ stated, and the original remains evidence in history. The peer's
 addendum with revised stance follows on explicit parent dispatch after both
 drafts are committed, as a separately committed addendum preserving this
 text unchanged.
+
+<a id="cross-review-addendum-1"></a>
+
+## Addendum — cross-review of the Astra draft and revised stance
+
+Stage 2, dispatched by the parent after both corrected first drafts were
+committed. Reviewed: the peer's initial draft at **`b5e66475`** exactly as
+committed (read via `git show`, before any peer addendum; none existed when
+I began). The peer disclosed incidental exposure to two creation-related
+lines of my file after its draft was written — noted, no impact on my
+review. Sections 1–12 above are my unchanged stage-1/1.1 argument; this
+addendum supersedes it where stated. All source claims below were
+re-verified by me in the archived Leaflet checkout (`600c7b5f`) this
+session unless marked otherwise.
+
+### A. The peer's publication finding is correct, and my 1.1 correction was incomplete
+
+The parent asked whether `GET /new` plus retained publication intent
+fulfills a configured publication context. It does not, and the proof is in
+the release path, not the mint:
+
+- `publishLeaflet` with a `publication_uri` joins
+  `leaflets_in_publications` filtered to **this leaflet** (`.eq(
+  "leaflets_in_publications.leaflet", leaflet_id)` + `.single()`) and
+  throws "No draft or not publisher" when no association row exists
+  (`src/utils/publishLeaflet.ts`). Publishing never creates the
+  association.
+- No push-RPC mutation inserts `leaflets_in_publications`. The only
+  source-verified creation path for an associated draft is the
+  `createPublicationDraft(publication_uri, "doc", {})` **server action**:
+  authenticated owner/confirmed-contributor check, `createNewLeaflet` with
+  a **text seed** (not h1), association insert with `doc: null`,
+  contributor default for non-owner creators, plain return value (no
+  redirect). A null result is an auth/permission failure, never license to
+  fall back to standalone mint.
+- Therefore a file with explicit `publication: <URI>` intent minted via
+  `GET /new` would be **permanently unfulfillable on that binding** —
+  exactly the silent downgrade the parent warned against.
+
+**Adopted:** two destination adapters, one body engine, per the peer:
+standalone (explicit null) → `GET /new` harvest; publication-associated
+(explicit/config URI) → `createPublicationDraft` with bounded Next-Action
+reference discovery and a deployed proof, both inside the required
+delivery. My 1.1 "associate later at publish" wording is withdrawn; Story
+2's publication paragraph is corrected to: intent resolution chooses the
+mint path; the binding records the actual returned association; ambient
+defaults never retarget. Also adopted: per-adapter seed expectations
+(h1/text), token retention on partial association failure, and the
+refusal-not-fallback rule on null action results.
+
+**Metadata destinations, corrected from source:** publication-associated
+drafts store title/description/tags in their `leaflets_in_publications` row
+and are written by the `updatePublicationDraft` mutation (title,
+description, tags, localPublishedAt, preferences — verified shape);
+standalone drafts store title/description in `permission_tokens` via
+`updateLeafletMetadata` (verified: no tags parameter), and a pure
+standalone draft has **no** tags storage at all. My stage-1 "tags carried
+as release intent" stance is replaced: nonempty standalone tags are
+diagnosed as unsupported application intent before mint (peer's position,
+now verified), with the alternative — scoping tags out of editor receipts —
+left as an explicit schema decision for the parent. Client-local extras
+versus server-owned state: `publication_*` and `draft_contributors` extras
+are server-owned rows surfaced by pull; contributor lists are
+identity/permission data — adopt the server default on creation, preserve
+unchanged, never write. The peer's derived-title/`Untitled`-placeholder
+point is also adopted: bound authored titles verify against stored
+metadata, not first-block derivation.
+
+### B. Verified peer findings adopted into my engine
+
+1. **`createEntity` RPC takes an array** (`Array<{entityID,
+   permission_set}>`; the single-object form is the internal context
+   method). Experiment 13's emitter uses the wrong shape at the RPC
+   boundary — correct it when promoting. My definition-page creation path
+   now uses the array form; block creation still rides `addBlock`.
+2. **`addLastBlock {parent, factID, entity}` appends with a
+   server-generated fractional position** (buffered reads see prior writes
+   in the same push). Adopted as my primary creation/ordering route:
+   create entities + asserts, append desired children in order, then run
+   the existing moveBlock normalization pass when live order differs. This
+   **removes the `generateKeyBetween` port** from my design — a genuine
+   simplification the peer found. Direct `addBlock` with client-minted
+   midpoint positions remains a named alternative if append+move churn
+   proves visible.
+3. **Local identity is not the token-derived import ID.** `import::build`
+   derives `state.id` from origin/token, and observation compares against
+   it; a locally created random document ID would fail its own post-save
+   identity check today. Adopted: observation takes the file's established
+   local ID as its namespace; import keeps deterministic first-adoption
+   IDs. This is a required model fix for disk-first authoring that my
+   stage-1 missed.
+4. **Strict uncertain-mint wording.** My 1.1 claim that homepage visibility
+   "resolves" a lost token was overstated: discovery coverage is reported
+   unknown, and a fresh-seed candidate is not provably *this* attempt's
+   mint. Corrected: candidates aid explicit user-selected recovery only;
+   selection is a binding decision, never proof of exactly-once creation;
+   when not attributable the outcome stays uncertain; no auto-remint, no
+   title-based or newest-draft identity guessing. The required native
+   creation keeps its explicit live-proof obligation inside the delivery.
+5. **Flat lists enter my first profile** (changed stance). The native shape
+   is source-verified: `block/is-list` (boolean, cardinality-one),
+   `block/list-style` (union), `block/list-number` (number, cardinality-
+   one), per-item text blocks; `computeDisplayNumbers` exists in
+   `getBlocks.ts`. Adopted with the peer's constraints: one keyed
+   rich-text block per item, no wrapper entity; nested/task/multi-block
+   items explicitly outside; decoder computes effective display numbers
+   including absent-number defaults; writer emits Markdown numbering
+   matching display numbers; key insertion inside list items must prove
+   reparse equivalence. In my engine a list item is an ordinary keyed block
+   with extra scalar asserts — same op vocabulary, no new operation family.
+6. **Acceptance-matrix rows adopted:** publication-associated first save
+   (B/C), metadata-only save without body writes (I — trivially true for
+   my engine since no-op discipline emits nothing, now an explicit
+   fixture), and the >62-sibling ordering guard.
+
+### C. Where I keep the keyed engine — the decisive comparison
+
+The peer's §9 table is fair, and its complete-keyed alternative is
+essentially my engine. Judging end-to-end machinery against this user's
+priorities:
+
+**Imported-corpus fit (decisive, receipts-based).** The live workspace's
+27 imported drafts include the class the first checkout's 12 blockers
+exposed: image/code blocks carrying **inactive `block/text`** from native
+type conversion, represented today via `inactiveTextFact` locators plus
+opaque witness payloads
+([checkout receipt](draft-checkout0.gpt61s.md)). The peer's generation
+eligibility refuses body-changing saves when such unrepresented payloads
+exist — so ordinary drafting (add a paragraph) on those real documents is
+blocked by default, or requires repeatedly accepting drop decisions. My
+engine keeps those blocks untouched (latent facts persist on retained
+entities); an edited image/code block never asserts over its latent text;
+a deleted block detaches with its entity; and an edited text block's
+**full edited-state encoding carries unknown extra Yrs roots in the same
+fact forward unchanged**, since the loaded document contains them and the
+edit touches only the `prosemirror` fragment. Known-inactive data is
+witnessed and preserved-by-omission, never silently dropped; unknown
+*meaningful* content still refuses. No eligibility cliff.
+
+**Association and receipt stability.** My node rows stay valid across
+saves; the peer rewrites the entire association table every save and
+detaches every block. The existing status/pull/diff/receipts architecture
+is association-based; under generation it works but churns wholesale.
+
+**No staging phase.** The peer's engine needs explicit-root staged reads
+(`getFactsForRoots` batching, depth limits), staged-inventory validation, a
+pre-activation recheck, an entry-switch uncertainty window, and stage-
+resolution recovery ("do not reencode fresh text while it may still
+arrive"). Mine writes directly on the live entry page and verifies with
+the **same full pull used everywhere**; recovery semantics are uniform
+(absent from the rooted closure ⇒ creation never landed; visible ⇒ verify
+or repair). First saves differ concretely: mine is one batch on the live
+page; the peer's is stage → read → verify → switch → re-verify.
+
+**Concurrent-edit blast radius.** Neither engine has CAS. Mine hides
+concurrent web edits only inside rebuilt containers of *changed* blocks
+(prior-wave probe); the peer's entry switch can hide **every** concurrent
+edit on **every** save. For a tool whose documents may be open in a web
+editor, proportional blast radius is the honest product choice.
+
+**Detached accumulation.** Mine detaches only removed blocks; the peer
+detaches the whole body per save. Both refuse cleanup automation.
+
+**What the peer's engine genuinely wins:** zero existing-state Yrs editing;
+one uniform mechanism for split/join/type-change/reorder without per-family
+ops; the old body survives staging failure (my incremental writes can
+leave a partially-updated live body visible until observation repairs it —
+an honest trade I keep). These are real, but the per-family ops are small,
+verified, and land in one batch; corpus fit and recovery simplicity are
+permanent properties.
+
+**Concrete save-shape difference:**
+
+| | First save | Second save (insert/split/join/delete/reorder/edit) |
+| --- | --- | --- |
+| **Keyed (recommended)** | auth → mint adapter → `createEntity[]`+asserts+`addLastBlock` in order on the live entry page → metadata asserts → pull/observe verify → promote pending rows | per-key disposition; unchanged blocks: zero writes; changed text: one complete edited-state payload per fact; new: create+append+move; deleted: `retractFact`; reorder: moveBlock chain when order differs; scalars/type: asserts (+ stale-scalar retraction, e.g. heading-level on type change, with the old text fact becoming represented inactive state) |
+| **Generated-body (peer)** | auth → mint adapter → stage complete disconnected body → explicit-root read/verify → switch entry fact → full verify → rebind all rows | regenerate entire body → stage → verify → switch → rebind all rows; unchanged paragraphs also replaced |
+
+One addition my engine needs that the peer's table fairly implied:
+**stale-attribute handling on type change** (retract owned scalars of the
+former kind; the retained text fact flips to represented `inactiveTextFact`
+state exactly like the corpus's native conversions). Added to the op table.
+
+### D. Revised recommendation (operative)
+
+Keyed block operations on the live entry page remain the default engine,
+now with: two mint adapters (standalone `GET /new`; publication
+`createPublicationDraft` action with in-delivery deployed proof),
+`addLastBlock`-based creation/ordering (no fractional-key port), flat
+lists in the first profile, metadata routed per real destination
+(`updatePublicationDraft` for associated drafts incl. tags;
+`updateLeafletMetadata` for standalone; standalone tags diagnosed before
+mint), local-ID namespace fix, derived-title/`Untitled` verification fix,
+and the stricter uncertain-mint contract. Generated-body staging remains
+the explicit `--recreate-body` escape and the honest alternative if the
+user selects wholesale-replace semantics; it is not implemented beside the
+default. This is one engine with named policy degradations (§3), not an
+average of two.
+
+### E. Product decisions for the human
+
+1. **Engine:** keyed default (my recommendation) vs generated-body default
+   (peer's). Deciding facts: must latent-text imported documents stay
+   draftable (corpus says yes); is whole-body anchor replacement per save
+   acceptable; is association-table churn per save acceptable.
+2. **Standalone tags:** reject-before-mint (recommended, verified storage
+   reality) vs scoping tags out of editor receipts (schema churn).
+3. **Unknown-mint recovery UI:** smallest explicit adoption path for a
+   user-selected candidate; preserved uncertain attempt reporting.
+4. **Publication adapter risk posture:** Next-Action discovery is
+   build-sensitive; accept the bounded adapter + deployed proof inside the
+   delivery, or explicitly accept publication-intent drafts being blocked
+   until the probe lands.
+
+### F. Updated batching and open deployment evidence
+
+Batches (§9) updated: **batch 1** adds flat-list model/parser/reader/writer
+and the local-ID namespace fix; **batch 2** carries both mint adapters
+(including the publication action-reference/Flight discovery), the
+`createEntity`-array correction, `addLastBlock` ordering, ack-aware pull
+(`lastMutationIDChanges` under the attempt's client group), and two gated
+live probes — standalone mint+generation and publication-associated
+mint+generation; **batch 3** adds stale-scalar retraction on type change
+and list-item fixtures; **batch 4** unchanged, plus uncertain-mint
+resolution UX.
+
+Open deployment evidence, precise: (a) live `GET /new` 307/Location shape
+(source-verified only); (b) live `createPublicationDraft` action-reference
+discovery, request/response encoding, and returned association; (c)
+deployed acceptance of our `addBlock`/`assertFact`/`addLastBlock`/
+`moveBlock`/`retractFact`/metadata batches, including append-chaining
+through buffered reads; (d) rooted-closure pull parity in production; (e)
+ack semantics for our client groups. None is claimed; each is inside the
+delivery's gated probes.
+
+### G. What would flip this stance
+
+If the user declares body anchors/associations disposable wholesale, or
+deployed probes show staged reads/entry-switch work reliably while block
+mutation batches misbehave, the generated-body engine becomes the better
+default — per the peer's design, not a second implementation maintained
+alongside. If comments/annotations anchored in edited middles become
+common, a finer matcher behind the `edit_text` seam is the response, still
+not a general engine. Neither flips on operation counts or payload size.
