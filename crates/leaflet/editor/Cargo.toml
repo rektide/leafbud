@@ -1,6 +1,6 @@
 [package]
-name = "springleaf-editor"
-description = "Leaflet editor surface for springleaf: fact graph, Yrs text state, bidirectional mapping, pure edit planning"
+name = "leafspring-editor"
+description = "Leaflet editor surface for leafspring: fact graph, Yrs text state, bidirectional mapping, pure edit planning"
 version.workspace = true
 edition.workspace = true
 
@@ -8,6 +8,6 @@ edition.workspace = true
 anyhow.workspace = true
 base64.workspace = true
 serde_json.workspace = true
-springleaf-document.workspace = true
+leafspring-document.workspace = true
 uuid.workspace = true
 yrs.workspace = true

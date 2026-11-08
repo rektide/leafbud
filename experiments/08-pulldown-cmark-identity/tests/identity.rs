@@ -161,7 +161,7 @@ fn multiple_keys_on_same_block_do_not_silently_win() {
 
 #[test]
 fn code_literal_and_escaped_shapes_match_baseline() {
-    let source = "## Code `{#inline}`\n\n## Escaped \\{#escaped}\n\nEscaped \\{#line}. Ordinary {braces}.\n\n\\{#standalone}\n\n```md\n{#fenced}\n{/* springleaf:key literal */}\n```\n\n    {#indented}\n\nParagraph {#same-line-literal}\n";
+    let source = "## Code `{#inline}`\n\n## Escaped \\{#escaped}\n\nEscaped \\{#line}. Ordinary {braces}.\n\n\\{#standalone}\n\n```md\n{#fenced}\n{/* leafspring:key literal */}\n```\n\n    {#indented}\n\nParagraph {#same-line-literal}\n";
     let result = good(source);
     assert!(keys(&result.blocks).is_empty());
     assert_eq!(result.html, parse(source, Mode::Plain).html);
@@ -186,7 +186,7 @@ fn heading_link_and_emphasis_payloads_are_not_keys() {
 
 #[test]
 fn raw_html_payload_is_not_scanned_for_keys() {
-    let source = "<div>\n{#literal}\n{/* springleaf:key literal */}\n</div>\n";
+    let source = "<div>\n{#literal}\n{/* leafspring:key literal */}\n</div>\n";
     let result = good(source);
     assert!(keys(&result.blocks).is_empty());
     assert_eq!(result.html, source);

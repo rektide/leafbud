@@ -23,15 +23,15 @@ sources:
     title: "Independent naming/editor/release evidence and current-endpoint resolution"
   - resource: /design/authoring-recommendation0.gpt61s.md
     title: "Satteri recommendation and declarative MDX language"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/Cargo.toml
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/Cargo.toml
     title: "Four-crate workspace as it stood when this design was written (pre-reset revision 80436b61)"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/main.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/main.rs
     title: "Command tree and lifecycle orchestration in the pre-reset binary"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config.rs
     title: "Figment workspace/global layering as it stood pre-reset"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/lib.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/lib.rs
     title: "Web client serving both draft and published Leaflets, pre-reset"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/facts.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/facts.rs
     title: "Fact decoder that discards opaque payloads, requiring deliberate replacement for robust witnesses"
   - resource: /experiments/13-satteri-authoring/src/model.rs
     title: "Existing transient model includes nested lists and keyed content, but not a complete production binding schema"
@@ -66,12 +66,12 @@ design selections preparing the build orchestration.
 ### Main document loop
 
 ```sh
-springleaf create drafts/essay.mdx --title "An essay"
-springleaf check drafts/essay.mdx
-springleaf push drafts/essay.mdx               # plan
-springleaf push drafts/essay.mdx --yes         # assign missing keys + save editor
-springleaf publish drafts/essay.mdx --yes      # save as needed + release
-springleaf pull drafts/essay.mdx              # adopt current editor changes
+leafspring create drafts/essay.mdx --title "An essay"
+leafspring check drafts/essay.mdx
+leafspring push drafts/essay.mdx               # plan
+leafspring push drafts/essay.mdx --yes         # assign missing keys + save editor
+leafspring publish drafts/essay.mdx --yes      # save as needed + release
+leafspring pull drafts/essay.mdx              # adopt current editor changes
 ```
 
 **Push saves; publish releases; pull reads the working editor.** These meanings
@@ -120,12 +120,12 @@ save verb, `push`.
 ### Tidy: all by default, selectors narrow the passes
 
 ```sh
-springleaf tidy essay.mdx                 # all applicable supported passes
-springleaf tidy essay.mdx --keys          # missing-key assignment only
-springleaf tidy essay.mdx --dry-run       # preview all applicable passes
-springleaf tidy essay.mdx --from path     # naming: filename follows path
-springleaf tidy essay.mdx --from filename # naming: path intent follows filename
-springleaf tidy essay.mdx --accept        # naming: accept the present pair
+leafspring tidy essay.mdx                 # all applicable supported passes
+leafspring tidy essay.mdx --keys          # missing-key assignment only
+leafspring tidy essay.mdx --dry-run       # preview all applicable passes
+leafspring tidy essay.mdx --from path     # naming: filename follows path
+leafspring tidy essay.mdx --from filename # naming: path intent follows filename
+leafspring tidy essay.mdx --accept        # naming: accept the present pair
 ```
 
 The default includes key assignment and the YAML/MDX normalization passes we
@@ -223,9 +223,9 @@ crates/
 ```
 
 Eight crates, not one crate per module. Package names can remain descriptive
-(`springleaf-document`, `springleaf-mdx`, `springleaf-editor`,
-`springleaf-web`, `springleaf-records`, `springleaf-atproto`,
-`springleaf-workflow`, binary package `springleaf`). Directory names do not repeat
+(`leafspring-document`, `leafspring-mdx`, `leafspring-editor`,
+`leafspring-web`, `leafspring-records`, `leafspring-atproto`,
+`leafspring-workflow`, binary package `leafspring`). Directory names do not repeat
 the project prefix.
 
 Dependencies point from consumers to their lower-level dependencies:
@@ -274,18 +274,18 @@ The [frontmatter proposal](frontmatter0.gpt61s.md) has the right overall shape:
 
 ```yaml
 ---
-format: springleaf-mdx/1
+format: leafspring-mdx/1
 title: An essay
 tags: [notes]
 
-"@springleaf":
+"@leafspring":
   id: "11111111-1111-4111-8111-111111111111"
   state: draft
 ---
 ```
 
 Keep flat author fields, camelCase, one whole-file format version and quoted
-`"@springleaf"`. The envelope grows only with actual binding/receipt needs.
+`"@leafspring"`. The envelope grows only with actual binding/receipt needs.
 Keep `binding`, `nodes`, `sync`, `released`, optional `names`, `assets` and `pending`
 as distinct concerns. A published binding with no native editor locator is valid
 but editing-unavailable. A published URI does not require a known local release
@@ -350,7 +350,7 @@ Use the restricted YAML profile: string mapping keys, ordinary scalar
 types and sequences, no duplicate keys, aliases/anchors, custom tags or merge
 keys. Whole-file validation precedes patching. Locate ranges through a parser or
 token/source-position facility, not regex boundary guesses that can misread a
-multiline scalar containing `"@springleaf":`. The current semantic YAML parser
+multiline scalar containing `"@leafspring":`. The current semantic YAML parser
 proof does not yet prove this writer. If bounded source-preserving patching
 cannot be implemented cleanly, bring back the whole-frontmatter normalization
 tradeoff explicitly.
@@ -391,28 +391,28 @@ saves an edit to that now-published document. Publishing does not move the file.
 
 ```sh
 # A. Root-level document verbs (selected)
-springleaf create essay.mdx --title "An essay"
-springleaf push essay.mdx --yes
-springleaf publish essay.mdx --yes
-springleaf pull essay.mdx
-springleaf push essay.mdx --yes
-springleaf publish essay.mdx --yes
+leafspring create essay.mdx --title "An essay"
+leafspring push essay.mdx --yes
+leafspring publish essay.mdx --yes
+leafspring pull essay.mdx
+leafspring push essay.mdx --yes
+leafspring publish essay.mdx --yes
 
 # B. A document command group
-springleaf doc create essay.mdx --title "An essay"
-springleaf doc push essay.mdx --yes
-springleaf doc publish essay.mdx --yes
-springleaf doc pull essay.mdx
-springleaf doc push essay.mdx --yes
-springleaf doc publish essay.mdx --yes
+leafspring doc create essay.mdx --title "An essay"
+leafspring doc push essay.mdx --yes
+leafspring doc publish essay.mdx --yes
+leafspring doc pull essay.mdx
+leafspring doc push essay.mdx --yes
+leafspring doc publish essay.mdx --yes
 
 # C. Lifecycle-scoped groups
-springleaf drafts create essay.mdx --title "An essay"
-springleaf drafts push essay.mdx --yes
-springleaf drafts publish essay.mdx --yes
-springleaf posts pull essay.mdx
-springleaf posts push essay.mdx --yes
-springleaf posts publish essay.mdx --yes
+leafspring drafts create essay.mdx --title "An essay"
+leafspring drafts push essay.mdx --yes
+leafspring drafts publish essay.mdx --yes
+leafspring posts pull essay.mdx
+leafspring posts push essay.mdx --yes
+leafspring posts publish essay.mdx --yes
 ```
 
 A and B differ mainly in namespace and typing: B puts all file operations under
@@ -428,7 +428,7 @@ changes; preserve unrelated author text.** Byte preservation is not absolute.
 | Operation | Intended rewrite scope |
 | --- | --- |
 | Read-only check/status/diff or a genuine no-op | No file rewrite |
-| Update sync/release/pending receipts | Normalize the generated `@springleaf` envelope; retain author-field text and body |
+| Update sync/release/pending receipts | Normalize the generated `@leafspring` envelope; retain author-field text and body |
 | Assign missing keys | Insert annotations; retain existing prose, keys and author-field text |
 | `edit --published-at TIME` / `--now` | Emit the selected date in the supported datetime spelling; preserve unrelated fields/comments |
 | Change a title/description/tags through a helper | Rewrite that field as valid YAML; quote/escape as needed; do not reorder tags or trim authored meaning implicitly |

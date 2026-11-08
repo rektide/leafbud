@@ -10,9 +10,9 @@
 //! without content rewrites only after verified semantic correspondence.
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, ensure};
+use leafspring_document::{Block, BlockKind, Document, Node, PROFILE, Page, State, Sync};
+use leafspring_web::LeafletState;
 use serde::Serialize;
-use springleaf_document::{Block, BlockKind, Document, Node, PROFILE, Page, State, Sync};
-use springleaf_web::LeafletState;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
@@ -77,9 +77,9 @@ fn scan(root: &Path, base: &str) -> Result<Bound> {
                 visit(&path, base, bound)?;
             } else if kind.is_file() && path.extension().is_some_and(|e| e == "mdx") {
                 let source = std::fs::read_to_string(&path)?;
-                let header = match springleaf_mdx::header(&source) {
+                let header = match leafspring_mdx::header(&source) {
                     Ok(header) => header,
-                    Err(_) if !source.contains("@springleaf") => {
+                    Err(_) if !source.contains("@leafspring") => {
                         bound.unmanaged += 1;
                         continue;
                     }
@@ -88,13 +88,13 @@ fn scan(root: &Path, base: &str) -> Result<Bound> {
                         continue;
                     }
                 };
-                if header["@springleaf"]["binding"]["baseUrl"] != base {
+                if header["@leafspring"]["binding"]["baseUrl"] != base {
                     continue;
                 }
-                let token = header["@springleaf"]["binding"]["token"].as_str().context("managed file token missing")?;
+                let token = header["@leafspring"]["binding"]["token"].as_str().context("managed file token missing")?;
                 match Uuid::parse_str(token).context("managed file token invalid") {
                     Ok(token) => {
-                        if let Some(state) = header["@springleaf"]["state"].as_str() {
+                        if let Some(state) = header["@leafspring"]["state"].as_str() {
                             bound.states.insert(path.clone(), state.to_owned());
                         }
                         bound.index.entry(token).or_default().push(path);
@@ -323,10 +323,10 @@ impl RemoteReader {
             Ok(source) => source,
             Err(error) => return fail(error),
         };
-        if !source.contains("@springleaf") {
+        if !source.contains("@leafspring") {
             return Outcome::Failure("not a managed document; import creates bindings".into());
         }
-        let existing = match springleaf_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved") {
+        let existing = match leafspring_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved") {
             Ok(existing) => existing,
             Err(error) => return fail(error),
         };
@@ -339,7 +339,7 @@ impl RemoteReader {
         }
         let data = match self.client.get(token).await {
             Ok(data) => data,
-            Err(springleaf_web::Error::NotFound) => {
+            Err(leafspring_web::Error::NotFound) => {
                 return Outcome::Failure("remote object missing or inaccessible (token not found); local file preserved".into());
             }
             Err(other) => return Outcome::Failure(format!("fetching remote metadata: {other}")),
@@ -422,7 +422,7 @@ impl RemoteReader {
         if verified.metadata.root_entity != data.metadata.root_entity || verified.observed_state() != LeafletState::Draft || !association_ok {
             return fail(anyhow::anyhow!("remote identity/lifecycle/association changed during pull; file preserved"));
         }
-        let next = match springleaf_mdx::update(&source, &merged).context("composing guarded refresh") {
+        let next = match leafspring_mdx::update(&source, &merged).context("composing guarded refresh") {
             Ok(next) => next,
             Err(error) => return fail(error),
         };

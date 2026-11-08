@@ -1878,6 +1878,118 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
+name = "leafspring"
+version = "0.6.0"
+dependencies = [
+ "base64 0.22.1",
+ "clap",
+ "leafspring-workflow",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "yrs",
+]
+
+[[package]]
+name = "leafspring-atproto"
+version = "0.6.0"
+dependencies = [
+ "base64 0.22.1",
+ "regex",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "leafspring-document"
+version = "0.6.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "leafspring-editor"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "leafspring-document",
+ "serde_json",
+ "uuid",
+ "yrs",
+]
+
+[[package]]
+name = "leafspring-mdx"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "leafspring-document",
+ "satteri-arena",
+ "satteri-ast",
+ "satteri-pulldown-cmark",
+ "serde",
+ "serde-saphyr",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "leafspring-records"
+version = "0.6.0"
+dependencies = [
+ "jacquard-common",
+ "jacquard-derive",
+ "jacquard-lexicon",
+ "leafspring-atproto",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "leafspring-web"
+version = "0.6.0"
+dependencies = [
+ "jiff",
+ "regex",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "leafspring-workflow"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "figment2",
+ "leafspring-document",
+ "leafspring-editor",
+ "leafspring-mdx",
+ "leafspring-web",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml_edit",
+ "uuid",
+ "yrs",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3519,118 +3631,6 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "springleaf"
-version = "0.6.0"
-dependencies = [
- "base64 0.22.1",
- "clap",
- "serde_json",
- "springleaf-workflow",
- "tempfile",
- "tokio",
- "yrs",
-]
-
-[[package]]
-name = "springleaf-atproto"
-version = "0.6.0"
-dependencies = [
- "base64 0.22.1",
- "regex",
- "reqwest 0.13.5",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "springleaf-document"
-version = "0.6.0"
-dependencies = [
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
-name = "springleaf-editor"
-version = "0.6.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "serde_json",
- "springleaf-document",
- "uuid",
- "yrs",
-]
-
-[[package]]
-name = "springleaf-mdx"
-version = "0.6.0"
-dependencies = [
- "anyhow",
- "satteri-arena",
- "satteri-ast",
- "satteri-pulldown-cmark",
- "serde",
- "serde-saphyr",
- "serde_json",
- "springleaf-document",
- "uuid",
-]
-
-[[package]]
-name = "springleaf-records"
-version = "0.6.0"
-dependencies = [
- "jacquard-common",
- "jacquard-derive",
- "jacquard-lexicon",
- "serde",
- "serde_json",
- "springleaf-atproto",
- "thiserror",
-]
-
-[[package]]
-name = "springleaf-web"
-version = "0.6.0"
-dependencies = [
- "jiff",
- "regex",
- "reqwest 0.13.5",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "springleaf-workflow"
-version = "0.6.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "figment2",
- "serde",
- "serde_json",
- "sha2",
- "springleaf-document",
- "springleaf-editor",
- "springleaf-mdx",
- "springleaf-web",
- "tempfile",
- "thiserror",
- "tokio",
- "toml_edit",
- "uuid",
- "yrs",
 ]
 
 [[package]]

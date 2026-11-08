@@ -1,8 +1,8 @@
 //! Pure native fact observation → bounded, loss-checked current content.
 //! Raw observations stay with the caller; no transport or local file effects.
 use anyhow::{Context, Result, bail, ensure};
+use leafspring_document::{Block, BlockKind, Inline, Node, Page, Theme};
 use serde_json::Value;
-use springleaf_document::{Block, BlockKind, Inline, Node, Page, Theme};
 use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 

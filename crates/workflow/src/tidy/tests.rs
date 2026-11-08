@@ -1,5 +1,5 @@
 use super::*;
-use springleaf_document::{Binding, Block, BlockKind, Document, Inline, Mark, Node, Page, State, Sync, Uuid};
+use leafspring_document::{Binding, Block, BlockKind, Document, Inline, Mark, Node, Page, State, Sync, Uuid};
 use std::collections::BTreeMap;
 
 fn document() -> Document {
@@ -35,13 +35,13 @@ fn document() -> Document {
             ),
         ]),
         sync: Sync {
-            profile: springleaf_document::PROFILE.into(),
+            profile: leafspring_document::PROFILE.into(),
             local_hash: "sha256:old-local".into(),
             remote_hash: "sha256:old-remote".into(),
         },
     };
     Document {
-        format: "springleaf-mdx/1".into(),
+        format: "leafspring-mdx/1".into(),
         title: "T".into(),
         description: None,
         tags: vec![],
@@ -79,10 +79,10 @@ fn authored_wrapped(root: &Path) -> PathBuf {
         }],
     };
     let markdown_body = "[guide](https://e.org/docs)";
-    let rendered = springleaf_mdx::render(&source).unwrap();
+    let rendered = leafspring_mdx::render(&source).unwrap();
     let source = rendered
         .replacen("\"title\": \"T\"\n", "title: T # author comment\n", 1)
-        .replacen("\n\"@springleaf\":", "\ncustomField: {\"meaning\": \"retained\"}\n\n\"@springleaf\":", 1)
+        .replacen("\n\"@leafspring\":", "\ncustomField: {\"meaning\": \"retained\"}\n\n\"@leafspring\":", 1)
         .replacen(
             &format!("<Key id=\"b-1\" />\n{markdown_body}\n"),
             "<Key id=\"b-1\" />\n<Paragraph>\n<Run text={\"guide\"} marks={[{\"kind\":\"link\",\"href\":\"https://e.org/docs\"}]} />\n\n</Paragraph>\n",

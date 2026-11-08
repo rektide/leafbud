@@ -1,10 +1,10 @@
-//! springleaf-atproto — a thin, hand-rolled ATProto client surface.
+//! leafspring-atproto — a thin, hand-rolled ATProto client surface.
 //!
 //! Deliberately minimal per the jacquard verdict
 //! (`experiments/04-jacquard/REPORT.md` §6): four XRPC calls over reqwest,
 //! identity resolution following the chain proven by
 //! `experiments/03-post-builder/REPORT.md` §1, typed errors, and no client
-//! machinery beyond that. Record types live in `springleaf-records`
+//! machinery beyond that. Record types live in `leafspring-records`
 //! (jacquard-generated); this crate stays lexicon-agnostic JSON.
 //!
 //! # Identity resolution
@@ -39,8 +39,8 @@
 //! Content-Type body).
 //!
 //! Persistence lives in [`session`]: a [`session::SessionStore`] at
-//! `$XDG_CONFIG_HOME/springleaf/session.json` (file 0600, parent 0700 —
-//! jacquard's `FileAuthStore` lacks this hardening, so springleaf owns
+//! `$XDG_CONFIG_HOME/leafspring/session.json` (file 0600, parent 0700 —
+//! jacquard's `FileAuthStore` lacks this hardening, so leafspring owns
 //! it) and [`session::resume_or_create_session`] — reuse while the
 //! access JWT is live, refresh at the issuing PDS, else `createSession`
 //! with the app password.

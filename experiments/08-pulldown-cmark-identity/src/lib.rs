@@ -246,11 +246,11 @@ fn transform(nodes: &mut [Node], source: &str, quote_depth: usize, out: &mut Vec
                 // opening must be claimed by a direct text leaf, never code.
                 for (offset, _) in raw.match_indices("{/") {
                     let start = child.span.start + offset;
-                    if !escaped(source, start) && source[start..].starts_with("{/* springleaf:") {
+                    if !escaped(source, start) && source[start..].starts_with("{/* leafspring:") {
                         diagnostic(
                             out,
                             "unsupported-comment",
-                            start..start + "{/* springleaf:".len(),
+                            start..start + "{/* leafspring:".len(),
                             "MDX comment identities are not implemented in this experiment; use an attribute or plain mode",
                         );
                     }

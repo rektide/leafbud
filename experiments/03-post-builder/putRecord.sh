@@ -26,7 +26,7 @@ set -euo pipefail
 PDS="https://puffball.us-east.host.bsky.network"
 DID="did:plc:zjbq26wybii5ojoypkso2mso"
 COLLECTION="site.standard.document"
-RKEY="springleaf-protocol-probe"   # default rule: rkey = slug (experiment 03 derivation)
+RKEY="leafspring-protocol-probe"   # default rule: rkey = slug (experiment 03 derivation)
 RECORD_FILE="$(cd "$(dirname "$0")" && pwd)/built-record.json"
 
 # 1. Session (app-password flow). accessJwt is captured, never printed.
@@ -38,7 +38,7 @@ SESSION_DID="$(printf '%s' "$SESSION_JSON" | jq -r '.did')"
 [ "$SESSION_DID" = "$DID" ] || { echo "session did $SESSION_DID != expected $DID" >&2; exit 1; }
 
 # 2. putRecord (upsert). Writes at://$DID/site.standard.document/$RKEY
-#    Expected URL after success: https://technautical.leaflet.pub/springleaf-protocol-probe
+#    Expected URL after success: https://technautical.leaflet.pub/leafspring-protocol-probe
 #    (fallback: https://leaflet.pub/lish/$DID/3molsbwkh522o/$RKEY)
 jq -n --arg repo "$DID" --arg collection "$COLLECTION" --arg rkey "$RKEY" \
      --slurpfile record "$RECORD_FILE" \

@@ -98,7 +98,7 @@ inside `parser_extension(...)`, supplied to `Parser::with_extensions(...)`:
 | `add_inline_parser`, priority `PRIORITY_EMPHASIS + 10` | `SuffixParser`: heading suffixes and entire final paragraph lines; code-span parsing has already claimed its contents; misplaced directives diagnose |
 | `KindData::Extension`, `NodeKind`, `PrettyPrint` | Temporary typed marker nodes, leaf-block or inline as appropriate; exact annotation byte ranges travel with them |
 | `add_ast_transformer`, priority 100 | `BindKeys`: resolve actual parents/siblings, reject invalid/duplicate/colliding keys, attach internal metadata and remove marker nodes before rendering |
-| `Node::attributes_mut()` | Store **`springleaf-key`**, not `id`, on the actual target block; expose the same identity on the typed projection |
+| `Node::attributes_mut()` | Store **`leafspring-key`**, not `id`, on the actual target block; expose the same identity on the typed projection |
 
 Upstream `parser/mod.rs` runs AST transformers **after** block parsing and inline
 parsing. Suffixes attach to their actual containing heading/paragraph; directives
@@ -176,10 +176,10 @@ syntax. The negative control uses Rushdown's extension API too.
 ## Phase B — preceding comment annotations
 
 ```mdx
-{/* springleaf:key introduction */}
+{/* leafspring:key introduction */}
 ## Introduction
 
-{/* springleaf:key central-argument */}
+{/* leafspring:key central-argument */}
 This is an ordinary paragraph with **formatting**.
 ```
 
@@ -187,8 +187,8 @@ Baseline Rushdown emits the first annotation as **visible paragraph text**.
 The experiment implements the requested literal spelling through the block
 extension, not a substituted HTML-comment spelling and not an MDX runtime.
 
-- Only the exact single-line `{/* springleaf:key NAME */}` directive is accepted
-  (trailing whitespace allowed). The reserved `{/* springleaf:` namespace gives
+- Only the exact single-line `{/* leafspring:key NAME */}` directive is accepted
+  (trailing whitespace allowed). The reserved `{/* leafspring:` namespace gives
   loud errors for wrong names, malformed keys or unterminated/multiline directives.
   Other comment-like text and `{expression}` are ordinary CommonMark content.
 - A preceding directive must begin a block. If earlier prose is still an open
@@ -198,7 +198,7 @@ extension, not a substituted HTML-comment spelling and not an MDX runtime.
 - Blank lines **between** directive and target are allowed. It binds the immediate
   next supported sibling in **its own container**, never a later arbitrary block.
   Supported targets: paragraph, heading, list, quote, code block, thematic break.
-- A directive before a list keys the list. `- {/* springleaf:key first */}` followed
+- A directive before a list keys the list. `- {/* leafspring:key first */}` followed
   by indented prose keys the paragraph inside that item, **not the item**. There is
   no direct list-item key spelling in this experiment.
 - An annotation at the end of an empty quote/item is unbound; it cannot escape to

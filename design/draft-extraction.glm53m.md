@@ -1,7 +1,7 @@
 ---
 type: Design
 title: Draft extraction — leaflet drafts ⇄ canonical records
-description: Build-ready design for converting a leaflet editor draft's fact graph into springleaf's canonical site.standard.document record and back via Replicache push; block coverage matrix, Yjs text recovery, the new-draft gap, Rust port notes, and verification gates.
+description: Build-ready design for converting a leaflet editor draft's fact graph into leafspring's canonical site.standard.document record and back via Replicache push; block coverage matrix, Yjs text recovery, the new-draft gap, Rust port notes, and verification gates.
 resource: design/draft-extraction.glm53m.md
 status: draft
 generated:
@@ -12,11 +12,11 @@ sources:
     title: "Session that read the Leaflet conversion sources, designed the coverage matrix and both directions, and wrote this document"
   - resource: "opencode://ses_e48e1411effeFlQHJe2NwO9UjN"
     title: "Session that built `drafts create` (5c): the /new redirect-harvest client and CLI gating, plus the 5c outcomes addendum"
-  - resource: "file:///home/rektide/src/springleaf/design/records-canonical.glm53m.md"
+  - resource: "file:///home/rektide/src/leafspring/design/records-canonical.glm53m.md"
     title: "The canonical format this pipeline targets (pure site.standard.document records)"
-  - resource: "file:///home/rektide/src/springleaf/experiments/02-draft-internals/REPORT.md"
+  - resource: "file:///home/rektide/src/leafspring/experiments/02-draft-internals/REPORT.md"
     title: "Fact model, pull/push contracts, minimal-mutation plan, Yjs encoder/decoder proofs"
-  - resource: "file:///home/rektide/src/springleaf/experiments/03-post-builder/REPORT.md"
+  - resource: "file:///home/rektide/src/leafspring/experiments/03-post-builder/REPORT.md"
     title: "Canonical record shape, byte-offset facet math, lexicon validation"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/src/utils/factsToPagesRecord.ts"
     title: "Leaflet's own draft→record conversion — the primary extraction reference (@600c7b5f)"
@@ -273,8 +273,8 @@ prune policy.
   JS chunk or observing a browser create. It is a write → gated on operator
   approval anyway. Highest fragility, no advantage over (d).
 - **(b) Playwright browser automation.** Ops-side tool, not CLI — already
-  policy (`design/springleaf.glm53m.md` stage 5).
-- **(c) User creates drafts in the web UI; springleaf lists and picks.**
+  policy (`design/leafspring.glm53m.md` stage 5).
+- **(c) User creates drafts in the web UI; leafspring lists and picks.**
   Zero new write surface beyond push itself; `drafts list` already exists.
 - **(d) `GET /new` harvest — verified in source.**
   `app/(app)/(identity)/new/route.ts:7-15` is a plain GET route
@@ -308,11 +308,11 @@ Total ≈ **1.7–2.2k LOC** across `crates/drafts` (fact graph, yjs, fractional
 and `crates/leaflet` (record types via jacquard codegen, already staged).
 No calendar estimates anywhere, by policy.
 
-CLI surface addition (extends `design/springleaf.glm53m.md` §CLI surface):
+CLI surface addition (extends `design/leafspring.glm53m.md` §CLI surface):
 
 ```
-springleaf drafts extract <token-id> [--out FILE] [--json]   # pull → canonical record + warns
-springleaf drafts author <token-id> <record.json>            # prints mutation batch; --yes sends
+leafspring drafts extract <token-id> [--out FILE] [--json]   # pull → canonical record + warns
+leafspring drafts author <token-id> <record.json>            # prints mutation batch; --yes sends
 ```
 
 `author` refuses without `--yes` (push is a write; `--dry-run` is the
@@ -354,13 +354,13 @@ default posture, matching `publish run`).
 - Publish-side parity for canonical-from-draft records:
   `truncateDocumentRecordForPDS` (members-only) and
   `maybeOffloadPagesToBlob` (large docs) if such records are later published
-  through springleaf.
+  through leafspring.
 - `b5ec6d` provenance (why empty blocks carry it) — irrelevant beyond the
   tolerance rule, noted for completeness.
 
 ## Outcomes (2026-11-07, after the 5a build)
 
-Shipped as `springleaf drafts export` (the doc's "extract" name did not
+Shipped as `leafspring drafts export` (the doc's "extract" name did not
 survive the build). Divergences and findings, accepted:
 
 - **embedded-canvas → skip+warn**: its target is a canvas page, which v0
@@ -386,7 +386,7 @@ survive the build). Divergences and findings, accepted:
 
 ## Outcomes (2026-11-07, after the 5b build)
 
-Shipped as `springleaf drafts author <token-id> --from <slug-or-file>`
+Shipped as `leafspring drafts author <token-id> --from <slug-or-file>`
 (dry-run default, exit 2; `--yes` executes the push — never run live,
 mock-verified end to end). Divergences from the reverse section, all
 flagged:
@@ -431,7 +431,7 @@ flagged:
 
 ## Outcomes (2026-11-07, after the 5c build)
 
-Shipped as `springleaf drafts create` — the (d) `/new` harvest promoted
+Shipped as `leafspring drafts create` — the (d) `/new` harvest promoted
 from v1 plan to implementation with the operator gate intact. Decisions
 and divergences, all flagged:
 

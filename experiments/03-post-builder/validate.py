@@ -21,7 +21,7 @@ LEXICON_DIR = Path.home() / "archive/hyperlink-academy/leaflet/lexicons"
 DID = "did:plc:zjbq26wybii5ojoypkso2mso"
 PUB_RKEY = "3molsbwkh522o"
 PUB_URL = "https://technautical.leaflet.pub"
-RKEY = "springleaf-protocol-probe"
+RKEY = "leafspring-protocol-probe"
 FALLBACK_URL = f"https://leaflet.pub/lish/{DID}/{PUB_RKEY}/{RKEY}"
 PUB_DOMAIN_URL = f"{PUB_URL}/{RKEY}"
 

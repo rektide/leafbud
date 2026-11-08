@@ -44,7 +44,7 @@ fn selected_authoring_gate_can_feed_actual_compiler_without_evaluation() {
         assert!(js.contains(name), "{name}");
     }
     let js = staged(include_str!("../fixtures/comments.mdx")).unwrap();
-    assert!(!js.contains("springleaf"));
+    assert!(!js.contains("leafspring"));
     assert!(!js.contains("central-argument"));
     assert!(js.contains("Introduction"));
     assert!(js.contains("strong"));
@@ -52,15 +52,15 @@ fn selected_authoring_gate_can_feed_actual_compiler_without_evaluation() {
 
 #[test]
 fn plain_comment_keys_are_not_compiler_metadata_unless_we_lower_them() {
-    let source = "{/* springleaf:key intro */}\n## Introduction\n";
+    let source = "{/* leafspring:key intro */}\n## Introduction\n";
     let stock_js = stock(source).unwrap();
     let staged_js = staged(source).unwrap();
     // Initial assumption that compiler output preserves the comment FAILED.
     // Stock codegen discards the text and leaves an empty JSX expression.
-    assert!(!stock_js.contains("springleaf:key intro"));
+    assert!(!stock_js.contains("leafspring:key intro"));
     assert!(stock_js.contains("<>{}"));
     assert!(!staged_js.contains("<>{}"));
-    assert!(!staged_js.contains("springleaf:key intro"));
+    assert!(!staged_js.contains("leafspring:key intro"));
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn multiline_code_loss_is_identical_to_07_and_not_fixed_by_compiler() {
     assert_eq!(reachable(&plain, 0).iter().filter(|&&id| kind(&plain, id) == M::InlineCode).count(), 2);
     assert!(!reachable(&mdx, 0).iter().any(|&id| kind(&mdx, id) == M::InlineCode));
     let js = stock(source).unwrap();
-    assert!(!js.contains("springleaf:key accidental"));
+    assert!(!js.contains("leafspring:key accidental"));
     assert!(js.contains("Code `first"));
     assert!(js.contains("last`."));
     assert!(!js.contains("code: \"code\""));
@@ -174,16 +174,16 @@ fn default_codegen_compiles_away_jsx_but_still_does_not_execute_it() {
 
 #[test]
 fn metadata_crossing_conversion_is_not_a_general_identity_transport() {
-    let (arena, errors) = lower("{/* springleaf:key heading */}\n## Heading\n\n<Poll key=\"poll\" options={[]} />\n");
+    let (arena, errors) = lower("{/* leafspring:key heading */}\n## Heading\n\n<Poll key=\"poll\" options={[]} />\n");
     assert!(errors.is_empty());
     let hast = convert(&arena);
     let data: Vec<serde_json::Value> = (0..hast.len() as u32)
         .filter_map(|id| hast.get_node_data(id).map(|b| serde_json::from_slice(b).unwrap()))
         .collect();
-    assert!(data.iter().any(|d| d["springleafKey"] == "poll"));
-    assert!(!data.iter().any(|d| d["springleafKey"] == "heading"));
+    assert!(data.iter().any(|d| d["leafspringKey"] == "poll"));
+    assert!(!data.iter().any(|d| d["leafspringKey"] == "heading"));
     let js = compile(&hast);
-    assert!(!js.contains("springleafKey"));
+    assert!(!js.contains("leafspringKey"));
     // Keep MDAST for Leaflet lowering: converting to render HTML/HAST loses prose identity.
 }
 

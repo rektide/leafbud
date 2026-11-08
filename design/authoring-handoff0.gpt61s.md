@@ -100,7 +100,7 @@ alternatives. Its field names are proposed, not an already implemented schema.
   view backed by a second JSON file.
 - A document is **draft or published**, never both. A published document may
   have unreleased edits without becoming a draft again.
-- Local metadata lives in the same file under `@springleaf`; no separate sidecar,
+- Local metadata lives in the same file under `@leafspring`; no separate sidecar,
   saved base document, hidden snapshot store, persisted Yjs history or shadow JSON.
 - Ordinary headings, paragraphs and lists remain Markdown. Optional identifiers
   are welcome; mandatory Paragraph/Heading component wrappers are not.
@@ -140,13 +140,13 @@ management. None should block a useful local authoring slice.
 These commands are proposals, not the existing implemented surface:
 
 ```sh
-springleaf create essay.mdx --title "An essay" # local only
-springleaf check essay.mdx                    # compile; no remote writes
-springleaf save essay.mdx --replace           # preview replacement plan
-springleaf save essay.mdx --replace --yes     # save to Leaflet editor
-springleaf publish essay.mdx --replace --yes  # save if needed, then publish
-springleaf edit essay.mdx --published-at TIME # local metadata edit
-springleaf edit essay.mdx --now               # local date edit
+leafspring create essay.mdx --title "An essay" # local only
+leafspring check essay.mdx                    # compile; no remote writes
+leafspring save essay.mdx --replace           # preview replacement plan
+leafspring save essay.mdx --replace --yes     # save to Leaflet editor
+leafspring publish essay.mdx --replace --yes  # save if needed, then publish
+leafspring edit essay.mdx --published-at TIME # local metadata edit
+leafspring edit essay.mdx --now               # local date edit
 ```
 
 The normal short loop is **write → publish → edit → publish again**. Save is
@@ -170,7 +170,7 @@ An authoring file has document-level frontmatter and an MDX-shaped body:
 
 ````mdx
 ---
-format: springleaf-mdx/1
+format: leafspring-mdx/1
 title: An essay
 description: Written locally
 tags: [notes]
@@ -199,7 +199,7 @@ automatically removed and treated as document metadata.
 Use a versioned typed structure, not arbitrary fields copied from old sidecars:
 
 ```text
-@springleaf
+@leafspring
   version, localId
   binding: unlinked-draft | leaflet-draft | leaflet-post
     baseUrl, token, rootEntity, entitySet, entryFact   when linked
@@ -437,7 +437,7 @@ continuity, not multiplayer character continuity, is the intended promise.
 
 | Read/reuse as evidence | Promote deliberately | Do not assume |
 | --- | --- | --- |
-| [13 `author.rs`](../experiments/13-satteri-authoring/src/author.rs) and [`model.rs`](../experiments/13-satteri-authoring/src/model.rs) | Key consumption, native typed access, literal/component schemas, inline lowering and page-reference validation | Its bounded model represents every Leaflet type or accepts owned `@springleaf` state already |
+| [13 `author.rs`](../experiments/13-satteri-authoring/src/author.rs) and [`model.rs`](../experiments/13-satteri-authoring/src/model.rs) | Key consumption, native typed access, literal/component schemas, inline lowering and page-reference validation | Its bounded model represents every Leaflet type or accepts owned `@leafspring` state already |
 | [14 `adapter.rs`](../experiments/14-satteri-authoring-attributes/src/adapter.rs) | Optional brace discovery/mask/reparse, source coordinates and identity collision corpus | Recovery-node shape is a stable upstream extension promise |
 | [13 `facts.rs`](../experiments/13-satteri-authoring/src/facts.rs) | Real fact/data shapes, deterministic generation, membership/reference and stable-Poll rules | Test fixture IDs or fresh-empty mutation batches are safe crash-recovery transport code |
 | [13 `text.rs`](../experiments/13-satteri-authoring/src/text.rs) and [`reference.mjs`](../experiments/13-satteri-authoring/reference.mjs) | Fresh v1 Yrs profile and independent Yjs/ProseMirror oracle | All mentions, themes, footnotes and text shapes are covered |
@@ -637,7 +637,7 @@ IDs to meaningful editable nodes and relationship occurrences, not blindly to
 every parser AST node. Already named Page/Poll/reference objects also need a
 consistent binding policy.
 
-Suggested compact extension of `@springleaf`, not a finalized schema:
+Suggested compact extension of `@leafspring`, not a finalized schema:
 
 ```text
 nodes[sourceId]
@@ -799,17 +799,17 @@ get lost even if document-first top-level verbs are ultimately preferred.
 Illustrative document-first flow, not an implemented or accepted command tree:
 
 ```sh
-springleaf create drafts/essay.mdx --title "An essay"
-springleaf check drafts/essay.mdx
-springleaf prepare drafts/essay.mdx             # proposed local key assignment
-springleaf status drafts/essay.mdx
-springleaf diff drafts/essay.mdx --edge leaflet
-springleaf push drafts/essay.mdx                # preview identity-aware edits
-springleaf push drafts/essay.mdx --yes          # save editor, not public release
-springleaf publish drafts/essay.mdx --yes       # save if necessary + release
-springleaf pull drafts/essay.mdx                # guarded current-editor adoption
-springleaf edit drafts/essay.mdx --now          # local metadata only
-springleaf tidy drafts/essay.mdx --from path
+leafspring create drafts/essay.mdx --title "An essay"
+leafspring check drafts/essay.mdx
+leafspring prepare drafts/essay.mdx             # proposed local key assignment
+leafspring status drafts/essay.mdx
+leafspring diff drafts/essay.mdx --edge leaflet
+leafspring push drafts/essay.mdx                # preview identity-aware edits
+leafspring push drafts/essay.mdx --yes          # save editor, not public release
+leafspring publish drafts/essay.mdx --yes       # save if necessary + release
+leafspring pull drafts/essay.mdx                # guarded current-editor adoption
+leafspring edit drafts/essay.mdx --now          # local metadata only
+leafspring tidy drafts/essay.mdx --from path
 ```
 
 `prepare` here is a candidate, not a settled new verb: confirmed first push could

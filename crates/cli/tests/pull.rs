@@ -39,7 +39,7 @@ async fn server() -> (testserver::TestServer, Arc<RwLock<BTreeMap<String, Value>
 }
 
 fn cli(base: &str, root: &str, args: &[&str]) -> TokioCommand {
-    let mut command = TokioCommand::new(env!("CARGO_BIN_EXE_springleaf"));
+    let mut command = TokioCommand::new(env!("CARGO_BIN_EXE_leafspring"));
     command
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env_remove("LEAFLET_BASE_URL")

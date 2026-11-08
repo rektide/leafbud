@@ -1,7 +1,7 @@
 //! Session persistence and the resume-or-create flow.
 //!
 //! `SessionStore` persists an app-password session to
-//! `$XDG_CONFIG_HOME/springleaf/session.json` (else `~/.config/springleaf/`)
+//! `$XDG_CONFIG_HOME/leafspring/session.json` (else `~/.config/leafspring/`)
 //! with private permissions: the file 0600, the parent directory 0700
 //! (directories need the execute bit to be traversable — 0700 is the
 //! directory analog of a 0600 file). JWTs are secrets: `Debug` redacts
@@ -94,8 +94,8 @@ impl SessionStore {
         Self { path: path.into() }
     }
 
-    /// The default store: `$XDG_CONFIG_HOME/springleaf/session.json`,
-    /// else `~/.config/springleaf/session.json`.
+    /// The default store: `$XDG_CONFIG_HOME/leafspring/session.json`,
+    /// else `~/.config/leafspring/session.json`.
     pub fn xdg() -> Result<Self, Error> {
         let dir = match std::env::var_os("XDG_CONFIG_HOME") {
             Some(xdg) if !xdg.is_empty() => PathBuf::from(xdg),
@@ -104,7 +104,7 @@ impl SessionStore {
                 PathBuf::from(home).join(".config")
             }
         };
-        Ok(Self::at(dir.join("springleaf").join("session.json")))
+        Ok(Self::at(dir.join("leafspring").join("session.json")))
     }
 
     pub fn path(&self) -> &Path {
@@ -154,7 +154,7 @@ impl SessionStore {
 }
 
 /// For each existing ancestor of the store (up to and including the
-/// springleaf dir), assert the private 0700 mode. Only rewrites modes we
+/// leafspring dir), assert the private 0700 mode. Only rewrites modes we
 /// created this call; existing directories that are already private are
 /// left alone, group/other-readable ones are tightened (the store is a
 /// secret — better loud than leaky).
@@ -229,7 +229,7 @@ mod tests {
     use super::*;
 
     fn unique_dir(label: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("springleaf-atproto-session-{label}-{}-{}", std::process::id(), uuid_counter()));
+        let dir = std::env::temp_dir().join(format!("leafspring-atproto-session-{label}-{}-{}", std::process::id(), uuid_counter()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn store_roundtrip_with_private_permissions() {
         let dir = unique_dir("roundtrip");
-        let store = SessionStore::at(dir.join("springleaf").join("session.json"));
+        let store = SessionStore::at(dir.join("leafspring").join("session.json"));
         let session = sample("https://pds.example", 4_000_000_000, 4_000_000_000);
         store.save(&session).unwrap();
         let file = store.path();
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn load_missing_is_none_and_corrupt_is_error() {
         let dir = unique_dir("load");
-        let store = SessionStore::at(dir.join("springleaf").join("session.json"));
+        let store = SessionStore::at(dir.join("leafspring").join("session.json"));
         assert!(store.load().unwrap().is_none());
         std::fs::create_dir_all(store.path().parent().unwrap()).unwrap();
         std::fs::write(store.path(), "{not json").unwrap();
@@ -331,7 +331,7 @@ mod tests {
     async fn live_stored_session_is_reused_without_network() {
         let server = TestServer::spawn(Arc::new(|_req| panic!("no request expected"))).await;
         let dir = unique_dir("reuse");
-        let store = SessionStore::at(dir.join("springleaf").join("session.json"));
+        let store = SessionStore::at(dir.join("leafspring").join("session.json"));
         store.save(&sample(&server.base_url, 4_000_000_000, 4_000_000_000)).unwrap();
         let session = resume_or_create_session(&store, "jauntywunderkind.bsky.social", "app-password", &server.base_url)
             .await
@@ -352,7 +352,7 @@ mod tests {
         }))
         .await;
         let dir = unique_dir("refresh");
-        let store = SessionStore::at(dir.join("springleaf").join("session.json"));
+        let store = SessionStore::at(dir.join("leafspring").join("session.json"));
         // Access long expired, refresh still live.
         store.save(&sample(&server.base_url, 1_000, 4_000_000_000)).unwrap();
         let session = resume_or_create_session(&store, "jauntywunderkind.bsky.social", "app-password", "https://auth.example")
@@ -380,7 +380,7 @@ mod tests {
         }))
         .await;
         let dir = unique_dir("fallback");
-        let store = SessionStore::at(dir.join("springleaf").join("session.json"));
+        let store = SessionStore::at(dir.join("leafspring").join("session.json"));
         // Both tokens expired; the createSession endpoint is the store's pds.
         store.save(&sample(&server.base_url, 1_000, 2_000)).unwrap();
         let session = resume_or_create_session(&store, "jauntywunderkind.bsky.social", "app-password", &server.base_url)
@@ -409,7 +409,7 @@ mod tests {
         }))
         .await;
         let dir = unique_dir("fresh");
-        let store = SessionStore::at(dir.join("springleaf").join("session.json"));
+        let store = SessionStore::at(dir.join("leafspring").join("session.json"));
         // Empty store → create.
         resume_or_create_session(&store, "jauntywunderkind.bsky.social", "pw", &server.base_url)
             .await

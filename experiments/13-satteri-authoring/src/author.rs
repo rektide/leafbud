@@ -438,8 +438,8 @@ pub fn compile(source: &str) -> Result<Document<'_>, Vec<Diagnostic>> {
             return Err(lower.error(0, "frontmatter-required", "start with YAML frontmatter (format/title/tags/date intent)"));
         };
         let metadata: Metadata = serde_saphyr::from_str(lower.value(frontmatter)).map_err(|e| lower.error(frontmatter, "frontmatter", e.to_string()))?;
-        if metadata.format != "springleaf-mdx/1" || metadata.title.trim().is_empty() {
-            return Err(lower.error(frontmatter, "frontmatter", "expected format springleaf-mdx/1 and a nonempty title"));
+        if metadata.format != "leafspring-mdx/1" || metadata.title.trim().is_empty() {
+            return Err(lower.error(frontmatter, "frontmatter", "expected format leafspring-mdx/1 and a nonempty title"));
         }
         let mut main = vec![];
         let mut pages = vec![];

@@ -60,10 +60,10 @@ fn literal_types_attributes_order_and_exact_inline_text_survive() {
 #[test]
 fn key_shaped_literal_strings_are_not_rewritten_or_bound() {
     let result =
-        inspect("<Run text={\"{#literal} {/* springleaf:key string */}\"} />\n\n<Poll options={[\"{#id}\", \"{/* springleaf:key id */}\"]} />\n").unwrap();
+        inspect("<Run text={\"{#literal} {/* leafspring:key string */}\"} />\n\n<Poll options={[\"{#id}\", \"{/* leafspring:key id */}\"]} />\n").unwrap();
     assert!(result.diagnostics.is_empty());
     assert!(result.bindings.is_empty());
-    assert_eq!(property(&result.components[0], "text"), &json!("{#literal} {/* springleaf:key string */}"));
+    assert_eq!(property(&result.components[0], "text"), &json!("{#literal} {/* leafspring:key string */}"));
 }
 
 #[test]

@@ -173,14 +173,14 @@ proofs here**. No regex or line replacement is used anywhere in this experiment.
 ## Selected identity grammar
 
 ```mdx
-{/* springleaf:key introduction */}
+{/* leafspring:key introduction */}
 ## Introduction
 
-{/* springleaf:key central-argument */}
+{/* leafspring:key central-argument */}
 This is an ordinary paragraph with **formatting**.
 ```
 
-- The exact single-line comment value is `/* springleaf:key NAME */`.
+- The exact single-line comment value is `/* leafspring:key NAME */`.
   Keys match `[A-Za-z][A-Za-z0-9_.-]*`, case-sensitive, document-wide unique.
   Unicode prose is supported; Unicode key names diagnose. Periods need not
   satisfy JS member-expression grammar; comment keys `trailing.` and `two..dots`
@@ -192,13 +192,13 @@ This is an ordinary paragraph with **formatting**.
   and another directive are barriers, not things to skip.
 - Supported targets: heading, paragraph, fenced code, list, quote, thematic break,
   and flow component. A preceding comment keys a list as a whole;
-  `- {/* springleaf:key first */}` followed by indented prose keys that item's
+  `- {/* leafspring:key first */}` followed by indented prose keys that item's
   **paragraph**, not the ListItem. No direct list-item identity spelling is defined.
 - If there is an earlier sibling, require at least one blank line **before** the
   identity comment. This is checked using actual node line positions, not a
   guessed source scanner. Consecutive directives never merge; the first diagnoses
   unbound, and the second must also satisfy the blank-boundary rule.
-- Malformed reserved `springleaf:` comments, orphan/misplaced comments and duplicate
+- Malformed reserved `leafspring:` comments, orphan/misplaced comments and duplicate
   keys diagnose. Unterminated MDX syntax can instead fail upstream first. A comment
   in an empty quote/item/component cannot escape into outside prose or another item.
 - Component `key="topic"` is optional internal identity too. It shares the global
@@ -217,7 +217,7 @@ Another initial test failed because this source acquired a key:
 
 ````mdx
 Code `first
-{/* springleaf:key accidental */}
+{/* leafspring:key accidental */}
 last`.
 ````
 

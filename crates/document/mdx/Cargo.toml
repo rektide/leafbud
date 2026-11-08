@@ -1,6 +1,6 @@
 [package]
-name = "springleaf-mdx"
-description = "MDX reading/writing for springleaf: Satteri parsing, YAML frontmatter, key insertion"
+name = "leafspring-mdx"
+description = "MDX reading/writing for leafspring: Satteri parsing, YAML frontmatter, key insertion"
 version.workspace = true
 edition.workspace = true
 
@@ -12,7 +12,7 @@ serde-saphyr.workspace = true
 satteri-arena.workspace = true
 satteri-ast.workspace = true
 satteri-pulldown-cmark.workspace = true
-springleaf-document.workspace = true
+leafspring-document.workspace = true
 
 [dev-dependencies]
 uuid.workspace = true

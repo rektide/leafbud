@@ -6,7 +6,7 @@
 #   - ~/archive/nonbinary.computer/jacquard — Jacquard checkout @ 8bf1f4146 (2026-06-28)
 #     prebuilt binary: target/release/jacquard-codegen (built 2026-06-25)
 #   - ~/archive/hyperlink-academy/leaflet — leaflet checkout @ 600c7b5f (2026-11-06),
-#     the same pin springleaf's design doc cites as ground truth.
+#     the same pin leafspring's design doc cites as ground truth.
 #
 # Output: standalone generated module tree in $OUT (throwaway, /tmp/opencode).
 # No credentials involved; no network; nothing written into either archive.

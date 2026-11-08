@@ -6,10 +6,10 @@ use tokio::process::Command as TokioCommand;
 /// comment, local-only customField), a literal-wrapped link block that
 /// normalizes to Markdown, and a second already-clean block.
 const MANAGED: &str = r#"---
-"format": "springleaf-mdx/1"
+"format": "leafspring-mdx/1"
 title: T # author comment
 customField: {"meaning": "retained"}
-"@springleaf": {"id": "00000000-0000-0000-0000-000000000000", "state": "draft", "binding": {"baseUrl": "https://leaflet.pub", "token": "00000000-0000-0000-0000-000000000000", "root": "e-root", "entitySet": "es", "entryFact": "f-entry", "publication": null}, "nodes": {"p-main": {"entity": "e-main", "memberships": {}}, "b-1": {"entity": "e-b1", "memberships": {}}}, "sync": {"profile": "leaflet-import/1", "localHash": "sha256:old-local", "remoteHash": "sha256:old-remote"}}
+"@leafspring": {"id": "00000000-0000-0000-0000-000000000000", "state": "draft", "binding": {"baseUrl": "https://leaflet.pub", "token": "00000000-0000-0000-0000-000000000000", "root": "e-root", "entitySet": "es", "entryFact": "f-entry", "publication": null}, "nodes": {"p-main": {"entity": "e-main", "memberships": {}}, "b-1": {"entity": "e-b1", "memberships": {}}}, "sync": {"profile": "leaflet-import/1", "localHash": "sha256:old-local", "remoteHash": "sha256:old-remote"}}
 ---
 
 <Page name="p-main" kind="linear">
@@ -31,7 +31,7 @@ fn workspace() -> tempfile::TempDir {
 }
 
 fn cli(root: &std::path::Path, args: &[&str]) -> TokioCommand {
-    let mut command = TokioCommand::new(env!("CARGO_BIN_EXE_springleaf"));
+    let mut command = TokioCommand::new(env!("CARGO_BIN_EXE_leafspring"));
     command
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env_remove("LEAFLET_BASE_URL")

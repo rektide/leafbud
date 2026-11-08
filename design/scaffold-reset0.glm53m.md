@@ -53,7 +53,7 @@ is recoverable there. Accurate navigation (verified):
 (`jj diff -r 80436b61` alone shows only that revision's own change);
 `jj file show -r 80436b61 crates/drafts/src/yjs.rs` prints one deleted
 file's contents; remote browsing:
-`https://github.com/rektide/springleaf/tree/80436b61cf69a2e41d157684b24c6cf2fd4674da`.
+`https://github.com/rektide/leafspring/tree/80436b61cf69a2e41d157684b24c6cf2fd4674da`.
 
 ## Workspace shape (as built)
 
@@ -61,14 +61,14 @@ Exactly the accepted destination's eight crates:
 
 | Crate | Package | Status |
 | --- | --- | --- |
-| `crates/document/model` | `springleaf-document` | stub (crate docs only) |
-| `crates/document/mdx` | `springleaf-mdx` | stub; Satteri dependency deferred |
-| `crates/leaflet/editor` | `springleaf-editor` | stub; Yrs dependency deferred |
-| `crates/leaflet/web` | `springleaf-web` | stub; reqwest dependency deferred |
-| `crates/leaflet/records` | `springleaf-records` | **real**: generated pinned types + wire helpers |
-| `crates/atproto` | `springleaf-atproto` | **real**: unchanged client surface |
-| `crates/workflow` | `springleaf-workflow` | stub |
-| `crates/cli` | binary `springleaf` | skeleton: full accepted surface, every command honestly not-implemented |
+| `crates/document/model` | `leafspring-document` | stub (crate docs only) |
+| `crates/document/mdx` | `leafspring-mdx` | stub; Satteri dependency deferred |
+| `crates/leaflet/editor` | `leafspring-editor` | stub; Yrs dependency deferred |
+| `crates/leaflet/web` | `leafspring-web` | stub; reqwest dependency deferred |
+| `crates/leaflet/records` | `leafspring-records` | **real**: generated pinned types + wire helpers |
+| `crates/atproto` | `leafspring-atproto` | **real**: unchanged client surface |
+| `crates/workflow` | `leafspring-workflow` | stub |
+| `crates/cli` | binary `leafspring` | skeleton: full accepted surface, every command honestly not-implemented |
 
 Stub crates deliberately declare **no dependencies**: an edge that no
 code uses yet would only draw the design graph (the accepted design's
@@ -80,7 +80,7 @@ change (new crate set, new CLI surface) in one coordinated step.
 
 | Retained | Home | Rationale |
 | --- | --- | --- |
-| Entire `springleaf-atproto` (identity, DNS/DID resolution, XRPC, sessions, test server) | `crates/atproto` | Matches its destination ownership verbatim: "existing public reads, identity, explicitly selected PDS writes". Only change: a doc-comment reference to the renamed records crate. |
+| Entire `leafspring-atproto` (identity, DNS/DID resolution, XRPC, sessions, test server) | `crates/atproto` | Matches its destination ownership verbatim: "existing public reads, identity, explicitly selected PDS writes". Only change: a doc-comment reference to the renamed records crate. |
 | Generated jacquard lexicon tree (`com_atproto`, `pub_leaflet`, `site_standard`, `builder_types`, features) | `crates/leaflet/records` | The committed tree **is** the lexicon pin; regenerating or rewriting it would manufacture churn, not clarity. |
 | `validate_document_record` + `reinject_type_discriminators` | `records/src/record.rs` | Records' named "validation" ownership, and the wire-shape adaptation every future document serializer needs (single-variant unions drop `$type`). |
 | `standalone_site_did` + `derive_document_url` | `records/src/record.rs` | Proven public-URL rules (experiment 03 §6) — publication-domain, `/lish` deep-link, and standalone `/p/{did}` forms. Introduces the one real `records → atproto` edge (`AtUri` parsing); no cycle (atproto stays lexicon-agnostic). |
@@ -98,7 +98,7 @@ in LEAFLET-PIN.md now names this test.
 | Removed (at `80436b61`) | Lines | Re-home when needed |
 | --- | --- | --- |
 | Old CLI command tree (`main.rs` modules: publish, sync, author, create, export, workspace, config*) | ~3,800 | `config.rs`/`config_cmd.rs` (figment2 + toml_edit layering) → `workflow`'s first slice; the rest dies with the sidecar lifecycle. |
-| `springleaf-drafts` web client (`lib.rs`, `create.rs`) | ~1,580 | `LeafletClient` core (`/home` RSC parse, `get_leaflet_data`, `/new`) → `web` when discovery/`remote list` lands. |
+| `leafspring-drafts` web client (`lib.rs`, `create.rs`) | ~1,580 | `LeafletClient` core (`/home` RSC parse, `get_leaflet_data`, `/new`) → `web` when discovery/`remote list` lands. |
 | Hand-rolled Yjs codec (`yjs.rs`), fractional positioning (`fractional.rs`) | ~2,520 | **Historical oracle/fixture evidence only**: the codec's byte-parity encoder/decoder stays the wire-shape reference for tests, not the production text architecture — that is Yrs-based per the accepted keyed direction (handoff §12: load current remote text into Yrs, apply identity-preserving edits, emit one cumulative delta per text fact). Fractional ordering and the push transport *shape* are the selectively recoverable pieces. |
 | Fact decoding (`facts.rs`) | ~490 | `editor`, but **not as-is**: `FactData::Other { kind }` drops payloads; the accepted design requires raw-payload-retaining observations. |
 | Extraction ⇄ authoring converters (`extract.rs`, `author.rs`, `pull.rs`, `push.rs`) | ~4,050 | Not recovered: they convert between records and the editor via the reset lifecycle. The new path is document model ↔ editor facts. The Replicache push transport shape returns to `web` for `remote append`. |
@@ -116,7 +116,7 @@ are preserved substantively (no broad rewrites). The one *active* doc
 whose sources stopped resolving — the accepted
 [authoring interface](authoring-interface0.gpt6a.md) — now binds its
 pre-reset crate citations to canonical revision permalinks
-(`https://github.com/rektide/springleaf/blob/80436b61cf69…/<path>`)
+(`https://github.com/rektide/leafspring/blob/80436b61cf69…/<path>`)
 instead of dangling local paths; remaining historical mentions stay as
 prose, recoverable through the navigation commands above.
 
@@ -140,11 +140,11 @@ implementations fix them; nothing implies an operation ran.
 - `cargo fmt --check` — clean.
 - `cargo clippy --workspace --all-targets` — clean, zero warnings
   (including the unused-workspace-dependency check after dropping the
-  `springleaf-records` workspace entry until a consumer exists).
+  `leafspring-records` workspace entry until a consumer exists).
 - `cargo nextest run --workspace` — **35/35 passed** (32 atproto
   offline wire/session tests; 3 records tests: fixture round-trip drift
   alarm, URL derivation forms, standalone-site near-misses).
-- Manual CLI probes: `--version` → `springleaf 0.2.0`; `tidy … --keys`,
+- Manual CLI probes: `--version` → `leafspring 0.2.0`; `tidy … --keys`,
   `push … --take local` → not-implemented, exit 1; `--take bogus` →
   clap usage error, exit 2.
 
@@ -156,7 +156,7 @@ exercise real retained code.
 1. **records → atproto edge** exists solely for `AtUri` parsing in URL
    derivation. If the projection layer prefers pre-parsed components,
    lift it then; today it is a real, acyclic, tested edge.
-2. **`springleaf-records` has no consumer yet**, so it is absent from
+2. **`leafspring-records` has no consumer yet**, so it is absent from
    `[workspace.dependencies]` (unused entries warn). Re-add the pin
    when `workflow`/`web` first depends on it.
 3. **`facts.rs` recovery must change shape** (retain raw payloads) —
@@ -183,7 +183,7 @@ oracle for those tests, not as code to recover into the editor;
 fractional ordering and the push transport shape are selectively
 recoverable from `80436b61` where the promoted paths need them; any
 recovered fact scanning must retain raw payloads. Then (b) give
-`springleaf-mdx` Satteri and the YAML profile; (c) let the document
+`leafspring-mdx` Satteri and the YAML profile; (c) let the document
 model emerge from that fixture rather than pre-designing it here.
 Workflow/config recovery and any web transport follow after the loop
 is proven.

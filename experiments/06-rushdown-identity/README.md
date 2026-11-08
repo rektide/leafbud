@@ -61,10 +61,10 @@ nodes and `AstTransformer` do the work; no fork or upstream patch is required.
 ## Phase B: preceding literal directives
 
 ```mdx
-{/* springleaf:key introduction */}
+{/* leafspring:key introduction */}
 ## Introduction
 
-{/* springleaf:key central-argument */}
+{/* leafspring:key central-argument */}
 This is ordinary Markdown with **formatting**.
 ```
 
@@ -74,7 +74,7 @@ It binds the immediate next block sibling in the same container. Blank lines
 between directive and target are allowed; a blank line is required before the
 directive when preceding text is an open paragraph. The directive never skips
 other directives, HTML/components or link-reference definitions to find prose.
-An annotation before a list keys the list; `- {/* springleaf:key first */}`
+An annotation before a list keys the list; `- {/* leafspring:key first */}`
 followed by indented prose keys the paragraph **inside** that item, not the item.
 
 Comments can also key a quote, fence or thematic break. An empty item/quote

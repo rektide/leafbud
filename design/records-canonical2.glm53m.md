@@ -1,7 +1,7 @@
 ---
 type: Design
-title: Canonical on-disk format, revision 2 — the springleaf.toml shape
-description: Answers records-canonical's open springleaf.toml item; flat keys resolved as figment2 layers (flag > workspace toml > global toml) with a loud malformed-config posture, replacing the hand parser.
+title: Canonical on-disk format, revision 2 — the leafspring.toml shape
+description: Answers records-canonical's open leafspring.toml item; flat keys resolved as figment2 layers (flag > workspace toml > global toml) with a loud malformed-config posture, replacing the hand parser.
 resource: design/records-canonical2.glm53m.md
 status: draft
 generated:
@@ -12,19 +12,19 @@ sources:
     title: "Session implementing the figment2 layered config this revision records"
   - resource: "opencode://ses_e4ceef2e9ffeMaBQB1Yc3bcyMD"
     title: "Session holding the protocol map; operator's canonical-format direction recorded in the original doc"
-  - resource: "file:///home/rektide/src/springleaf/experiments/03-post-builder/REPORT.md"
+  - resource: "file:///home/rektide/src/leafspring/experiments/03-post-builder/REPORT.md"
     title: "Proof that a lexicon-valid record + putRecord posting path works"
 ---
 
-# Canonical on-disk format, revision 2 — the springleaf.toml shape
+# Canonical on-disk format, revision 2 — the leafspring.toml shape
 
 Revision of [`design/records-canonical.glm53m.md`](records-canonical.glm53m.md).
 Only the config items change; the layout, sidecar, and sync semantics
 are unchanged from the original.
 
-## The `springleaf.toml` open item, answered
+## The `leafspring.toml` open item, answered
 
-The original's open items asked after "the `springleaf.toml` shape and
+The original's open items asked after "the `leafspring.toml` shape and
 whether publication default belongs there (yes, per experiment 03's
 pick-first-publication lesson)". Answer, implemented in
 `crates/cli/src/config.rs` with figment2 (the operator's preferred
@@ -32,9 +32,9 @@ config library) replacing the hand parser:
 
 - **Shape: flat keys, one file name, two locations.** The known key
   set is `workspace`, `handle`, `pds`, `publication`; unknown keys are
-  ignored. A global file at `$XDG_CONFIG_HOME/springleaf/
-  springleaf.toml` (else `~/.config/springleaf/`) and a workspace file
-  at `<root>/springleaf.toml`.
+  ignored. A global file at `$XDG_CONFIG_HOME/leafspring/
+  leafspring.toml` (else `~/.config/leafspring/`) and a workspace file
+  at `<root>/leafspring.toml`.
 - **Layering, per key** — stacked figment providers, flags fed in
   programmatically as the top layer (not env-var magic):
   - `publication`: `--publication` > workspace toml > global toml.

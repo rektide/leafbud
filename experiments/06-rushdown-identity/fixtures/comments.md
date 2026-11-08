@@ -1,26 +1,26 @@
-{/* springleaf:key introduction */}
+{/* leafspring:key introduction */}
 ## Introduction
 
-{/* springleaf:key central-argument */}
+{/* leafspring:key central-argument */}
 This is ordinary Markdown with **formatting** and [a link](https://example.com).
 It continues on a second line.
 
-{/* springleaf:key alternative */}
+{/* leafspring:key alternative */}
 Alternative *heading*
 ---------------------
 
-{/* springleaf:key whole-list */}
-- {/* springleaf:key first-item-prose */}
+{/* leafspring:key whole-list */}
+- {/* leafspring:key first-item-prose */}
   First item.
 - Second item.
 
-> {/* springleaf:key quote-prose */}
+> {/* leafspring:key quote-prose */}
 > Quoted **prose**.
 
-{/* springleaf:key code-block */}
+{/* leafspring:key code-block */}
 ```md
-{/* springleaf:key not-a-key */}
+{/* leafspring:key not-a-key */}
 {#not-a-key}
 ```
 
-Inline `{/* springleaf:key not-a-key */}` and escaped \{/* springleaf:key literal */}.
+Inline `{/* leafspring:key not-a-key */}` and escaped \{/* leafspring:key literal */}.

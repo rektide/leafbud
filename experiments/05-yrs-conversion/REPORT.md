@@ -11,11 +11,11 @@ sources:
   - resource: "opencode://ses_e48556aa8ffe9Fzbp0FmthuoDH"
     title: "Independent Astra inquiry upgraded by the user to an offline executable experiment; implementation and checks"
   - resource: /experiments/02-draft-internals/REPORT.md
-    title: "Prior protocol evidence at springleaf e48b62660d977e06de852d68bb1fc8a7a72b768a"
+    title: "Prior protocol evidence at leafspring e48b62660d977e06de852d68bb1fc8a7a72b768a"
   - resource: /experiments/02-draft-internals/fixtures/yjs-samples.md
-    title: "Frozen synthetic Yjs 13.6.18 inputs, same springleaf revision"
+    title: "Frozen synthetic Yjs 13.6.18 inputs, same leafspring revision"
   - resource: /crates/drafts/src/yjs.rs
-    title: "Existing hand codec and sample 1 hex, same springleaf revision"
+    title: "Existing hand codec and sample 1 hex, same leafspring revision"
   - resource: "https://github.com/y-crdt/y-crdt/blob/e0b476b0ce613453c70d0bb477b955808aa79a07/yrs/Cargo.toml"
     title: "Locally inspected Yrs 0.28.1 manifest; exact experiment dependency"
   - resource: "https://github.com/y-crdt/y-crdt/blob/e0b476b0ce613453c70d0bb477b955808aa79a07/yrs/src/transaction.rs"
@@ -63,7 +63,7 @@ Read local repositories before using network dependency resolution:
 | --- | --- |
 | `~/archive/y-crdt/y-crdt` | `e0b476b0ce613453c70d0bb477b955808aa79a07`, `yrs` **0.28.1** |
 | `~/archive/hyperlink-academy/leaflet` | `600c7b5f1f7b31b66fb626c293cc104312a12caf` |
-| Springleaf before this experiment | `e48b62660d977e06de852d68bb1fc8a7a72b768a` |
+| Leafspring before this experiment | `e48b62660d977e06de852d68bb1fc8a7a72b768a` |
 | Final JS reference | Yjs **13.6.15**, y-prosemirror **1.2.5**, prosemirror-model **1.25.0**, matching Leaflet's lockfile |
 | Runtime used | Node **26.6.0**, pnpm **12.16.1**, cargo **1.101.0-nightly (29c5daa1a 2026-10-07)** |
 
@@ -89,7 +89,7 @@ Recorded results: **2/2 Rust tests passed** (nextest run
 Clippy passed with warnings denied. The rich-text edit emitted a **226-byte
 delta**, versus **469-byte full state** in this run. Bytes are diagnostic, not
 a contractual compression target or byte-identical serialization requirement.
-`cargo fmt --check` passed. From the springleaf root, these checks also passed:
+`cargo fmt --check` passed. From the leafspring root, these checks also passed:
 
 ```sh
 cargo run --quiet --manifest-path /home/rektide/src/rekon/tool/rust/Cargo.toml -- check --okf design/yrs-conversion0.gpt6a.md experiments/05-yrs-conversion/REPORT.md
@@ -135,7 +135,7 @@ reproduction path; there is no machine-specific dependency in the manifest.
 | Wrong replacement | Merging independent `old` and `new` documents yields **two paragraphs**. New-client replacement content does not overwrite an existing root. The prototype refuses this unsupported shape. |
 | Surrogates | A JS insertion inside an emoji pair yields `a�Z�b`; Yrs reads the same wire result. An unpaired JS surrogate is replaced on wire encoding. Literal unpaired-surrogate JSON is rejected by Rust's parser. |
 | Invalid/unsupported | Corrupt `b5ec6d`, off-boundary facets, schema version 2, mention nodes, unknown marks, a v2 fixture sent to the v1 endpoint, and a standalone delta missing its base all fail. |
-| Fact round trip | Full synthetic pull patch → one record-shaped JSON text block → one `assertFact` → actual `Y.mergeUpdates(base, delta)` → Yrs JSON. Original fact ID/entity/edge/comment rows remain; `@springleaf` never enters the mutation. Repeating produces no delta. |
+| Fact round trip | Full synthetic pull patch → one record-shaped JSON text block → one `assertFact` → actual `Y.mergeUpdates(base, delta)` → Yrs JSON. Original fact ID/entity/edge/comment rows remain; `@leafspring` never enters the mutation. Repeating produces no delta. |
 | Last-write cache | Two separate same-client deltas are not safe if only the last is retained: the last depends on the missing first. Merging them into one cumulative delta works. This reproduces the relevant server cache assumption without a database. |
 
 ## Experimental algorithm
@@ -209,7 +209,7 @@ evidence, not application persistence.
   Replicache scheduling or live browser effects were tested. Its locator uses a
   JSON pointer suitable for this one unmoved block; arbitrary reordering/editing
   cannot infer stable identity from such a pointer alone.
-- The three layers are distinct: Yrs integrates text items; springleaf must map
+- The three layers are distinct: Yrs integrates text items; leafspring must map
   the external fact graph; Leaflet must accept the mutations. CRDT convergence
   supplies neither fact-graph CAS nor user-intent merge from an old JSON file.
   Replanning `ac` after observing concurrent `aRc` would delete `R`; do not loop

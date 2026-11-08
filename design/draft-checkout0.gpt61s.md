@@ -30,13 +30,13 @@ sources:
     title: "Satteri arena lowering, literal JSX/Run/Key/Page precedents"
   - resource: /experiments/14-satteri-authoring-attributes/src/adapter.rs
     title: "Brace adapter inspected; imports deliberately use explicit Key markers rather than adding brace syntax here"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config.rs
     title: "Recovered Figment2 precedence and strict config read posture"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config_cmd.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/config_cmd.rs
     title: "Recovered toml_edit comment-preserving setter and provenance precedent"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/workspace.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/workspace.rs
     title: "Recovered root selection only, not old record directories/sidecars"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/pull.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/pull.rs
     title: "Recovered proven native pull transport, strengthened to reject partial/malformed snapshots"
   - resource: file:///home/rektide/archive/hyperlink-academy/leaflet/actions/getIdentityData.ts
     title: "Pinned upstream query checked for pagination/limit and contributor embeds"
@@ -53,7 +53,7 @@ sources:
 ## Outcome and checkpoints
 
 The user commissioned actual work with their data, not another inventory.
-Code remains in `~/src/springleaf`; **`~/l` is the document workspace**.
+Code remains in `~/src/leafspring`; **`~/l` is the document workspace**.
 
 - `ba87d27c` — **Restore layered authoring config and shared document workspace resolution**.
 - `3ba5a977` — **Import native drafts as loss-checked keyed MDX without remote writes**.

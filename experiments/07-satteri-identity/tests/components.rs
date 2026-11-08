@@ -72,18 +72,18 @@ fn spreads_duplicate_properties_standalone_expressions_and_esm_are_rejected() {
 
 #[test]
 fn annotation_can_key_component_but_collision_is_not_silently_overwritten() {
-    let p = parse("{/* springleaf:key poll */}\n<Poll options={[\"A\", \"B\"]} />\n", Mode::Author);
+    let p = parse("{/* leafspring:key poll */}\n<Poll options={[\"A\", \"B\"]} />\n", Mode::Author);
     assert!(p.diagnostics.is_empty());
     assert_eq!(p.tree.children[0].kind, Kind::Component);
     assert_eq!(p.tree.children[0].key.as_deref(), Some("poll"));
-    let p = parse("{/* springleaf:key first */}\n<Poll key=\"second\" />\n", Mode::Author);
+    let p = parse("{/* leafspring:key first */}\n<Poll key=\"second\" />\n", Mode::Author);
     assert!(p.diagnostics.iter().any(|d| d.code == "key-collision"));
     assert_eq!(p.tree.children[0].key, None);
 }
 
 #[test]
 fn prose_component_keys_share_namespace() {
-    let p = parse("{/* springleaf:key same */}\n## Head\n\n<Poll key=\"same\" />\n", Mode::Author);
+    let p = parse("{/* leafspring:key same */}\n## Head\n\n<Poll key=\"same\" />\n", Mode::Author);
     assert_eq!(p.diagnostics.iter().filter(|d| d.code == "duplicate-key").count(), 2);
     assert!(nodes(&p.tree).iter().all(|n| n.key.is_none()));
 }

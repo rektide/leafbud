@@ -102,7 +102,7 @@ impl Resolver {
     pub fn new() -> Self {
         Self {
             http: reqwest::Client::builder()
-                .user_agent(concat!("springleaf/", env!("CARGO_PKG_VERSION")))
+                .user_agent(concat!("leafspring/", env!("CARGO_PKG_VERSION")))
                 .build()
                 .expect("reqwest client builds"),
             plc_directory: "https://plc.directory".into(),
@@ -240,7 +240,7 @@ impl Default for Resolver {
     }
 }
 
-/// The subset of a DID document springleaf needs.
+/// The subset of a DID document leafspring needs.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DidDocument {
     /// DID-core key: the subject, named `id` (not `did`).

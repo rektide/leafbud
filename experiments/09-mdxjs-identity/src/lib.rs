@@ -158,12 +158,12 @@ fn valid_key(key: &str) -> bool {
 }
 
 fn reserved(value: &str) -> bool {
-    value.trim().starts_with("/* springleaf:")
+    value.trim().starts_with("/* leafspring:")
 }
 
 fn directive(value: &str) -> Option<&str> {
     // This namespace deliberately has one spelling, not a JS comment interpreter.
-    let key = value.strip_prefix("/* springleaf:key ")?.strip_suffix(" */")?;
+    let key = value.strip_prefix("/* leafspring:key ")?.strip_suffix(" */")?;
     valid_key(key).then_some(key)
 }
 
@@ -244,7 +244,7 @@ impl Compiler {
                 } else {
                     self.error(
                         "malformed-key",
-                        "expected {/* springleaf:key NAME */}; NAME=[A-Za-z][A-Za-z0-9_.-]*",
+                        "expected {/* leafspring:key NAME */}; NAME=[A-Za-z][A-Za-z0-9_.-]*",
                         span(node),
                     );
                 }

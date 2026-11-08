@@ -282,10 +282,10 @@ report unsupported content rather than choose lossy downconversion.
 Follow the [accepted interface](authoring-interface0.gpt6a.md#tidy-all-by-default-selectors-narrow-the-passes):
 
 ```sh
-springleaf tidy essay.mdx --dry-run   # all applicable implemented passes
-springleaf tidy essay.mdx             # includes Markdown normalization
-springleaf tidy essay.mdx --markdown  # proposed selector: this pass only
-springleaf tidy essay.mdx --keys      # only missing keys, never Markdown formatting
+leafspring tidy essay.mdx --dry-run   # all applicable implemented passes
+leafspring tidy essay.mdx             # includes Markdown normalization
+leafspring tidy essay.mdx --markdown  # proposed selector: this pass only
+leafspring tidy essay.mdx --keys      # only missing keys, never Markdown formatting
 ```
 
 `--markdown` is a proposed pass selector, not an export format or a demand to

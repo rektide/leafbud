@@ -1,6 +1,6 @@
 [package]
-name = "springleaf-workflow"
-description = "Application workflow for springleaf: local files, config, inventory, plan/execute/verify orchestration"
+name = "leafspring-workflow"
+description = "Application workflow for leafspring: local files, config, inventory, plan/execute/verify orchestration"
 version.workspace = true
 edition.workspace = true
 
@@ -10,13 +10,13 @@ figment2.workspace = true
 tempfile.workspace = true
 toml_edit.workspace = true
 sha2.workspace = true
-springleaf-document.workspace = true
-springleaf-mdx.workspace = true
-springleaf-editor.workspace = true
+leafspring-document.workspace = true
+leafspring-mdx.workspace = true
+leafspring-editor.workspace = true
 uuid.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-springleaf-web.workspace = true
+leafspring-web.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 

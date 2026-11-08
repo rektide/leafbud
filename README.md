@@ -1,4 +1,4 @@
-# springleaf
+# leafspring
 
 Local-first MDX authoring for [leaflet.pub](https://leaflet.pub)
 documents, in Rust: one MDX file per document, durable identities,
@@ -16,10 +16,10 @@ destination shape. Implemented versus pending:
 
 | implemented | not implemented |
 | --- | --- |
-| `springleaf-atproto` — retained identity resolution, XRPC, app-password sessions; `springleaf-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
-| `springleaf-web` — cookie-authenticated discovery, metadata and full editor pull; `springleaf-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
-| `springleaf-document` + `springleaf-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
-| `springleaf-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
+| `leafspring-atproto` — retained identity resolution, XRPC, app-password sessions; `leafspring-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
+| `leafspring-web` — cookie-authenticated discovery, metadata and full editor pull; `leafspring-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
+| `leafspring-document` + `leafspring-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
+| `leafspring-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `status`, `diff`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -32,22 +32,22 @@ what was kept, what was reset, and where each piece re-homes.
 ```
 crates/
   document/
-    model/     springleaf-document: pure document model — current content,
+    model/     leafspring-document: pure document model — current content,
                 stable source IDs and compact bindings (bounded import profile)
-    mdx/       springleaf-mdx: Satteri parsing, YAML frontmatter,
+    mdx/       leafspring-mdx: Satteri parsing, YAML frontmatter,
                 loss-checked initial keyed MDX writing and validation
   leaflet/
-    editor/    springleaf-editor: fact graph, Yrs text state, bindings,
+    editor/    leafspring-editor: fact graph, Yrs text state, bindings,
                 bounded pure observation; write planning still pending
-    web/       springleaf-web: cookie auth, discovery, RPC/actions,
+    web/       leafspring-web: cookie auth, discovery, RPC/actions,
                 read-only discovery/metadata/content pulls; writes pending
-    records/   springleaf-records: generated pinned lexicon record types,
+    records/   leafspring-records: generated pinned lexicon record types,
                validation, wire-shape helpers — see LEAFLET-PIN.md
-  atproto/     springleaf-atproto: hand-rolled ATProto surface — handle→DID→PDS
+  atproto/     leafspring-atproto: hand-rolled ATProto surface — handle→DID→PDS
                identity resolution, XRPC client, sessions, public reads
-  workflow/    springleaf-workflow: local files, config, inventory,
+  workflow/    leafspring-workflow: local files, config, inventory,
                 layered config, native reads, guarded draft import and pull
-  cli/         springleaf (binary): thin Clap/rendering layer;
+  cli/         leafspring (binary): thin Clap/rendering layer;
                 reads/import/check/pull/config implemented; writes pending
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
@@ -61,16 +61,16 @@ adds no crate dependency edges that no code uses yet.
 ## Remote reads
 
 ```sh
-cargo run -p springleaf -- remote list --state draft
-cargo run -p springleaf -- remote list --json
-cargo run -p springleaf -- remote show 01999000-0000-7aaa-8000-000000000001
-cargo run -p springleaf -- remote show https://leaflet.pub/01999000-0000-7aaa-8000-000000000001 --json
+cargo run -p leafspring -- remote list --state draft
+cargo run -p leafspring -- remote list --json
+cargo run -p leafspring -- remote show 01999000-0000-7aaa-8000-000000000001
+cargo run -p leafspring -- remote show https://leaflet.pub/01999000-0000-7aaa-8000-000000000001 --json
 ```
 
 The examples use a synthetic UUID; replace it with a real permission-token ID.
 Credentials: `--token` > `LEAFLET_AUTH_TOKEN` >
-`$XDG_CONFIG_HOME/springleaf/auth-token` (else
-`~/.config/springleaf/auth-token`). Prefer env/file to keep tokens out of
+`$XDG_CONFIG_HOME/leafspring/auth-token` (else
+`~/.config/leafspring/auth-token`). Prefer env/file to keep tokens out of
 shell history and process listings. Tokens are trimmed; explicit empty
 credentials and unreadable/empty files are errors. A missing file permits
 anonymous requests, which may fail authentication. Login remains unimplemented;
@@ -101,15 +101,15 @@ Implementation receipt and next seam:
 ## Document workspace and publication defaults
 
 ```sh
-cargo run -p springleaf -- config set workspace /home/rektide/l
-cargo run -p springleaf -- config show --json
-cargo run -p springleaf -- config set publication AT_URI --workspace-file
+cargo run -p leafspring -- config set workspace /home/rektide/l
+cargo run -p leafspring -- config show --json
+cargo run -p leafspring -- config set publication AT_URI --workspace-file
 ```
 
 Workspace root: `--root DIR` > global TOML `workspace` > cwd. Global config is
-`$XDG_CONFIG_HOME/springleaf/springleaf.toml` (else
-`~/.config/springleaf/springleaf.toml`); relative global workspace paths resolve
-from that file's directory. `<root>/springleaf.toml` supplies workspace defaults.
+`$XDG_CONFIG_HOME/leafspring/leafspring.toml` (else
+`~/.config/leafspring/leafspring.toml`); relative global workspace paths resolve
+from that file's directory. `<root>/leafspring.toml` supplies workspace defaults.
 Figment2 resolves explicit flag > unbound document intent > workspace > global
 for `handle`, `pds`, `publication`; `config show` reports per-key provenance.
 `config set` edits only the chosen key, preserves comments/unknown settings,
@@ -123,9 +123,9 @@ retargeting a binding from ambient defaults or inventing publication dates.
 ## Checkout drafts as editable MDX
 
 ```sh
-cargo run -p springleaf -- import --all --state draft --root /home/rektide/l
-cargo run -p springleaf -- import EDITOR_URL --to drafts/chosen.mdx --json
-cargo run -p springleaf -- --root /home/rektide/l check drafts/chosen.mdx
+cargo run -p leafspring -- import --all --state draft --root /home/rektide/l
+cargo run -p leafspring -- import EDITOR_URL --to drafts/chosen.mdx --json
+cargo run -p leafspring -- --root /home/rektide/l check drafts/chosen.mdx
 ```
 
 This fetches native editor content, unlike metadata-only `remote show`.
@@ -167,9 +167,9 @@ Current implementation/verification handoff:
 ## Refresh bound drafts from their editors (guarded pull)
 
 ```sh
-cargo run -p springleaf -- pull --all --root /home/rektide/l
-cargo run -p springleaf -- pull drafts/chosen.mdx --dry-run --json
-cargo run -p springleaf -- pull drafts/chosen.mdx --take remote
+cargo run -p leafspring -- pull --all --root /home/rektide/l
+cargo run -p leafspring -- pull drafts/chosen.mdx --dry-run --json
+cargo run -p leafspring -- pull drafts/chosen.mdx --take remote
 ```
 
 `pull` refreshes **existing bound local files** from their current native
@@ -208,9 +208,9 @@ Current implementation/verification handoff:
 ## Markdown-first rich text and deliberate tidy
 
 ```sh
-cargo run -p springleaf -- tidy --all --markdown --dry-run --json --root /home/rektide/l
-cargo run -p springleaf -- tidy drafts/chosen.mdx            # default: all implemented passes
-cargo run -p springleaf -- tidy drafts/chosen.mdx --markdown # this pass alone
+cargo run -p leafspring -- tidy --all --markdown --dry-run --json --root /home/rektide/l
+cargo run -p leafspring -- tidy drafts/chosen.mdx            # default: all implemented passes
+cargo run -p leafspring -- tidy drafts/chosen.mdx --markdown # this pass alone
 ```
 
 Import and genuinely changed pull bodies now emit ordinary Markdown
@@ -250,8 +250,8 @@ Current implementation/verification handoff:
 
 ```
 cargo build
-cargo run -p springleaf -- --version
-cargo run -p springleaf -- push essay.mdx   # -> "not implemented", exit 1
+cargo run -p leafspring -- --version
+cargo run -p leafspring -- push essay.mdx   # -> "not implemented", exit 1
 ```
 
 Checks: `cargo fmt`, `cargo clippy --workspace --all-targets`,

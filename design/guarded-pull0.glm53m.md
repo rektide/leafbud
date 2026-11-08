@@ -27,21 +27,21 @@ sources:
 ## Outcome and checkpoints
 
 The user commissioned guarded refresh/pull for the existing imported draft
-MDX files. Code remains in `~/src/springleaf`; **`~/l` is the document
+MDX files. Code remains in `~/src/leafspring`; **`~/l` is the document
 workspace** and only contains the 27 real drafts plus this capability's
 receipts.
 
 - `tvplrskqw` — **Add source-preserving MDX update for guarded refresh**:
   the single writer split into verified frontmatter/body parts, plus
-  `springleaf_mdx::update` patching owned author fields, regenerating the
-  reserved `@springleaf` envelope, keeping unrelated author bytes and
+  `leafspring_mdx::update` patching owned author fields, regenerating the
+  reserved `@leafspring` envelope, keeping unrelated author bytes and
   rewriting the body only when page content changed. `Uuid` re-exported from
   the document model.
 - `xyqypkkt` — **Add guarded pull workflow**: `RemoteReader::pull` with
   workspace scan, identity/rights/lifecycle/association guards, key
   reconciliation, remote-owned merge preserving local-only metadata,
   receipt-based classification and guarded atomic writes.
-- `vkyusotn` — **Wire the CLI and bump to 0.5.0**: `springleaf pull FILE...
+- `vkyusotn` — **Wire the CLI and bump to 0.5.0**: `leafspring pull FILE...
   [--all] [--state draft|published] [--take remote] [--dry-run] [--json]`,
   accepted exit codes, coordinated version bump with exact internal pins.
 
@@ -93,7 +93,7 @@ unique entity when placements grew), so manual renames survive refresh and
 unrenamed files are never rekeyed. Ambiguous matches fall back to the derived
 key rather than guessing.
 
-Writing is `springleaf_mdx::update`: changed owned fields (`title`,
+Writing is `leafspring_mdx::update`: changed owned fields (`title`,
 `description`, `tags`, `publication`, `theme`, `contributors`) are rewritten in
 normalized form at their existing location; unchanged fields, comments, blank
 lines and unknown/local-only fields keep their exact bytes; the reserved
@@ -126,7 +126,7 @@ Envelope round-tripping goes through the typed model, but the patcher replaces
 only the envelope's own extent, so future unknown envelope fields survive in
 the file only insofar as they are representable. `Binding`/`Node`/`Sync`
 already carried `deny_unknown_fields`; **`State` itself did not**, so unknown
-top-level `@springleaf` fields were silently dropped by typed reserialization
+top-level `@leafspring` fields were silently dropped by typed reserialization
 in `mdx::update` — a real data-loss path this handoff misreported as already
 blocked. The correction session added `deny_unknown_fields` to `State` with a
 regression (synthetic `futurePolicy` field: full parse and `update` refuse,

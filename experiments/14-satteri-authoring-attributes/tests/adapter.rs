@@ -10,7 +10,7 @@ use satteri_authoring_attributes_experiment::{
 const BRACES: &str = include_str!("../fixtures/garden-attributes.mdx");
 const KEYS: &str = include_str!("../../13-satteri-authoring/fixtures/garden.mdx");
 fn source(body: &str) -> String {
-    format!("---\nformat: springleaf-mdx/1\ntitle: Test\n---\n\n{body}")
+    format!("---\nformat: leafspring-mdx/1\ntitle: Test\n---\n\n{body}")
 }
 fn code(body: &str) -> &'static str {
     compile(&source(body)).unwrap_err()[0].code

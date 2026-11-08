@@ -99,7 +99,7 @@ never silently switch management mode or mint a duplicate on publication.
 
 ## 2. Storage and identity
 
-JSON is a full record-shaped document plus top-level `@springleaf`. Local
+JSON is a full record-shaped document plus top-level `@leafspring`. Local
 drafts need not satisfy final wire-required publication fields before they
 exist. Unknown document fields survive ordinary edits. Strip the envelope
 explicitly for remote record serialization and record-only export.
@@ -131,7 +131,7 @@ Use one tagged binding, not simultaneous `draft` and `post` management sections.
 An illustrative outline (exact names remain open):
 
 ```text
-@springleaf
+@leafspring
   version, localId
   binding: unlinked-draft | leaflet-draft | leaflet-post
     baseUrl, token, rootEntity          where linked
@@ -326,7 +326,7 @@ push must not silently reset publication dates. Native future-date clamping
 is reported; scheduling remains separate.
 
 Markdown is an alternative serialization of the same document with metadata
-and `@springleaf` in frontmatter. No second maintained JSON output, conversion
+and `@leafspring` in frontmatter. No second maintained JSON output, conversion
 baseline, or Markdown sync edge. Conversion loses nothing it can preserve;
 report actual unsupported content and require `--force-downconvert` for lossy
 conversion, including pull into a limited Markdown representation. A lossy
@@ -336,20 +336,20 @@ is future work in `leafspring-mdx`.
 Illustrative surface:
 
 ```sh
-springleaf create drafts/essay.json --title "An essay"
-springleaf import LEAFLET-LOCATOR          # picks default layout unless --to
-springleaf status [FILE]                   # both edges and release evidence
-springleaf diff FILE --edge names|leaflet
-springleaf pull FILE                       # current working editor state
-springleaf push FILE --yes                 # save to Leaflet, never publish
-springleaf publish FILE --yes              # save + publish / republish
-springleaf resolve FILE --take local|remote
-springleaf tidy FILE --from filename|path
-springleaf tidy FILE --accept
-springleaf edit FILE --now
-springleaf drafts append TOKEN --from FILE # additive low-level operation
-springleaf convert FILE --to json|markdown
-springleaf export FILE --record-only
+leafspring create drafts/essay.json --title "An essay"
+leafspring import LEAFLET-LOCATOR          # picks default layout unless --to
+leafspring status [FILE]                   # both edges and release evidence
+leafspring diff FILE --edge names|leaflet
+leafspring pull FILE                       # current working editor state
+leafspring push FILE --yes                 # save to Leaflet, never publish
+leafspring publish FILE --yes              # save + publish / republish
+leafspring resolve FILE --take local|remote
+leafspring tidy FILE --from filename|path
+leafspring tidy FILE --accept
+leafspring edit FILE --now
+leafspring drafts append TOKEN --from FILE # additive low-level operation
+leafspring convert FILE --to json|markdown
+leafspring export FILE --record-only
 ```
 
 Kind-specific groups may scope the same implementation. Bulk discovery/import

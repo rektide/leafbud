@@ -40,10 +40,10 @@ network operation, or Leaflet/Yrs integration. The original `.mdx` stays authori
 Selected optional prose identity syntax:
 
 ```mdx
-{/* springleaf:key introduction */}
+{/* leafspring:key introduction */}
 ## Introduction
 
-{/* springleaf:key central-argument */}
+{/* leafspring:key central-argument */}
 Ordinary prose with **formatting**.
 
 <Poll key="topic" options={["Gardens", "Maps"]} />

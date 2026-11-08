@@ -20,9 +20,9 @@ sources:
     title: "RPC metadata and synthetic response fixtures, distinct from editor-content reads"
   - resource: /design/document-sync1.gpt61s.md
     title: "Precedent requiring honest discovery completeness and dependable native locator resolution"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/lib.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/lib.rs
     title: "Selectively recovered flight/brace extraction and protocol behavior, not obsolete lifecycle"
-  - resource: https://github.com/rektide/springleaf/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/main.rs
+  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/cli/src/main.rs
     title: "Recovered token/base URL precedence and rendering precedent"
   - resource: file:///home/rektide/archive/hyperlink-academy/leaflet/app/api/rpc/[command]/get_leaflet_data.ts
     title: "Local upstream RPC source verifies direct standalone document joins and response envelope"

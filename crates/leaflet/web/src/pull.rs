@@ -53,8 +53,8 @@ impl LeafletClient {
             .http
             .post(self.base.join("api/rpc/pull").expect("static path"))
             .json(&serde_json::json!({"token_id":id,"pullRequest":{
-                "pullVersion":1,"schemaVersion":"","profileID":"springleaf-read-only",
-                "cookie":null,"clientGroupID":"springleaf-read-only"
+                "pullVersion":1,"schemaVersion":"","profileID":"leafspring-read-only",
+                "cookie":null,"clientGroupID":"leafspring-read-only"
             }}))
             .send()
             .await

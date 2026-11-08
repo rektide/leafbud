@@ -3,10 +3,10 @@
 //! use proven Run JSX. Updates patch owned fields and the reserved envelope;
 //! unrelated author text, comments and unknown fields survive.
 use anyhow::{Context, Result, bail, ensure};
+use leafspring_document::*;
 use satteri_arena::{Arena, Mdast, decode_string_ref_data};
 use satteri_ast::mdast::*;
 use serde_json::{Value, json};
-use springleaf_document::*;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
@@ -27,7 +27,7 @@ fn frontmatter<T: serde::de::DeserializeOwned>(source: &str) -> Result<T> {
 }
 
 /// Emit ordinary, explicitly typed YAML, quoting every key/string (including
-/// UUIDs and @springleaf). No aliases/tags/duplicate keys are generated.
+/// UUIDs and @leafspring). No aliases/tags/duplicate keys are generated.
 fn yaml(value: &Value, indent: usize, out: &mut String) {
     if let Some(map) = value.as_object() {
         for (key, value) in map {
@@ -835,7 +835,7 @@ pub fn parse_with_spans(source: &str) -> Result<(Document, Vec<BlockSpan>)> {
     ensure!(reader.kind(first) == MdastNodeType::Yaml, "YAML frontmatter required");
     let mut document: Document = frontmatter(reader.value(first))?;
     ensure!(
-        document.format == "springleaf-mdx/1" && document.state.sync.profile == PROFILE && document.state.state == "draft",
+        document.format == "leafspring-mdx/1" && document.state.sync.profile == PROFILE && document.state.state == "draft",
         "unsupported managed format/profile/lifecycle"
     );
     ensure!(!document.title.trim().is_empty(), "empty document title");
@@ -969,7 +969,7 @@ fn patch_key(lines: &mut Vec<String>, key: &str, new: &Value) -> Result<()> {
         }
         None if new.is_null() => {}
         None => {
-            let at = find_key(lines, "@springleaf")?.context("reserved @springleaf envelope not found for source-preserving patch")?;
+            let at = find_key(lines, "@leafspring")?.context("reserved @leafspring envelope not found for source-preserving patch")?;
             lines.splice(at..at, key_lines(key, new));
         }
     }
@@ -980,7 +980,7 @@ fn patch_key(lines: &mut Vec<String>, key: &str, new: &Value) -> Result<()> {
 /// next state of THIS document (same format, id and binding token). Owned
 /// author fields that changed are rewritten in normalized form; unchanged
 /// fields, comments, blank lines and unknown/local-only fields keep their
-/// bytes; the reserved `@springleaf` envelope is regenerated. The body is
+/// bytes; the reserved `@leafspring` envelope is regenerated. The body is
 /// re-serialized only when page content actually changed. The result is
 /// verified to parse back to exactly `document`.
 pub fn update(source: &str, document: &Document) -> Result<String> {
@@ -1008,10 +1008,10 @@ pub fn update(source: &str, document: &Document) -> Result<String> {
         }
         patch_key(&mut lines, key, &new)?;
     }
-    let envelope = find_key(&lines, "@springleaf")?.context("reserved @springleaf envelope not found for source-preserving patch")?;
+    let envelope = find_key(&lines, "@leafspring")?.context("reserved @leafspring envelope not found for source-preserving patch")?;
     let end = value_extent(&lines, envelope);
     let mut regenerated = String::new();
-    yaml(&json!({"@springleaf": &document.state}), 0, &mut regenerated);
+    yaml(&json!({"@leafspring": &document.state}), 0, &mut regenerated);
     lines.splice(envelope..end, regenerated.split_inclusive('\n').map(str::to_owned));
     let frontmatter = "---\n".to_owned() + &lines.join("") + "---\n";
     let body = if existing.pages == document.pages {
@@ -1149,7 +1149,7 @@ mod tests {
             },
         };
         Document {
-            format: "springleaf-mdx/1".into(),
+            format: "leafspring-mdx/1".into(),
             title: "T".into(),
             description: None,
             tags: vec![],
@@ -1177,8 +1177,8 @@ mod tests {
     fn authored(source: &str) -> String {
         source
             .replacen("\"title\": \"T\"", "title: T # chosen by the author", 1)
-            .replacen("\"format\": \"springleaf-mdx/1\"\n", "\"format\": \"springleaf-mdx/1\"\n# author note\n", 1)
-            .replacen("\n\"@springleaf\":", "\ncustomField: {\"meaning\": \"retained\"}\n\n\"@springleaf\":", 1)
+            .replacen("\"format\": \"leafspring-mdx/1\"\n", "\"format\": \"leafspring-mdx/1\"\n# author note\n", 1)
+            .replacen("\n\"@leafspring\":", "\ncustomField: {\"meaning\": \"retained\"}\n\n\"@leafspring\":", 1)
     }
 
     #[test]
@@ -1243,14 +1243,14 @@ mod tests {
         assert!(update(&original, &broken).is_err());
     }
 
-    /// A future/unknown field inside the reserved `@springleaf` envelope must
+    /// A future/unknown field inside the reserved `@leafspring` envelope must
     /// block managed mutation instead of silently disappearing through typed
     /// State reserialization. `header` stays untyped and still reads it.
     #[test]
     fn unknown_state_fields_block_managed_mutation() {
         let original = render(&document()).unwrap();
         // Synthetic future field: a sibling of the owned State fields.
-        let future = original.replacen("\"@springleaf\":\n", "\"@springleaf\":\n  \"futurePolicy\": {\"mode\": \"reserved\"}\n", 1);
+        let future = original.replacen("\"@leafspring\":\n", "\"@leafspring\":\n  \"futurePolicy\": {\"mode\": \"reserved\"}\n", 1);
         assert!(parse(&future).is_err(), "full parse must reject unknown owned-state semantics");
         let mut next = document();
         next.state.sync.remote_hash = "sha256:newer".into();
@@ -1265,7 +1265,7 @@ mod tests {
         assert!(parse(&original).is_ok());
         // Untyped header inspection still observes the raw state, future field included.
         let header = header(&future).unwrap();
-        assert_eq!(header["@springleaf"]["futurePolicy"]["mode"], "reserved");
+        assert_eq!(header["@leafspring"]["futurePolicy"]["mode"], "reserved");
     }
 
     fn body_of(source: &str) -> &str {

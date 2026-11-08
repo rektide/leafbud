@@ -103,7 +103,7 @@ also skips some media; symmetry cannot be claimed merely by reusing it.
 
 ## Logical document and embedded metadata
 
-Keep the record-shaped document at the top level and reserve `@springleaf` for
+Keep the record-shaped document at the top level and reserve `@leafspring` for
 all local state. Strip it completely for record-only export and remote record
 writes. JSON is the lossless default; Markdown is an alternative serialization
 of this *same* logical object. Do not require state-specific directories.
@@ -112,7 +112,7 @@ Illustrative metadata, with placeholders rather than actual credentials:
 
 ```json
 {
-  "@springleaf": {
+  "@leafspring": {
     "version": 1,
     "localId": "uuid",
     "target": {"kind": "draft", "binding": null},
@@ -219,21 +219,21 @@ retains `pending` and reports achieved differences. PDS updates use
 ## Lifecycle and symmetric command sketch
 
 ```text
-springleaf create FILE [--path /post]       # local draft, no remote identity
-springleaf import SOURCE --to FILE         # draft token or published AT-URI/URL
-springleaf status FILE                     # both edges; remote read by default
-springleaf diff FILE [--edge names|remote]  # baseline/local/remote
-springleaf pull FILE                       # route by tagged target
-springleaf push FILE                       # draft mint-or-replace; published CAS
-springleaf resolve FILE --take local|remote
-springleaf resolve FILE --merged MERGEFILE
-springleaf tidy FILE --from path|filename
-springleaf tidy FILE --accept
-springleaf publish FILE [--now]             # draft -> published through Leaflet
-springleaf drafts push FILE                # same push, require draft kind
-springleaf drafts append TOKEN --from FILE # explicit append, no sync claim
-springleaf convert FILE --to json|markdown # developer-facing encoding tool
-springleaf export FILE --record-only       # no @springleaf
+leafspring create FILE [--path /post]       # local draft, no remote identity
+leafspring import SOURCE --to FILE         # draft token or published AT-URI/URL
+leafspring status FILE                     # both edges; remote read by default
+leafspring diff FILE [--edge names|remote]  # baseline/local/remote
+leafspring pull FILE                       # route by tagged target
+leafspring push FILE                       # draft mint-or-replace; published CAS
+leafspring resolve FILE --take local|remote
+leafspring resolve FILE --merged MERGEFILE
+leafspring tidy FILE --from path|filename
+leafspring tidy FILE --accept
+leafspring publish FILE [--now]             # draft -> published through Leaflet
+leafspring drafts push FILE                # same push, require draft kind
+leafspring drafts append TOKEN --from FILE # explicit append, no sync claim
+leafspring convert FILE --to json|markdown # developer-facing encoding tool
+leafspring export FILE --record-only       # no @leafspring
 ```
 
 The kind-specific command is a convenient entry point, not separate semantics.
@@ -287,7 +287,7 @@ clamps future dates; future scheduling is a separate capability, not a promise
 of this option. Import/pull preserve record dates; observation/accepted/write
 times live only in the envelope and never determine precedence.
 
-Markdown stores record metadata and `@springleaf` in frontmatter and encodes
+Markdown stores record metadata and `@leafspring` in frontmatter and encodes
 representable content as its body. Reading either encoding yields the same
 logical document. Converting encodings in place does not reset remote baselines;
 its filename change is visible on the naming edge. Plain Markdown cannot retain

@@ -68,7 +68,7 @@ Minimal new file, `essay.mdx`:
 
 ````mdx
 ---
-format: springleaf-mdx/1
+format: leafspring-mdx/1
 title: A small essay
 description: An example authored locally
 tags: [notes]
@@ -127,7 +127,7 @@ HTML/code text, inline mentions/footnotes and theme slots can be represented
 without executing a program. Inline names/references are resolved within each
 build; flattened publication facets are generated output, not the stored model.
 
-Use frontmatter as authoring data plus a CLI-owned `@springleaf` section. After
+Use frontmatter as authoring data plus a CLI-owned `@leafspring` section. After
 binding, the latter contains only:
 
 ```text
@@ -154,10 +154,10 @@ not turn it into a second draft. Filenames/directories are convenient placement.
 Proposed surface, not existing implemented commands:
 
 ```sh
-springleaf create essay.mdx --title "A small essay"  # local file only
-springleaf check essay.mdx                         # compile/validate; no writes
-springleaf save essay.mdx --replace                # create once, then replace body
-springleaf publish essay.mdx --replace             # ensure body, then publish/update
+leafspring create essay.mdx --title "A small essay"  # local file only
+leafspring check essay.mdx                         # compile/validate; no writes
+leafspring save essay.mdx --replace                # create once, then replace body
+leafspring publish essay.mdx --replace             # ensure body, then publish/update
 ```
 
 `publish --replace` includes save when needed; the normal short path is therefore

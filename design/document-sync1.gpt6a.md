@@ -108,7 +108,7 @@ edit likewise requires an explicit choice, not a silent normalization.
 ## File and compact metadata
 
 The JSON body is the complete record-shaped logical document plus reserved
-`@springleaf`. Draft validation permits fields such as path/date to be absent
+`@leafspring`. Draft validation permits fields such as path/date to be absent
 before publication. Record-only export explicitly removes the envelope; every
 outbound conversion starts from that stripped object. Credentials stay in config.
 
@@ -116,7 +116,7 @@ Illustrative published metadata; hashes and identifiers are placeholders:
 
 ```json
 {
-  "@springleaf": {
+  "@leafspring": {
     "version": 1,
     "id": "local-uuid",
     "target": {
@@ -212,7 +212,7 @@ classification pattern, not a shared baseline:
 - No usable witness: unbased; inspect current endpoints and explicitly establish
   correspondence. Missing/unlinked/unknown are separate states.
 
-The local hash is versioned deterministic logical JSON, excluding `@springleaf`,
+The local hash is versioned deterministic logical JSON, excluding `@leafspring`,
 preserving array order and unknown fields. Semantic projection compares editable
 meaning: regenerated entity IDs and CRDT byte encodings are not content changes.
 Do not erase meaningful reference topology when normalizing IDs.
@@ -318,7 +318,7 @@ queues cleanup of still-used image objects.
 
 Read-only draft pull must not require remote uploads to express media. Retain
 content-addressed blob descriptors in the logical record and compact source
-locators under `@springleaf.assets` when bytes are still in Leaflet/local storage;
+locators under `@leafspring.assets` when bytes are still in Leaflet/local storage;
 resolve bytes in memory to construct/verify those descriptors. Poll references
 and other external resources likewise need resolvable targets; never claim a
 made-up AT-URI is a published object. Newly authored resources require their
@@ -330,24 +330,24 @@ an acceptance condition, not a permanent `--force` bypass for unfinished work.
 ## Commands, dates, and encodings
 
 ```sh
-springleaf create essay                    # defaults to drafts/essay.json
-springleaf create --file notes/essay.json   # equally valid placement
-springleaf import SOURCE --to FILE
-springleaf status FILE
-springleaf diff FILE
-springleaf pull FILE
-springleaf push FILE                       # draft save; published save + update
-springleaf publish FILE --now              # first native publication
-springleaf resolve FILE --take local       # pin reviewed overwrite choice
-springleaf resolve FILE --take remote      # guarded current-remote pull
-springleaf tidy FILE --from filename
-springleaf tidy FILE --from path
-springleaf tidy FILE --accept
-springleaf edit FILE --published-at TIME
-springleaf drafts push FILE                # scoped entry to the same operation
-springleaf drafts append TOKEN --from FILE # low-level additive primitive
-springleaf convert FILE --to markdown --force-downconvert
-springleaf export FILE --record-only
+leafspring create essay                    # defaults to drafts/essay.json
+leafspring create --file notes/essay.json   # equally valid placement
+leafspring import SOURCE --to FILE
+leafspring status FILE
+leafspring diff FILE
+leafspring pull FILE
+leafspring push FILE                       # draft save; published save + update
+leafspring publish FILE --now              # first native publication
+leafspring resolve FILE --take local       # pin reviewed overwrite choice
+leafspring resolve FILE --take remote      # guarded current-remote pull
+leafspring tidy FILE --from filename
+leafspring tidy FILE --from path
+leafspring tidy FILE --accept
+leafspring edit FILE --published-at TIME
+leafspring drafts push FILE                # scoped entry to the same operation
+leafspring drafts append TOKEN --from FILE # low-level additive primitive
+leafspring convert FILE --to markdown --force-downconvert
+leafspring export FILE --record-only
 ```
 
 `posted/` is the default destination for new published imports; `drafts/` for

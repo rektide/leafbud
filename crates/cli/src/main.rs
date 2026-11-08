@@ -1,4 +1,4 @@
-//! springleaf — thin parsing/rendering for native reads/imports, bounded
+//! leafspring — thin parsing/rendering for native reads/imports, bounded
 //! offline check, and layered configuration.
 //!
 //! The command tree below mirrors the **accepted** authoring interface
@@ -22,7 +22,7 @@
 //!
 //! Other commands report `not implemented` on stderr and exit `1`.
 //! Business policy lives in
-//! `springleaf-workflow`; this binary stays a thin Clap/rendering layer.
+//! `leafspring-workflow`; this binary stays a thin Clap/rendering layer.
 //! The pre-reset stage-5 client (auth status, drafts list/export/author,
 //! publish build/run, sync, config) is recoverable at revision
 //! `80436b61`.
@@ -31,7 +31,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use springleaf_workflow::{LeafletState, RemoteOptions};
+use leafspring_workflow::{LeafletState, RemoteOptions};
 
 mod config;
 mod import;
@@ -41,7 +41,7 @@ mod tidy;
 
 #[derive(Parser)]
 #[command(
-    name = "springleaf",
+    name = "leafspring",
     version,
     about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, guarded pull, check and config)"
 )]
@@ -60,7 +60,7 @@ struct Cli {
     /// Leaflet origin (LEAFLET_BASE_URL; default https://leaflet.pub)
     #[arg(long, global = true, value_name = "URL")]
     base_url: Option<String>,
-    /// auth_token cookie value (LEAFLET_AUTH_TOKEN; else XDG springleaf/auth-token).
+    /// auth_token cookie value (LEAFLET_AUTH_TOKEN; else XDG leafspring/auth-token).
     /// Prefer env/file to avoid shell history/process-list exposure.
     #[arg(long, global = true, value_name = "TOKEN")]
     token: Option<String>,
@@ -347,7 +347,7 @@ enum ConfigCommand {
     },
     /// Write one key to the layered config
     Set {
-        key: springleaf_workflow::config::Key,
+        key: leafspring_workflow::config::Key,
         value: String,
         #[arg(long)]
         workspace_file: bool,
@@ -361,7 +361,7 @@ async fn main() -> ExitCode {
         base_url: cli.base_url,
         token: cli.token,
     };
-    let flags = springleaf_workflow::config::Config {
+    let flags = leafspring_workflow::config::Config {
         handle: cli.handle,
         pds: cli.pds,
         publication: cli.publication,
@@ -372,7 +372,7 @@ async fn main() -> ExitCode {
             options,
             cli.root.as_deref(),
             &flags,
-            springleaf_workflow::import::Request {
+            leafspring_workflow::import::Request {
                 locator: locator.clone(),
                 to: to.clone(),
                 all: *all,
@@ -387,7 +387,7 @@ async fn main() -> ExitCode {
         {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("springleaf: {error}");
+                eprintln!("leafspring: {error}");
                 ExitCode::FAILURE
             }
         };
@@ -405,7 +405,7 @@ async fn main() -> ExitCode {
             options,
             cli.root.as_deref(),
             &flags,
-            springleaf_workflow::pull::Request {
+            leafspring_workflow::pull::Request {
                 all: *all,
                 files: files.clone(),
                 state: state.map(|s| match s {
@@ -421,7 +421,7 @@ async fn main() -> ExitCode {
         {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("springleaf: {error}");
+                eprintln!("leafspring: {error}");
                 ExitCode::FAILURE
             }
         };
@@ -442,14 +442,14 @@ async fn main() -> ExitCode {
         // settles naming silently.
         if *keys {
             eprintln!(
-                "springleaf: tidy --keys (missing source identity assignment) is not implemented yet; \
+                "leafspring: tidy --keys (missing source identity assignment) is not implemented yet; \
                  this build only normalizes Markdown bodies"
             );
             return ExitCode::FAILURE;
         }
         if from.is_some() || *accept {
             eprintln!(
-                "springleaf: tidy --from/--accept (naming reconciliation) is not implemented yet; \
+                "leafspring: tidy --from/--accept (naming reconciliation) is not implemented yet; \
                  this build only normalizes Markdown bodies"
             );
             return ExitCode::FAILURE;
@@ -457,7 +457,7 @@ async fn main() -> ExitCode {
         return match tidy::run(
             cli.root.as_deref(),
             &flags,
-            springleaf_workflow::tidy::Request {
+            leafspring_workflow::tidy::Request {
                 all: *all,
                 files: files.clone(),
                 dry_run: *dry_run,
@@ -466,16 +466,16 @@ async fn main() -> ExitCode {
         ) {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("springleaf: {error}");
+                eprintln!("leafspring: {error}");
                 ExitCode::FAILURE
             }
         };
     }
     if let Command::Check { files } = &cli.command {
-        let context = match springleaf_workflow::config::load(cli.root.as_deref(), &flags, None) {
+        let context = match leafspring_workflow::config::load(cli.root.as_deref(), &flags, None) {
             Ok(context) => context,
             Err(e) => {
-                eprintln!("springleaf: {e}");
+                eprintln!("leafspring: {e}");
                 return ExitCode::FAILURE;
             }
         };
@@ -486,7 +486,7 @@ async fn main() -> ExitCode {
             } else {
                 context.workspace_root.join(file)
             };
-            match springleaf_workflow::import::check(&path) {
+            match leafspring_workflow::import::check(&path) {
                 Ok((blocks, changed)) => println!("valid {} ({blocks} blocks; local changes: {changed})", path.display()),
                 Err(error) => {
                     failed += 1;
@@ -524,7 +524,7 @@ async fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("springleaf: {error}");
+            eprintln!("leafspring: {error}");
             ExitCode::FAILURE
         }
     }
@@ -537,7 +537,7 @@ async fn main() -> ExitCode {
 fn not_implemented(command: &Command) -> ExitCode {
     let name = command_name(command);
     eprintln!(
-        "springleaf: '{name}' is not implemented — this is the post-reset scaffold; \
+        "leafspring: '{name}' is not implemented — this is the post-reset scaffold; \
          see design/authoring-interface0.gpt6a.md and design/scaffold-reset0.glm53m.md"
     );
     ExitCode::FAILURE

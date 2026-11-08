@@ -1,6 +1,6 @@
 [package]
-name = "springleaf-web"
-description = "Leaflet web effects for springleaf: cookie auth, discovery, RPC/actions, uploads, native publication"
+name = "leafspring-web"
+description = "Leaflet web effects for leafspring: cookie auth, discovery, RPC/actions, uploads, native publication"
 version.workspace = true
 edition.workspace = true
 

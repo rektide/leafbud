@@ -1,6 +1,6 @@
 ---
 type: Proposal
-title: "Document-centered springleaf — Sol's independent option"
+title: "Document-centered leafspring — Sol's independent option"
 description: "A file-first lifecycle with one active remote, two reconciliation edges, embedded witnesses, and alternative document encodings."
 resource: design/document-sync0.gpt61s.md
 status: draft
@@ -30,7 +30,7 @@ sources:
     title: "Read only after the independent Sol option was committed; comparison and revised leans below"
 ---
 
-# Document-centered springleaf — Sol's independent option
+# Document-centered leafspring — Sol's independent option
 
 ## Standing and intent
 
@@ -83,7 +83,7 @@ remain unbuilt and must be established before advertising that lifecycle.
 
 ## Local document and lifecycle
 
-JSON contains the complete logical document plus a reserved `@springleaf`
+JSON contains the complete logical document plus a reserved `@leafspring`
 object. Record-only serialization removes that object explicitly; test the
 outbound object rather than relying on server rejection of unknown properties.
 Metadata editing preserves unknown document fields rather than reconstructing
@@ -104,7 +104,7 @@ repair placement. There is never a second active copy maintained in both dirs.
 Suggested metadata responsibilities, not a frozen wire schema:
 
 ```text
-@springleaf
+@leafspring
   version
   id                         stable local identity, independent of all names
   state                      draft | published (tagged, mutually exclusive)
@@ -207,18 +207,18 @@ available, with the result checked against a fresh remote observation on push.
 Illustrative command grammar, not a decided CLI specification:
 
 ```sh
-springleaf create my-post                 # local file, no remote required
-springleaf status [FILE]                  # both edges, no baseline mutation
-springleaf diff FILE --edge remote
-springleaf pull FILE                      # active remote -> document
-springleaf push FILE                      # document -> active remote
-springleaf tidy FILE --from path          # path -> filename
-springleaf tidy FILE --from filename      # filename -> path
-springleaf resolve FILE --edge remote --take local
-springleaf resolve FILE --edge remote --take remote
-springleaf publish FILE                   # Leaflet transition, not bare put
-springleaf edit FILE --published-at TIME
-springleaf edit FILE --now
+leafspring create my-post                 # local file, no remote required
+leafspring status [FILE]                  # both edges, no baseline mutation
+leafspring diff FILE --edge remote
+leafspring pull FILE                      # active remote -> document
+leafspring push FILE                      # document -> active remote
+leafspring tidy FILE --from path          # path -> filename
+leafspring tidy FILE --from filename      # filename -> path
+leafspring resolve FILE --edge remote --take local
+leafspring resolve FILE --edge remote --take remote
+leafspring publish FILE                   # Leaflet transition, not bare put
+leafspring edit FILE --published-at TIME
+leafspring edit FILE --now
 ```
 
 Draft/post groups can expose the same verbs as scoped entrypoints. Ordinary
@@ -279,7 +279,7 @@ distinct from a fully publishable wire record's required-field validation.
 Scheduling is separate; the native action currently clamps future dates.
 
 JSON is the full-fidelity encoding. Markdown is an alternative encoding of the
-same logical document, with document fields and `@springleaf` in frontmatter.
+same logical document, with document fields and `@leafspring` in frontmatter.
 One chosen file is maintained, never a Markdown source plus synchronized JSON
 output. Converters can create outputs for inspection, but do not establish a
 third sync edge. Before conversion, report unrepresentable fields/blocks;

@@ -28,10 +28,10 @@ fn expression_grammar_is_not_a_general_attribute_key_grammar() {
 
 #[test]
 fn native_comment_is_a_positioned_flow_expression_not_identity() {
-    let tree = stock("{/* springleaf:key intro */}\n## Heading\n").unwrap();
+    let tree = stock("{/* leafspring:key intro */}\n## Heading\n").unwrap();
     let children = tree.children().unwrap();
     let Node::MdxFlowExpression(comment) = &children[0] else { panic!("{tree:?}") };
-    assert_eq!(comment.value, "/* springleaf:key intro */");
+    assert_eq!(comment.value, "/* leafspring:key intro */");
     assert_eq!(comment.position.as_ref().unwrap().start.offset, 0);
     assert!(matches!(&children[1], Node::Heading(_)));
 }
@@ -75,7 +75,7 @@ fn components_are_real_jsx_nodes_with_ordered_attributes_and_children() {
 
 #[test]
 fn native_mdx_flow_comments_interrupt_apparent_multiline_code() {
-    let tree = stock("Code `first\n{/* springleaf:key accidental */}\nlast`.\n").unwrap();
+    let tree = stock("Code `first\n{/* leafspring:key accidental */}\nlast`.\n").unwrap();
     let children = tree.children().unwrap();
     assert_eq!(children.len(), 3);
     assert!(matches!(children[0], Node::Paragraph(_)));

@@ -22,10 +22,10 @@ cargo fmt --check
 The selected authoring spelling uses native MDX comment expression nodes:
 
 ```mdx
-{/* springleaf:key introduction */}
+{/* leafspring:key introduction */}
 ## Introduction
 
-{/* springleaf:key central-argument */}
+{/* leafspring:key central-argument */}
 This is an ordinary paragraph with **formatting**.
 
 <Poll key="next-topic" options={["Gardens", "Maps"]} />

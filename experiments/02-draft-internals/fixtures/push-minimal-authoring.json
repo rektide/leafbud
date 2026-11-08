@@ -5,12 +5,12 @@
       "pushVersion": 1,
       "schemaVersion": "",
       "profileID": "00000000-0000-0000-0000-000000000000",
-      "clientGroupID": "springleaf-author-group-1",
+      "clientGroupID": "leafspring-author-group-1",
       "mutations": [
         {
           "id": 1,
           "name": "addBlock",
-          "clientID": "springleaf-client-1",
+          "clientID": "leafspring-client-1",
           "timestamp": 1794000000000,
           "args": {
             "parent": "01999000-0000-7aaa-8000-000000000003",
@@ -24,7 +24,7 @@
         {
           "id": 2,
           "name": "assertFact",
-          "clientID": "springleaf-client-1",
+          "clientID": "leafspring-client-1",
           "timestamp": 1794000000001,
           "args": {
             "entity": "01999000-0000-7aaa-8000-000000000032",
@@ -35,7 +35,7 @@
         {
           "id": 3,
           "name": "assertFact",
-          "clientID": "springleaf-client-1",
+          "clientID": "leafspring-client-1",
           "timestamp": 1794000000002,
           "args": {
             "entity": "01999000-0000-7aaa-8000-000000000032",
@@ -46,7 +46,7 @@
         {
           "id": 4,
           "name": "addBlock",
-          "clientID": "springleaf-client-1",
+          "clientID": "leafspring-client-1",
           "timestamp": 1794000000003,
           "args": {
             "parent": "01999000-0000-7aaa-8000-000000000003",
@@ -60,7 +60,7 @@
         {
           "id": 5,
           "name": "assertFact",
-          "clientID": "springleaf-client-1",
+          "clientID": "leafspring-client-1",
           "timestamp": 1794000000004,
           "args": {
             "entity": "01999000-0000-7aaa-8000-000000000034",
@@ -71,7 +71,7 @@
         {
           "id": 6,
           "name": "updateLeafletMetadata",
-          "clientID": "springleaf-client-1",
+          "clientID": "leafspring-client-1",
           "timestamp": 1794000000005,
           "args": { "title": "Synthetic title" }
         }

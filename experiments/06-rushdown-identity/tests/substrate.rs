@@ -95,7 +95,7 @@ fn component_html_and_expressions_are_not_an_mdx_implementation() {
 
 #[test]
 fn json_component_can_look_like_prose_and_is_not_classified_by_identity_extension() {
-    let parsed = parse("{/* springleaf:key component-looking */}\n<Poll options={[\"A\"]} />\n", Mode::Comments);
+    let parsed = parse("{/* leafspring:key component-looking */}\n<Poll options={[\"A\"]} />\n", Mode::Comments);
     assert!(parsed.diagnostics.is_empty());
     assert_eq!(parsed.blocks[0].kind, "Paragraph");
     assert_eq!(parsed.blocks[0].key.as_deref(), Some("component-looking"));
@@ -133,7 +133,7 @@ fn projection_intentionally_retains_raw_markdown_text_escapes_and_entities() {
 
 #[test]
 fn annotation_shapes_inside_raw_html_remain_html_payload() {
-    let source = "<div>\n{/* springleaf:key literal */}\n{#literal}\n</div>\n";
+    let source = "<div>\n{/* leafspring:key literal */}\n{#literal}\n</div>\n";
     let parsed = parse(source, Mode::Both);
     assert!(parsed.diagnostics.is_empty());
     assert_eq!(parsed.blocks.len(), 1);

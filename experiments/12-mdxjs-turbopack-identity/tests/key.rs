@@ -131,7 +131,7 @@ fn duplicate_ids_and_cross_syntax_collisions_are_invalid() {
     for source in [
         "<Key id=\"same\" />\nOne.\n\n<Key id=\"same\" />\n## Two\n",
         "<Key id=\"same\" />\nOne.\n\n<Poll key=\"same\" />\n",
-        "<Key id=\"same\" />\nOne.\n\n{/* springleaf:key same */}\nTwo.\n",
+        "<Key id=\"same\" />\nOne.\n\n{/* leafspring:key same */}\nTwo.\n",
     ] {
         let result = inspect(source).unwrap();
         assert_eq!(

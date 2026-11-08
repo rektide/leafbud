@@ -1,7 +1,7 @@
 ---
 type: Report
-title: "Experiment 04 — Jacquard evaluation for springleaf reuse"
-description: What Jacquard is, stack solidity, the lexicon codegen story, auth/session handling, posting capability, and a reuse verdict for springleaf.
+title: "Experiment 04 — Jacquard evaluation for leafspring reuse"
+description: What Jacquard is, stack solidity, the lexicon codegen story, auth/session handling, posting capability, and a reuse verdict for leafspring.
 resource: experiments/04-jacquard/REPORT.md
 status: draft
 generated:
@@ -10,11 +10,11 @@ generated:
 sources:
   - resource: "opencode://ses_e4ca91c62ffejYe7DfZ5gw5uMq"
     title: "Session that evaluated the Jacquard archive checkout, ran the codegen probe against pinned leaflet lexicons, and wrote this report"
-  - resource: "file:///home/rektide/src/springleaf/design/springleaf.glm53m.md"
-    title: "Springleaf design doc — architecture, stages, and risks this experiment probes"
+  - resource: "file:///home/rektide/src/leafspring/design/leafspring.glm53m.md"
+    title: "Leafspring design doc — architecture, stages, and risks this experiment probes"
 ---
 
-# Experiment 04 — Jacquard evaluation for springleaf reuse
+# Experiment 04 — Jacquard evaluation for leafspring reuse
 
 Source evaluated: `~/archive/nonbinary.computer/jacquard` @ `8bf1f4146`
 (2026-06-28), upstream `tangled.org/nonbinary.computer/jacquard`, workspace
@@ -58,7 +58,7 @@ lexicon tooling, and repo primitives end-to-end:
 - Helpers: `lazy-collections`, `mini-moka-wasm`, plus `examples/` (18
   examples incl. `app_password_create_post.rs`, `post_with_image.rs`).
 
-**The headline for springleaf:** Jacquard's `lexicons.kdl` already lists a
+**The headline for leafspring:** Jacquard's `lexicons.kdl` already lists a
 **"leaflet" source** at priority 100 (`lexicons.kdl` lines 7–10, fetching
 `https://github.com/hyperlink-academy/leaflet`), so `jacquard-api` **already
 ships generated bindings for both live record generations**: `site.standard.*`
@@ -154,7 +154,7 @@ code generator, and a runtime validation layer** — plus a reverse direction
   types can produce their lexicon doc — leaflet is even the doc example
   ("`pub.leaflet.poll.definition`", `schema.rs` line 94).
 
-**Could springleaf use it to define/pin leaflet's lexicons and get typed
+**Could leafspring use it to define/pin leaflet's lexicons and get typed
 records + validation instead of hand-written serde? Yes — verified live.**
 `probe-codegen.sh` in this directory ran the archive's prebuilt
 `target/release/jacquard-codegen` against the **SHA-pinned** leaflet checkout
@@ -165,7 +165,7 @@ design doc) and generated a complete standalone module tree in seconds:
 generated `pub.leaflet.content` type even encodes the **`blobs[]` top-level
 mirroring rule** with its schema description ("the PDS only scans the top
 level of a record for blob references when deciding what to garbage-collect…")
-— direct input on springleaf's Blob-GC risk item.
+— direct input on leafspring's Blob-GC risk item.
 
 **Comparison with the alternatives:**
 
@@ -204,10 +204,10 @@ examples use `/tmp/jacquard-*.json`) holding a map keyed
 `atp:{did}/{session_id}`, `oauth:{did}/{session_id}`, `oauth-state:{state}`.
 **No 0600 permission hardening** (plain `std::fs::write`; verified by grep).
 
-**What springleaf should borrow:** the resume-or-login shape (`SessionHint` →
+**What leafspring should borrow:** the resume-or-login shape (`SessionHint` →
 resume → challenge → login) mapped onto
 `ATPROTO_HANDLE`/`ATPROTO_APP_PASSWORD`/`ATPROTO_PDS`; a single-JSON session
-store *but with mode 600 and a real config path* (`~/.config/springleaf/`
+store *but with mode 600 and a real config path* (`~/.config/leafspring/`
 per the design's config resolution); keep the leaflet `auth_token` cookie
 entirely separate in the `drafts` crate (Jacquard has nothing for web-app
 cookies — correct separation). The loopback OAuth path is the ready-made
@@ -217,13 +217,13 @@ answer for `authFullPermissions` when v0's app-password scope ends.
 
 **Yes, today, against an arbitrary PDS.**
 `AgentSessionExt` (`crates/jacquard/src/client.rs`) provides:
-`create_record` (line 706), **`put_record`** — the upsert springleaf needs —
+`create_record` (line 706), **`put_record`** — the upsert leafspring needs —
 (line 1081), `update_record` (fetch-modify-put, line 976), `delete_record`
 (1036), `get_record` (783, typed via `Collection`), **`upload_blob`**
 (bytes + `MimeType`, line 1150, sets real Content-Type). All use bootstrap
 types so they work without the `api` feature; `listRecords` is available as a
 generated request via `agent.send(...)`. `examples/post_with_image.rs` is
-almost literally springleaf's `publish run` (upload blob → build record →
+almost literally leafspring's `publish run` (upload blob → build record →
 create), and `examples/app_password_create_post.rs` is the auth path.
 
 There is no "session blobs/candidates/lexicon-record plumbing" for leaflet's
@@ -236,7 +236,7 @@ set.
 
 ## 6. Reuse verdict
 
-**Recommend (b): use Jacquard's lexicon toolchain for springleaf's record
+**Recommend (b): use Jacquard's lexicon toolchain for leafspring's record
 types, keep the hand-rolled thin `atproto` crate, borrow its auth patterns.**
 With a documented upgrade path toward partial (a).
 
@@ -250,13 +250,13 @@ With a documented upgrade path toward partial (a).
   then lives in the committed artifact + the checkout SHA, satisfying the
   design's "Lexicon drift" risk without noteful's `--sha` fetcher (which
   jacquard lacks).
-- **The client is excellent but heavier than springleaf's needs.** The design
+- **The client is excellent but heavier than leafspring's needs.** The design
   doc's `atproto` crate is four calls (createSession, putRecord, uploadBlob,
   resolveHandle/listRecords) with social-cli as reference; owning that is
   cheap and keeps the design's jiff/thiserror/anyhow stack coherent.
   Adopting `jacquard` wholesale imports the BosStr generic model, miette,
   chrono, bon, and a large transitive tree, plus 0.13 breakage risk and a
-  bus-factor-one upstream. That trade only pays off when springleaf wants
+  bus-factor-one upstream. That trade only pays off when leafspring wants
   OAuth loopback (`authFullPermissions`), jetstream/firehose, or repo
   primitives — at which point `Agent` + `put_record` + generated types can
   replace the thin `atproto` crate wholesale (the typed surface is the same

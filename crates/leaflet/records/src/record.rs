@@ -22,7 +22,7 @@
 //! is recoverable at revision `80436b61`.
 
 use jacquard_common::DefaultStr;
-use springleaf_atproto::AtUri;
+use leafspring_atproto::AtUri;
 
 use crate::site_standard::document::Document;
 
@@ -82,7 +82,7 @@ pub fn standalone_site_did(site: &str) -> Option<String> {
 #[derive(Debug, thiserror::Error)]
 pub enum UrlError {
     #[error("invalid publication at-uri {0:?} ({1}); expected at://<did>/site.standard.publication/<rkey>")]
-    BadPublication(String, #[source] springleaf_atproto::Error),
+    BadPublication(String, #[source] leafspring_atproto::Error),
 }
 
 /// Derive the human-facing URL for a document rkey (experiment 03 §6):
@@ -134,13 +134,13 @@ mod tests {
     fn url_derivation_both_forms() {
         // Publication-domain form: url field wins, trailing slash trimmed.
         assert_eq!(
-            derive_document_url(PUBLICATION, Some("https://technautical.leaflet.pub/"), "springleaf-protocol-probe").unwrap(),
-            "https://technautical.leaflet.pub/springleaf-protocol-probe"
+            derive_document_url(PUBLICATION, Some("https://technautical.leaflet.pub/"), "leafspring-protocol-probe").unwrap(),
+            "https://technautical.leaflet.pub/leafspring-protocol-probe"
         );
         // Fallback: /lish/{did}/{pubRkey}/{rkey}.
         assert_eq!(
-            derive_document_url(PUBLICATION, None, "springleaf-protocol-probe").unwrap(),
-            "https://leaflet.pub/lish/did:plc:zjbq26wybii5ojoypkso2mso/3molsbwkh522o/springleaf-protocol-probe"
+            derive_document_url(PUBLICATION, None, "leafspring-protocol-probe").unwrap(),
+            "https://leaflet.pub/lish/did:plc:zjbq26wybii5ojoypkso2mso/3molsbwkh522o/leafspring-protocol-probe"
         );
         // A malformed publication at-uri is a typed error, not a panic.
         assert!(matches!(derive_document_url("not-an-at-uri", None, "x"), Err(UrlError::BadPublication(..))));

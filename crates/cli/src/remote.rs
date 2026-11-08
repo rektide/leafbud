@@ -1,7 +1,7 @@
 //! Rendering only. Credential resolution and reusable operations are in workflow.
 use std::fmt::Write as _;
 
-use springleaf_workflow::{LeafletState, RemoteList, RemoteOptions, RemoteShow};
+use leafspring_workflow::{LeafletState, RemoteList, RemoteOptions, RemoteShow};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 

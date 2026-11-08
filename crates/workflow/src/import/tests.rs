@@ -1,5 +1,5 @@
 use super::*;
-use springleaf_web::{LeafletClient, parse_pull, parse_rpc};
+use leafspring_web::{LeafletClient, parse_pull, parse_rpc};
 use std::sync::Arc;
 
 // Shared with the pull tests: one module load of the loopback responder.
@@ -22,10 +22,10 @@ fn fixture_content_to_real_mdx_and_back_without_loss() {
     assert_eq!(document.title, "Synthetic title");
     assert_eq!(document.publication, None);
     assert!(document.extra.is_empty());
-    let source = springleaf_mdx::render(&document).unwrap();
+    let source = leafspring_mdx::render(&document).unwrap();
     assert!(source.contains("Synthetic body copy"));
     assert!(!source.contains("AQPY"));
-    let parsed = springleaf_mdx::parse(&source).unwrap();
+    let parsed = leafspring_mdx::parse(&source).unwrap();
     assert_eq!(parsed.semantic_value(), document.semantic_value());
     assert_eq!(parsed.state.sync.local_hash, hash(&parsed.semantic_value()));
     assert_eq!(parsed.state.binding.token, data.metadata.id);
@@ -66,11 +66,11 @@ fn restricted_yaml_and_unknown_author_metadata() {
     let fixture = fixture();
     let mut document = build("https://leaflet.pub", &data(&fixture), &parse_pull(fixture["response"].clone()).unwrap()).unwrap();
     document.extra.insert("customAuthorField".into(), json!({"meaning":"retained"}));
-    let source = springleaf_mdx::render(&document).unwrap();
-    assert_eq!(springleaf_mdx::parse(&source).unwrap().extra, document.extra);
+    let source = leafspring_mdx::render(&document).unwrap();
+    assert_eq!(leafspring_mdx::parse(&source).unwrap().extra, document.extra);
     for invalid in ["title: 'duplicate'\n", "extra: &anchor 'value'\n", "extra: !custom 'value'\n", "<<: {}\n"] {
         let changed = source.replacen("---\n", &format!("---\n{invalid}"), 1);
-        assert!(springleaf_mdx::parse(&changed).is_err(), "{invalid}");
+        assert!(leafspring_mdx::parse(&changed).is_err(), "{invalid}");
     }
 }
 
@@ -91,7 +91,7 @@ fn visible_code_ignores_but_witnesses_native_inactive_richtext() {
         json!({"id":"11111111-1111-4111-8111-111111111111","entity":block,"attribute":"block/code","data":{"type":"string","value":"visible current code"}}),
     );
     let document = build("https://leaflet.pub", &data, &pull).unwrap();
-    let source = springleaf_mdx::render(&document).unwrap();
+    let source = leafspring_mdx::render(&document).unwrap();
     assert!(source.contains("visible current code"));
     assert!(!source.contains("Synthetic body copy"));
     assert_eq!(document.state.nodes.values().filter(|n| n.inactive_text_fact.is_some()).count(), 1);
@@ -102,7 +102,7 @@ fn visible_code_ignores_but_witnesses_native_inactive_richtext() {
 
 #[test]
 fn rich_runs_empty_blocks_images_and_pages_roundtrip() {
-    use springleaf_document::*;
+    use leafspring_document::*;
     let fixture = fixture();
     let mut document = build("https://leaflet.pub", &data(&fixture), &parse_pull(fixture["response"].clone()).unwrap()).unwrap();
     let inline = vec![
@@ -184,8 +184,8 @@ fn rich_runs_empty_blocks_images_and_pages_roundtrip() {
         key: "p-other".into(),
         blocks: vec![],
     });
-    let source = springleaf_mdx::render(&document).unwrap();
-    assert_eq!(springleaf_mdx::parse(&source).unwrap().semantic_value(), document.semantic_value());
+    let source = leafspring_mdx::render(&document).unwrap();
+    assert_eq!(leafspring_mdx::parse(&source).unwrap().semantic_value(), document.semantic_value());
 }
 
 async fn server() -> testserver::TestServer {

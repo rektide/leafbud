@@ -2,7 +2,7 @@ use satteri_authoring_experiment::{author, model::*};
 
 pub const GARDEN: &str = include_str!("../fixtures/garden.mdx");
 fn source(body: &str) -> String {
-    format!("---\nformat: springleaf-mdx/1\ntitle: Test\n---\n\n{body}")
+    format!("---\nformat: leafspring-mdx/1\ntitle: Test\n---\n\n{body}")
 }
 fn good(body: &str) -> Document<'_> {
     author::compile(body).unwrap_or_else(|d| panic!("{d:#?}"))
@@ -217,7 +217,7 @@ fn metadata_is_author_owned_heading_is_not_title_and_bad_metadata_fails() {
     assert_eq!(bad("## No frontmatter\n")[0].code, "frontmatter-required");
     assert_eq!(bad("---\nformat: wrong\ntitle: T\n---\n\nBody.\n")[0].code, "frontmatter");
     assert_eq!(
-        bad("---\nformat: springleaf-mdx/1\ntitle: T\nunknown: true\n---\n\nBody.\n")[0].code,
+        bad("---\nformat: leafspring-mdx/1\ntitle: T\nunknown: true\n---\n\nBody.\n")[0].code,
         "frontmatter"
     );
 }

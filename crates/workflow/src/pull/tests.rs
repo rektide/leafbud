@@ -1,7 +1,7 @@
 use super::*;
 use crate::import;
+use leafspring_web::{LeafletClient, LeafletData, parse_pull, parse_rpc};
 use serde_json::{Value, json};
-use springleaf_web::{LeafletClient, LeafletData, parse_pull, parse_rpc};
 use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 
@@ -156,7 +156,7 @@ fn request(files: Vec<PathBuf>) -> Request {
 }
 
 fn keys_of(source: &str) -> BTreeSet<String> {
-    springleaf_mdx::parse(source).unwrap().state.nodes.keys().cloned().collect()
+    leafspring_mdx::parse(source).unwrap().state.nodes.keys().cloned().collect()
 }
 
 #[tokio::test]
@@ -192,7 +192,7 @@ async fn pull_adopts_link_bodies_as_markdown_and_repeat_is_exact_noop() {
     assert_eq!((report.updated, report.failed), (1, 0), "{}", serde_json::to_string(&report).unwrap());
     let after = std::fs::read_to_string(&path).unwrap();
     assert!(after.contains("see the [docs](https://e.org/docs) now"), "ordinary link spelling");
-    assert_eq!(springleaf_mdx::parse(&after).unwrap(), springleaf_mdx::parse(&after).unwrap());
+    assert_eq!(leafspring_mdx::parse(&after).unwrap(), leafspring_mdx::parse(&after).unwrap());
     // No-op repeat: bytes and mtimes identical.
     let metadata = std::fs::symlink_metadata(&path).unwrap().modified().unwrap();
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
@@ -219,7 +219,7 @@ async fn pull_adopts_remote_text_mark_move_and_metadata_preserving_identities() 
     let after = std::fs::read_to_string(&path).unwrap();
     // Same source-key set: refresh never rekeys existing files.
     assert_eq!(keys_of(&before), keys_of(&after));
-    let document = springleaf_mdx::parse(&after).unwrap();
+    let document = leafspring_mdx::parse(&after).unwrap();
     assert_eq!(document.title, "New remote title");
     let runs: Vec<_> = document.pages[0]
         .blocks
@@ -230,9 +230,9 @@ async fn pull_adopts_remote_text_mark_move_and_metadata_preserving_identities() 
         })
         .collect();
     assert!(
-        runs.contains(&&springleaf_document::Inline::Run {
+        runs.contains(&&leafspring_document::Inline::Run {
             text: "remote".into(),
-            marks: vec![springleaf_document::Mark::Strong],
+            marks: vec![leafspring_document::Mark::Strong],
         }),
         "{runs:?}"
     );
@@ -285,7 +285,7 @@ async fn pull_witness_only_change_settles_receipts_without_content_rewrite() {
     assert_eq!(changed.len(), 1, "only the remote receipt line changes: {changed:?}");
     assert!(changed[0].1.contains("remoteHash"));
     assert!(after.contains("visible current code"));
-    let document = springleaf_mdx::parse(&after).unwrap();
+    let document = leafspring_mdx::parse(&after).unwrap();
     assert_eq!(document.state.sync.local_hash, import::hash(&document.semantic_value()));
 }
 
@@ -322,7 +322,7 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let imported = std::fs::read_to_string(&path).unwrap();
-    let old_key = springleaf_mdx::parse(&imported)
+    let old_key = leafspring_mdx::parse(&imported)
         .unwrap()
         .state
         .nodes
@@ -333,8 +333,8 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
     let mut renamed = imported.replace(&format!("\"{old_key}\""), "\"my-renamed-block\"");
     assert_ne!(renamed, imported, "key appears in body and envelope");
     renamed = renamed.replacen(
-        "\n\"@springleaf\":",
-        "\n# author note\ncustomField: {\"meaning\": \"retained\"}\n\n\"@springleaf\":",
+        "\n\"@leafspring\":",
+        "\n# author note\ncustomField: {\"meaning\": \"retained\"}\n\n\"@leafspring\":",
         1,
     );
     std::fs::write(&path, renamed).unwrap();
@@ -364,7 +364,7 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
     assert!(!after.contains(&format!("\"{old_key}\"")), "manual rename survives, no rekeying");
     assert!(after.contains("# author note"));
     assert!(after.contains("customField: {\"meaning\": \"retained\"}"));
-    let document = springleaf_mdx::parse(&after).unwrap();
+    let document = leafspring_mdx::parse(&after).unwrap();
     assert_eq!(document.extra["customField"], json!({"meaning": "retained"}));
     assert!(document.state.nodes.contains_key("my-renamed-block"));
 }
@@ -387,7 +387,7 @@ async fn pull_converged_settles_receipts_without_body_rewrite() {
     let (after_fm, after_body) = after.split_once("---\n\n").unwrap();
     assert_eq!(before_body, after_body, "converged endpoints never rewrite the body");
     assert_ne!(before_fm, after_fm, "receipts settle");
-    let document = springleaf_mdx::parse(&after).unwrap();
+    let document = leafspring_mdx::parse(&after).unwrap();
     assert_eq!(document.state.sync.local_hash, import::hash(&document.semantic_value()));
     // A repeat is now an exact no-op.
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
@@ -487,7 +487,7 @@ async fn pull_all_selects_bound_files_only_with_loud_broken_and_state_filter() {
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     std::fs::write(temp.path().join("unmanaged.mdx"), "just local prose\n").unwrap();
     std::fs::write(temp.path().join("notes.txt"), "not a document\n").unwrap();
-    std::fs::write(temp.path().join("broken.mdx"), "---\n@springleaf: [unclosed\n---\nbody\n").unwrap();
+    std::fs::write(temp.path().join("broken.mdx"), "---\n@leafspring: [unclosed\n---\nbody\n").unwrap();
     let report = reader(&server)
         .pull(
             &context(temp.path()),
@@ -508,7 +508,7 @@ async fn pull_all_selects_bound_files_only_with_loud_broken_and_state_filter() {
     assert_eq!(std::fs::read_to_string(temp.path().join("unmanaged.mdx")).unwrap(), "just local prose\n");
     assert_eq!(
         std::fs::read_to_string(temp.path().join("broken.mdx")).unwrap(),
-        "---\n@springleaf: [unclosed\n---\nbody\n"
+        "---\n@leafspring: [unclosed\n---\nbody\n"
     );
     let report = reader(&server)
         .pull(

@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn resolv_conf_nameservers() {
-        let dir = std::env::temp_dir().join("springleaf-atproto-dns-test");
+        let dir = std::env::temp_dir().join("leafspring-atproto-dns-test");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("resolv-test.conf");
         std::fs::write(&path, "# comment\nnameserver 192.0.2.53\nnameserver 2001:db8::53\noptions edns0\n").unwrap();

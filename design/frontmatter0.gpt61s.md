@@ -42,7 +42,7 @@ assigns missing identities alone. Read that decision before freezing the schema;
 relationship fixtures and rich-content mappings still supply exact field details.
 
 **Use ordinary YAML frontmatter: author-facing document fields at the top level,
-one quoted `"@springleaf"` mapping for tool-maintained state, and durable block
+one quoted `"@leafspring"` mapping for tool-maintained state, and durable block
 identifiers attached to the actual Markdown/MDX content.**
 
 The file stores one current document. Metadata holds identities and compact
@@ -58,7 +58,7 @@ production changes, dependency additions or new parser executions were made.
 
 ```yaml
 ---
-format: springleaf-mdx/1
+format: leafspring-mdx/1
 title: An essay
 description: Notes from the garden
 tags: [gardening, agents]
@@ -66,7 +66,7 @@ tags: [gardening, agents]
 ```
 
 No publication date, public path, token or invented record URI is required to
-begin writing. A never-managed file can omit `@springleaf`. Local prepare/create
+begin writing. A never-managed file can omit `@leafspring`. Local prepare/create
 can add its identity and draft state; remote fields appear only after binding.
 
 **Alternative:** put author fields under `document:`. That makes ownership
@@ -82,7 +82,7 @@ Optional state sections need not all be present.
 
 ```yaml
 ---
-format: springleaf-mdx/1
+format: leafspring-mdx/1
 title: An essay
 description: Notes from the garden
 tags: [gardening, agents]
@@ -90,7 +90,7 @@ publication: "at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/site.standard.publication/ex
 path: /example-post
 publishedAt: "2026-11-08T10:00:00Z"
 
-"@springleaf":
+"@leafspring":
   id: "11111111-1111-4111-8111-111111111111"
   state: published
 
@@ -135,7 +135,7 @@ The corresponding body still carries its identity, for example
 the lifecycle authority. `names.file` is a previous accepted observation, not a
 command to move the file back.
 
-**Why quote `"@springleaf"`?** A leading `@` is not valid at the start of an
+**Why quote `"@leafspring"`?** A leading `@` is not valid at the start of an
 unquoted YAML plain scalar. The chosen field name is fine as a quoted mapping key.
 
 ## 3. Author fields: current document, not protocol-envelope copies
@@ -146,7 +146,7 @@ there is no requirement to rename config keys to match document YAML.
 
 | Field | Proposed meaning | Missing/clearing behavior |
 | --- | --- | --- |
-| `format` | Whole local format/schema identifier, initially `springleaf-mdx/1` | Required for a managed file; unknown major blocks managed writes |
+| `format` | Whole local format/schema identifier, initially `leafspring-mdx/1` | Required for a managed file; unknown major blocks managed writes |
 | `title` | Document title, separate from body headings | Required nonempty text |
 | `description` | Current document description | Missing or null means no description; empty string can normalize to the same clear intent |
 | `tags` | Current ordered tag list | Missing means `[]`; use `[]` to clear explicitly; null is a type error |
@@ -188,7 +188,7 @@ Bluesky sharing is a separate native action, not proof of publication success.
 
 ## 4. Identity and exclusive lifecycle
 
-`@springleaf.id` is the local document UUID, independent of names and remote
+`@leafspring.id` is the local document UUID, independent of names and remote
 keys. The tool maintains it; an ordinary filename change keeps it.
 
 `state` is exactly `draft` or `published`:
@@ -337,7 +337,7 @@ confirmed remote locations where needed. Prefer source-relative local paths;
 the body/component still owns actual current content. No base64 media or old
 document payload is required in metadata. Computing a blob identity does not
 prove it is uploaded. Unpublished poll definitions belong in current content,
-not as fabricated published references under `@springleaf`.
+not as fabricated published references under `@leafspring`.
 
 An optional `pending` mapping describes **one unsettled attempt**, not a durable
 queue: operation ID/kind/phase, selected input hash, expected witnesses and known
@@ -381,7 +381,7 @@ Writing rules:
 
 1. Preserve body bytes except deliberate ID insertion or an explicit pull/edit.
 2. Preserve unknown frontmatter values. No-op operations write nothing.
-3. Tool updates normally touch only `@springleaf`; explicit metadata commands and
+3. Tool updates normally touch only `@leafspring`; explicit metadata commands and
    accepted native normalization may edit the corresponding author fields.
 4. An initial serializer may normalize **frontmatter formatting** on a real write,
    but must disclose/test that behavior. Exact preservation of YAML comments and

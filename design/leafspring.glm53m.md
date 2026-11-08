@@ -1,8 +1,8 @@
 ---
 type: Design
-title: Springleaf — a Leaflet client for agents and the CLI
+title: Leafspring — a Leaflet client for agents and the CLI
 description: Architecture, protocol map, and staged build plan for a Rust multi-crate CLI that lists drafts, reads draft internals, and publishes posts to leaflet.pub.
-resource: design/springleaf.glm53m.md
+resource: design/leafspring.glm53m.md
 status: draft
 generated:
   at: 2026-11-07
@@ -16,7 +16,7 @@ sources:
     title: "Leaflet draft system: fact graph, Replicache sync, publish flow"
 ---
 
-# Springleaf — a Leaflet client for agents and the CLI
+# Leafspring — a Leaflet client for agents and the CLI
 
 ## Purpose
 
@@ -80,16 +80,16 @@ Rust, single workspace, domain-grouped crates. Package names carry the
 registry prefix; directories do not.
 
 ```
-springleaf/
+leafspring/
   crates/
-    atproto/   # springleaf-atproto: XRPC client, app-password sessions,
+    atproto/   # leafspring-atproto: XRPC client, app-password sessions,
                #   DID/handle→PDS resolution, records, blobs. Generic ATProto.
-    leaflet/   # springleaf-leaflet: GENERATED record types (jacquard-codegen
+    leaflet/   # leafspring-leaflet: GENERATED record types (jacquard-codegen
                #   from pinned leaflet lexicons; committed code = the pin) +
                #   markdown⇄blocks converter + slug/URL rules
-    drafts/    # springleaf-drafts: web surface — cookie auth, /home discovery,
+    drafts/    # leafspring-drafts: web surface — cookie auth, /home discovery,
                #   get_leaflet_data, facts/pull readers; (later) push mutations
-    cli/       # springleaf: the binary — clap commands, config, output formats
+    cli/       # leafspring: the binary — clap commands, config, output formats
   design/      # this document + staged findings promoted from experiments/
   experiments/ # protocol probes and evidence; see experiments/README.md
 ```
@@ -118,13 +118,13 @@ across all crates, shared.
 ### CLI surface (v0)
 
 ```
-springleaf auth status                     # verify cookie: GET /home, report identity state
-springleaf drafts list [--json] [--fetch]  # home → ids (+titles via get_leaflet_data with --fetch)
-springleaf drafts show <token-id> [--json] # one draft: title, rights, publication, documents
-springleaf pubs list [--json]              # listRecords publications (public, no auth)
-springleaf publish build <file.md> --publication <at-uri> [--dry-run is default]
+leafspring auth status                     # verify cookie: GET /home, report identity state
+leafspring drafts list [--json] [--fetch]  # home → ids (+titles via get_leaflet_data with --fetch)
+leafspring drafts show <token-id> [--json] # one draft: title, rights, publication, documents
+leafspring pubs list [--json]              # listRecords publications (public, no auth)
+leafspring publish build <file.md> --publication <at-uri> [--dry-run is default]
                                            # prints the exact record JSON + derived URL
-springleaf publish run <file.md> ...       # putRecord; refuses without explicit --yes
+leafspring publish run <file.md> ...       # putRecord; refuses without explicit --yes
 ```
 
 Agent-contract conventions (from social-cli): `--json` output, meaningful
@@ -146,7 +146,7 @@ fixtures, findings promoted into `design/` when load-bearing.
    draft-internals mapping, post-record construction. See
    `experiments/*/REPORT.md`.
 2. **Build: `drafts list`/`show` + `auth status`** — workspace scaffold
-   (remove the empty TS placeholders `package.json`/`springleaf.ts` from the
+   (remove the empty TS placeholders `package.json`/`leafspring.ts` from the
    init commit), `drafts` + `cli` crates against the experiment findings.
 3. **Build: `atproto` + `leaflet` crates, `pubs list`** — public reads,
    record types, live verification.
@@ -187,7 +187,7 @@ fixtures, findings promoted into `design/` when load-bearing.
   hand-written serde + JSON pinning to jacquard codegen with committed
   generated code as the pin — verdict (b), lexicon toolchain only, thin
   `atproto` crate preserved (see `experiments/04-jacquard/REPORT.md`).
-  Auth note: jacquard's `FileAuthStore` lacks 0600 hardening — springleaf
+  Auth note: jacquard's `FileAuthStore` lacks 0600 hardening — leafspring
   owns its own session-file permissions either way.
 - **2026-11-07, after stage 3**: well-known `/.well-known/atproto-did` in
   production serves the **bare DID**, not the `did=…` prefixed form implied

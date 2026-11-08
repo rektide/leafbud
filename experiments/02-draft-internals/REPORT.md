@@ -1,7 +1,7 @@
 ---
 type: Experiment
 title: "Experiment 02 — draft internals: fact model, Replicache sync, Yjs feasibility"
-description: "Read-only recon of one draft's fact graph and pull/push protocol against leaflet.pub, with the minimal push-mutation plan for headless authoring and a byte-verified Yjs text encoder verdict. Gates stage 5 of design/springleaf.glm53m.md."
+description: "Read-only recon of one draft's fact graph and pull/push protocol against leaflet.pub, with the minimal push-mutation plan for headless authoring and a byte-verified Yjs text encoder verdict. Gates stage 5 of design/leafspring.glm53m.md."
 resource: experiments/02-draft-internals/REPORT.md
 status: draft
 generated:
@@ -12,8 +12,8 @@ sources:
     title: "Session that mapped the draft fact model, pulled/pushed shapes, and proved the Yjs encoder byte-identical against yjs 13.6.18"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet"
     title: "Leaflet checkout @600c7b5f (app/api/rpc/[command]/*, src/replicache/*, src/utils/*, drizzle/schema.ts, supabase/migrations)"
-  - resource: "file:///home/rektide/src/springleaf/design/springleaf.glm53m.md"
-    title: "Springleaf design doc (stage 5 gating, experiments policy)"
+  - resource: "file:///home/rektide/src/leafspring/design/leafspring.glm53m.md"
+    title: "Leafspring design doc (stage 5 gating, experiments policy)"
 ---
 
 # Experiment 02 — draft internals
@@ -287,7 +287,7 @@ Evidence (all reproducible from this directory + scratch node):
    fully deterministic, zero prior state.
 3. **Any clientID works.** A structurally identical update with a
    substituted client id applies cleanly (`<paragraph>Hello world</paragraph>`).
-   springleaf can mint a random uint32 per draft — collision with the
+   leafspring can mint a random uint32 per draft — collision with the
    browser's client only matters for clock interleaving, which merges handle.
 4. **Server merge path verified.** `Y.mergeUpdates([ourUpdate,
    otherClientEdit])` — exactly what `cachedServerMutationContext.flush`

@@ -16,8 +16,8 @@ sources:
     title: "Leaflet's vendored parts.page.* lexicon source of truth (service adds canBeScopedToDid beyond the published schema)"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/appview/index.ts"
     title: "Leaflet appview ingestion of parts.page.mention.service/config (filterCollections + upsert)"
-  - resource: "file:///home/rektide/src/springleaf/design/draft-extraction.glm53m.md"
-    title: "Where mention facets sit in springleaf's extraction plan (didMention/atMention deferred to v0.5)"
+  - resource: "file:///home/rektide/src/leafspring/design/draft-extraction.glm53m.md"
+    title: "Where mention facets sit in leafspring's extraction plan (didMention/atMention deferred to v0.5)"
 ---
 
 # page.parts — federated mention services
@@ -172,12 +172,12 @@ From the archive checkout @600c7b5f (paths under
   `PostContent` (view) append `parts.page.embed.ctx.{mode,bgColor,primaryColor}`
   query params to service-embed iframe URLs.
 
-Relevance to springleaf: extraction keeps mention plaintext today and mention
+Relevance to leafspring: extraction keeps mention plaintext today and mention
 facets (`didMention`, `atMention`, footnote recursion) are deferred to v0.5
 ([draft-extraction](draft-extraction.glm53m.md)). When that lands,
 service-derived mentions are just `atMention` facets with `href` and possibly
 non-DID `atURI`s — the record side needs no parts.page knowledge. A future
-`springleaf` feature could read the user's config (`listRecords`, per the
+`leafspring` feature could read the user's config (`listRecords`, per the
 rkey delta above) and query services directly; no leaflet auth is needed for
 the XRPC itself.
 
@@ -210,7 +210,7 @@ The schema authority is likewise repo-local: leaflet pins the lexicons
 `lexicons/src/mentionService.ts`) and consumes the pin — the published
 page.parts records are documentation, not a runtime dependency. That is how
 `canBeScopedToDid` shipped without republication, and it mirrors how
-springleaf itself pins leaflet's lexicons (experiments/04, jacquard).
+leafspring itself pins leaflet's lexicons (experiments/04, jacquard).
 
 ```mermaid
 flowchart TB

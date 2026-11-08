@@ -218,14 +218,14 @@ await test("fact graph -> JSON -> one mutation -> simulated server merge -> read
   const page=one(pulled.root,"root/page").data.value;
   const edge=one(page,"card/block"),entity=edge.data.value,tf=one(entity,"block/text");
   const pulledText=(await rust({update:tf.data.value})).canonical;
-  const local={"@springleaf":{version:1,target:{kind:"draft",root:ids.root},entities:{"/content/pages/0/blocks/0":{entity,edge:edge.id}}},
+  const local={"@leafspring":{version:1,target:{kind:"draft",root:ids.root},entities:{"/content/pages/0/blocks/0":{entity,edge:edge.id}}},
     $type:"site.standard.document",title:"Synthetic",content:{$type:"pub.leaflet.content",pages:[{$type:"pub.leaflet.pages.linearDocument",id:page,blocks:[{block:{$type:"pub.leaflet.blocks.text",...pulledText}}]}]}};
   Object.assign(local.content.pages[0].blocks[0].block,desired);
-  const {"@springleaf":metadata,...body}=local;
+  const {"@leafspring":metadata,...body}=local;
   const {plaintext,facets}=body.content.pages[0].blocks[0].block;
   const planned=await rust({update:tf.data.value,desired:{plaintext,facets}});
   const mutation={id:1,name:"assertFact",clientID:"experiment",timestamp:0,args:{entity:metadata.entities["/content/pages/0/blocks/0"].entity,attribute:"block/text",data:{type:"text",value:planned.incrementalUpdate}}};
-  assert.ok(!JSON.stringify(mutation).includes("@springleaf"));
+  assert.ok(!JSON.stringify(mutation).includes("@leafspring"));
   const untouched=[...rows.values()].filter(f=>f!==tf).map(f=>structuredClone(f));
   // Mirrors only the text merge and cardinality-one identity behavior, not the DB/auth handler.
   tf.data.value=b64(Y.mergeUpdates([bytes(tf.data.value),bytes(mutation.args.data.value)]));
