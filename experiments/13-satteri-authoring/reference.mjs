@@ -37,7 +37,12 @@ function normalized(pm) {
   const result = structuredClone(pm);
   const content = [];
   for (const node of result.content[0].content ?? []) {
-    if (node.marks?.length) node.marks.sort((a, b) => a.type.localeCompare(b.type));
+    if (node.marks?.length) {
+      for (const mark of node.marks) {
+        if (mark.attrs && Object.keys(mark.attrs).length === 0) delete mark.attrs;
+      }
+      node.marks.sort((a, b) => a.type.localeCompare(b.type));
+    }
     else delete node.marks;
     const previous = content.at(-1);
     if (node.type === "text" && previous?.type === "text" && JSON.stringify(previous.marks) === JSON.stringify(node.marks)) previous.text += node.text;

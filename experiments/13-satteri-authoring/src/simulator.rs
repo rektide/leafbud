@@ -114,7 +114,11 @@ impl Store {
                 .filter(|f| &f.entity == entity && f.attribute == "poll/options")
                 .map(|f| f.id.as_str())
                 .collect();
-            ensure!(old.is_empty() || old == next, "stable Poll option inventory changed; use a new key");
+            // The builder emits block/type AFTER all options. In this simulator
+            // only, its presence witnesses a complete definition. A partially
+            // staged new Poll may have a strict subset of the expected slots.
+            let complete = self.facts.values().any(|f| &f.entity == entity && f.attribute == "block/type");
+            ensure!(!complete || old == next, "stable Poll option inventory changed; use a new key");
         }
         self.entities.extend(plan.entities.iter().cloned());
         for (i, fact) in plan.facts.iter().enumerate() {
@@ -128,6 +132,31 @@ impl Store {
     }
     pub fn verify(&self, plan: &Plan) -> Result<()> {
         ensure!(plan.entities.is_subset(&self.entities), "staged entity missing");
+        // A subset check would falsely approve appended blocks or duplicate
+        // cardinality-one facts. Compare the entire profile-owned inventory.
+        const OWNED: &[&str] = &[
+            "page/type",
+            "card/block",
+            "block/type",
+            "block/text",
+            "block/heading-level",
+            "block/code",
+            "block/code-language",
+            "block/is-list",
+            "block/list-style",
+            "block/list-number",
+            "block/card",
+            "poll/options",
+            "poll-option/name",
+        ];
+        let expected_ids: BTreeSet<_> = plan.facts.iter().map(|f| f.id.as_str()).collect();
+        let actual_ids: BTreeSet<_> = self
+            .facts
+            .values()
+            .filter(|f| plan.entities.contains(&f.entity) && OWNED.contains(&f.attribute.as_str()))
+            .map(|f| f.id.as_str())
+            .collect();
+        ensure!(actual_ids == expected_ids, "staged profile fact inventory differs");
         for expected in &plan.facts {
             let actual = self.facts.get(&expected.id).context("staged fact missing")?;
             ensure!(Self::equivalent(actual, expected)?, "staged fact mismatch");

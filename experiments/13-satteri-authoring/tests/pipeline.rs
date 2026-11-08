@@ -135,6 +135,35 @@ fn failed_or_corrupt_staging_never_exposes_unverified_body() {
 }
 
 #[test]
+fn every_interrupted_fact_boundary_can_resume_without_reasserting_text() {
+    let p = plan(GARDEN, 100);
+    for boundary in 0..p.facts.len() {
+        let mut store = Store::fixture();
+        let old = store.active_page().to_owned();
+        assert!(store.stage(&p, Some(boundary)).is_err());
+        assert_eq!(store.active_page(), old);
+        store.apply(&p).unwrap_or_else(|e| panic!("boundary {boundary}: {e}"));
+        store.verify(&p).unwrap();
+        assert_eq!(store.active_page(), p.main_page);
+    }
+}
+
+#[test]
+fn verifier_rejects_extra_memberships_and_duplicate_profile_facts() {
+    let p = plan(GARDEN, 100);
+    for attribute in ["card/block", "page/type"] {
+        let mut store = Store::fixture();
+        let old = store.active_page().to_owned();
+        store.stage(&p, None).unwrap();
+        let mut extra = p.facts.iter().find(|f| f.entity == p.main_page && f.attribute == attribute).unwrap().clone();
+        extra.id = uuid::Uuid::from_u128(99999).to_string();
+        store.facts.insert(extra.id.clone(), extra);
+        assert!(store.switch(&p).is_err());
+        assert_eq!(store.active_page(), old);
+    }
+}
+
+#[test]
 fn exact_repeat_lost_switch_response_and_semantically_equal_reencoding_do_not_append() {
     let p = plan(GARDEN, 100);
     let mut store = Store::fixture();
