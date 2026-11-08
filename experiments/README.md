@@ -41,7 +41,10 @@ what remains unproved. They are not all implemented product capabilities.
   code, remaining decisions and production/remote verification gates. Its
   [latest addendum](../design/authoring-handoff0.gpt61s.md#keyed-bidirectional-addendum)
   restores identity-preserving MDX/Yrs edits and a modest bidirectional target;
-  the combined path still needs its own proof.
+  the combined path still needs its own proof. The
+  [CLI design arena](../design/authoring-handoff0.gpt61s.md#remake-and-cli-arena)
+  inventories commands, effects, bulk workflows and choices to settle before
+  remaking the public interface.
 - **Current recommendation:** [local MDX authoring with Satteri, with
   alternatives](../design/authoring-recommendation0.gpt61s.md). This incorporates
   the later compiler evidence, not just the initial parser comparison.

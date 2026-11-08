@@ -1,7 +1,7 @@
 ---
 type: Design
 title: "Preliminary design and implementation handoff — local MDX authoring"
-description: "Preliminary Satteri/MDX handoff with a subsequent keyed bidirectional/Yrs addendum: stable current-content identities, automatic key assignment, modest synchronization, and explicit recreation fallback."
+description: "Preliminary Satteri/MDX handoff with keyed bidirectional/Yrs editing, automatic identity, an explicit CLI design arena, remake decisions and experimental implementation gates."
 resource: /design/authoring-handoff0.gpt61s.md
 status: preliminary
 generated:
@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e4900b8d7ffeDT9QuFwmKRAB7t"
-    title: "User's authoring/storage direction and experiments; preliminary handoff followed by clarification that MDX keys should retain Yrs/Leaflet identity and enable some bidirectional conversion"
+    title: "Authoring experiments and handoff; clarified keyed bidirectional Yrs intent, then audited remake decisions and preserved the CLI design arena"
   - resource: /design/authoring-recommendation0.gpt61s.md
     title: "Current Satteri recommendation with alternatives and adoption boundaries"
   - resource: /design/mdx-recreate0.gpt6a.md
@@ -37,6 +37,12 @@ sources:
     title: "Existing web client and create/pull/push/author/extract/text modules"
   - resource: /crates/cli/src/config.rs
     title: "Existing Figment configuration precedence and XDG storage"
+  - resource: /crates/cli/src/main.rs
+    title: "Current command tree audited against the proposed remake; not assumed to match the proposed document-first interface"
+  - resource: /design/document-sync1.gpt61s.md
+    title: "Recovered earlier CLI ideas: symmetric push/pull, import, status, diff, resolve, tidy, conversion and metadata editing"
+  - resource: /design/document-sync1.gpt6a.md
+    title: "Recovered independent command sketch, identity/import behavior, explicit loss and resolution concerns"
 ---
 
 # Preliminary design and implementation handoff
@@ -63,6 +69,12 @@ For a short decision account and alternatives, read the
 receipts, use the [experiment index](../experiments/README.md). Start substantive
 code work with experiments **05, 13 and 14**, connecting the existing-state Yrs
 proof to the MDX/keying compiler rather than promoting only fresh encoding.
+
+Before choosing the public interface, read the
+[remake decisions and CLI design arena](#remake-and-cli-arena). That section
+collects capabilities previously scattered across designs and distinguishes
+established intent from unresolved spelling/grouping choices. The original
+`--replace` examples below are not the default for identity-preserving updates.
 
 ## 1. Direction, assumptions, and boundaries
 
@@ -699,3 +711,165 @@ discarding all existing CRDT identities through recreation.
 This addendum authorizes no implementation or live write by itself. The next
 handoff should be an explicitly commissioned combined experiment/integration
 slice using the corrected target above.
+
+<a id="remake-and-cli-arena"></a>
+
+## 13. Remake decisions and the CLI design arena
+
+### What needs deciding before the remake
+
+The parser choice is no longer the main uncertainty. The consequential choices
+are which identities the stored document retains, what an update means, and how
+users can see and direct it. Settle these through one coherent CLI/lifecycle
+story and the combined proof in section 12, not a full rewrite of every subsystem.
+
+| Factor | Current intended direction | Remaining decision/proof |
+| --- | --- | --- |
+| **Round-trip contract** | MDX stores current supported meaning and durable associations; no historical base or binary CRDT copy | Prove editor -> MDX -> edited MDX -> same editor objects for a useful profile, including marks and moves |
+| **Identity lifecycle** | Automatic IDs when unnamed, optional human keys, stable remote entity/fact binding | Choose when source annotations are inserted, how rekey/copy/split/join are represented, and which nodes/edges require identity |
+| **Edit versus recreate** | Unchanged/moved/edited mapped objects retain identity; Yrs edits existing text | Define supported operations and explicit recreation fallback; stop treating `--replace` as routine save permission |
+| **Direction and conflict policy** | Local authorship plus useful pull; preflight witnesses and current-endpoint diff | Decide ordinary local-only/remote-only/both-changed behavior and how an explicit take-local/take-remote choice is expressed |
+| **Save versus publication** | Saving editor work does not publish; publishing can save first; exclusive draft/post lifecycle | Choose one normal save verb and final command grouping; prove native release and stable output URI separately |
+| **Representation coverage** | All current content is the destination; partial profiles fail explicitly on unsupported input | Define first useful bidirectional subset, media/source representation and what a limited export may lose |
+| **Remote ownership and reachability** | Bind to the correct Leaflet/root/selected entry and preserve unrelated content | Verify rights, actual mutation behavior, staged reads and update/recovery semantics; no inferred authority from filenames |
+| **Integration and reuse** | Keep configuration/auth/transport and experimental evidence where useful | Test real dependency feature union; separate a pure authoring core from graph planning and effects; do not port the simulator as a server client |
+
+These are design questions, not mandatory new services or framework layers. No
+valuable-data migration is presently required. Keep the next slice narrow enough
+to expose mistaken assumptions before replacing the whole CLI.
+
+### CLI coverage audit
+
+The earlier handoff captured local create/check, a save/release distinction,
+date editing and append naming. Other discussions contained substantial command
+ideas not carried into that initial sketch. This inventory preserves them:
+
+| Arena | Capability that must remain visible in the handoff | Standing |
+| --- | --- | --- |
+| Local creation | Create the actual source file; remote creation happens when binding/saving needs it | Established direction |
+| Compile/check | Validate locally and explain unsupported components before remote effects | Established direction |
+| Automatic keying | Assign missing durable IDs, inspect associations, deliberately rename/rekey; ordinary authors need not name every block | Established goal; command/automatic insertion timing open |
+| Inspect/status/diff | Show current local/Leaflet differences, naming drift, untracked bindings, unreleased edits and supported identity effects | Needed for modest synchronization; exact report schema open |
+| Import/adopt | Bring an existing Leaflet document onto disk once, retaining actual token/URI and generated source identities | Bidirectional direction; exact locator and adoption interface open |
+| Pull | Refresh an already bound file without minting another remote object; guard changed local content | Bidirectional direction, not a perpetual recreation/export loop |
+| Push/save | Make local edits available in the same editor objects where supported; create/link only when unbound | Established direction; choose one verb/grouping |
+| Publish/update | First native publication or update of the same published identity; save first when necessary | Chief desired lifecycle; never imply push automatically releases |
+| Explicit resolution | Inspect today's endpoints and choose local, remote or manual edit; no saved base/automatic historical merge required | Needed behavior; dedicated resolve verb versus push/pull choice flags open |
+| Explicit recreation | Replace a selected unsupported/desired subtree with identity/anchor effects stated | Fallback, not normal identity-preserving push |
+| Metadata helpers | Title/description/date editing, `--published-at` and `--now`; preserve date on ordinary updates | Requested family; exact helper surface preliminary |
+| Naming tidy | Filename -> path, path -> filename, accept-as-is; optional independent naming witnesses | Established requirement; native URL/path limits still apply |
+| Bulk disk adoption | Discover/import all relevant remote drafts or posts; per-item outcomes and stable names/bindings | Earlier requested workflow gap; collection completeness must be verified |
+| Bulk bound-file refresh | Pull/push selected already-bound workspace documents without treating unseen remotes as deletions | Useful capability to preserve, not an instruction to implement blanket writes first |
+| Encoding/export | One current document, alternate JSON/plain-Markdown/record exports as appropriate; explicit lossy downconversion | Retained idea; native full MDX remains the current authoring direction |
+| Low-level append | Rename current append-only `author` behavior to `append` if kept; token-addressed plumbing | Earlier user selection; not the everyday edit path |
+| Auth/config/publications | Keep explicit identity/auth diagnostics, layered config show/set and publication discovery | Existing useful capabilities, not problems to rediscover during remake |
+
+This is a **capability inventory**, not a demand to add one top-level command per
+row or ship every capability in the first slice. Naming aliases and full syntax
+should follow a command-map review, not accumulate accidentally during coding.
+
+### Preferred working sketch and alternatives
+
+With bidirectional use restored, my current spelling lean is **push/pull**, with
+**publish** as the separate public-release action. `save` remains a reasonable
+alternative spelling for push; select one rather than adding permanent synonyms
+by default. The user previously selected `drafts push`; that capability must not
+get lost even if document-first top-level verbs are ultimately preferred.
+
+Illustrative document-first flow, not an implemented or accepted command tree:
+
+```sh
+springleaf create drafts/essay.mdx --title "An essay"
+springleaf check drafts/essay.mdx
+springleaf prepare drafts/essay.mdx             # proposed local key assignment
+springleaf status drafts/essay.mdx
+springleaf diff drafts/essay.mdx --edge leaflet
+springleaf push drafts/essay.mdx                # preview identity-aware edits
+springleaf push drafts/essay.mdx --yes          # save editor, not public release
+springleaf publish drafts/essay.mdx --yes       # save if necessary + release
+springleaf pull drafts/essay.mdx                # guarded current-editor adoption
+springleaf edit drafts/essay.mdx --now          # local metadata only
+springleaf tidy drafts/essay.mdx --from path
+```
+
+`prepare` here is a candidate, not a settled new verb: confirmed first push could
+assign the same keys automatically. Either way, document the local file mutation,
+preview it, and avoid reminting identities on repeated runs.
+
+Two viable grouping choices:
+
+- **Document-first verbs:** the file's tagged state/binding selects the adapter.
+  Same push/pull/status behavior for draft and published documents. Discovery can
+  be grouped separately; token IDs normally stay inside the file.
+- **Scoped draft/post commands:** `drafts push`, `posts push`, etc. can enforce
+  scope or aid discovery, but should call the same operations rather than create
+  divergent state models. Do not make users maintain both a draft and a post file.
+
+Root-level verbs are the current recommendation for the main file-based loop;
+scope-specific commands are optional surfaces. Keep **publications** distinct
+from published documents: existing `pubs list` lists publication containers, not
+posts. A `list` design must say whether it lists local files or remote Leaflets;
+the old overloaded word "drafts" was a real source of confusion.
+
+### Effects and flags need distinct meanings
+
+| Operation/flag | Meaning to preserve |
+| --- | --- |
+| `check`, read-only `status`/`diff` | No remote writes, no baseline acknowledgment merely because the state was observed; offline results must not masquerade as fresh remote checks |
+| `prepare` / automatic key assignment | Local current-source mutation, not remote creation; planned separately from publication |
+| `--yes` | Execute the displayed remote operation; it does not authorize overriding a conflict or losing content by itself |
+| Take-local/take-remote choice | Resolve a specifically inspected local/remote discrepancy; recheck reviewed witnesses before applying it |
+| `--replace` / recreate | Explicitly request identity-destroying fallback at a stated scope, not required for an ordinary mapped text edit |
+| `--overwrite` | Permission to replace a local destination where applicable; not permission to overwrite a different remote binding |
+| `--force-downconvert` | Approve specifically reported representation loss during conversion; not remote overwrite permission |
+| `--all` or collection selection | Select scope, not execution approval, conflict resolution or deletion policy |
+
+A dedicated `resolve` command and choice flags on push/pull are alternatives for
+the same interaction; do not require an elaborate ceremony for every edit. Show
+the useful plan: unchanged, add, edit in place, move, remove membership, rekey,
+recreate, unsupported and remote conflict. Include the public-release effect
+separately from editor changes. Read-back can report achieved/partial/diverged/
+unverifiable without pretending a failed mutation acknowledgment was success.
+
+Keep stdout suitable for versioned `--json` output and diagnostics on stderr;
+human output should identify the file, selected remote, proposed identity effects
+and next useful action. Choose exit behavior deliberately for clean/no-op,
+needs-decision, partial and operational failure; do not accidentally inherit
+today's exit-2 refusal everywhere. Preserve the no-secret-output boundary.
+
+### Import, pull, export and bulk are different jobs
+
+**Import** establishes a local file and exact remote association. **Pull** updates
+that same association. **Export/convert** emits a selected representation, not a
+second synchronized master. Repeating import of an already tracked remote must
+reuse ordinary pull/conflict logic or report an explicit destination ambiguity;
+it must not recreate a title-derived duplicate. An imported post without a
+recoverable native editor locator is editing-unavailable, not permission to mint
+a replacement document or quietly switch to PDS management.
+
+Earlier discussion asked for all drafts/posts on disk. Preserve that requirement
+as a deliberate collection workflow, not a shell loop presented as the product:
+
+- Distinguish **discover/import remote objects** from **refresh existing bound
+  files**. Newly discovered remotes and known local documents are different scopes.
+- Native drafts and posts should receive comparable summaries and per-item
+  errors. Discovery limits/pagination uncertainty must be visible before saying
+  "all". Preserve friendly user filenames on repeat adoption.
+- A batch must not clear unrelated conflicts, prune unseen objects or silently
+  publish. Explicit write confirmation still applies. Partial success must be
+  inspectable/resumable through per-file receipts rather than one opaque result.
+
+An aggregate `sync` command could report both naming and Leaflet discrepancies
+and suggest directional operations. It must not secretly cascade filename tidy,
+push/pull and publication together. Whether this aggregate is useful enough to
+ship is open; shared classification does not require one magic sync command.
+
+### What to settle next, without expanding into a full CLI spec
+
+Before a remake lands a public interface, review one draft-local-to-web example,
+one existing published-post edit/pull example, and one bulk-adoption example.
+Choose the save verb/grouping, key-assignment point, conflict-choice interaction,
+replacement fallback spelling and local-versus-remote discovery distinction.
+Keep the remaining inventory as staged capabilities rather than silently losing
+it or implementing every option immediately. The next combined experiment can
+validate the operations independently of their final command spelling.

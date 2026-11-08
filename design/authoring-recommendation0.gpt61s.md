@@ -281,6 +281,10 @@ The [preliminary design and handoff](authoring-handoff0.gpt61s.md) develops this
 recommendation into source/state contracts, production module boundaries,
 experimental-code reuse, failure handling and a capability-gated landing plan.
 Its open-decision list is the starting point for an implementation commission.
+Its [CLI design arena](authoring-handoff0.gpt61s.md#remake-and-cli-arena) preserves
+the document-first/scoped command alternatives, directional synchronization,
+automatic keying, bulk adoption and effect/confirmation distinctions rather than
+leaving the public interface implicit in compiler work.
 
 **Recommended next decision:** select Satteri and this source-authoritative
 authoring direction for an explicitly commissioned integration slice, with the
