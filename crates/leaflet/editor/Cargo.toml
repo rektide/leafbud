@@ -11,3 +11,9 @@ serde_json.workspace = true
 leafbud-document.workspace = true
 uuid.workspace = true
 yrs.workspace = true
+
+[dev-dependencies]
+base64.workspace = true
+yrs.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

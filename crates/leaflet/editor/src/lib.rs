@@ -1,7 +1,7 @@
 //! Pure native fact observation → bounded, loss-checked current content.
 //! Raw observations stay with the caller; no transport or local file effects.
 use anyhow::{Context, Result, bail, ensure};
-use leafbud_document::{Block, BlockKind, Inline, Node, Page, Theme};
+use leafbud_document::{Block, BlockKind, Inline, ListStyle, Node, Occurrence, Page, Theme};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
@@ -102,11 +102,13 @@ impl Scan<'_> {
     fn page(&mut self, entity: &str, membership: &str) -> Result<String> {
         let key = self.key("p", entity);
         if self.pages.contains_key(entity) {
-            self.nodes
-                .get_mut(&key)
-                .context("page binding")?
-                .memberships
-                .insert(membership.into(), membership.into());
+            match self.nodes.get_mut(&key).context("page binding")? {
+                Node {
+                    occurrence: Occurrence::Page { references },
+                    ..
+                } => references.push(membership.into()),
+                Node { .. } => bail!("page entity carries a non-page occurrence"),
+            }
             return Ok(key);
         }
         ensure!(
@@ -120,9 +122,9 @@ impl Scan<'_> {
             key.clone(),
             Node {
                 entity: entity.into(),
-                memberships: BTreeMap::from([(membership.into(), membership.into())]),
-                text_fact: None,
-                inactive_text_fact: None,
+                occurrence: Occurrence::Page {
+                    references: vec![membership.into()],
+                },
             },
         );
         let mut blocks = vec![];
@@ -139,6 +141,27 @@ impl Scan<'_> {
     fn block(&mut self, entity: &str, membership: &str) -> Result<Block> {
         let key = self.key("b", membership);
         let kind = self.string(entity, "block/type", "block-type-union")?.context("block has no block/type")?;
+        // Blocks never own block children in this profile; a block entity with
+        // card/block facts is nested list/container content.
+        ensure!(
+            self.rows.iter().all(|f| !(f["entity"] == entity && f["attribute"] == "card/block")),
+            "nested list/container content is not supported by this profile"
+        );
+        let is_list = self.one(entity, "block/is-list", "boolean")?.map(|f| f["data"]["value"] == Value::Bool(true));
+        if self.one(entity, "block/check-list", "boolean")?.is_some() {
+            bail!("task lists are not supported by this profile");
+        }
+        if self.one(entity, "block/list-number", "number")?.is_some() {
+            bail!("ordered-list numbering overrides are not supported by this profile");
+        }
+        let list_style = match self.string(entity, "block/list-style", "list-style-union")? {
+            None => ListStyle::Bullet,
+            Some(style) => match style.as_str() {
+                "unordered" => ListStyle::Bullet,
+                "ordered" => ListStyle::Ordered,
+                other => bail!("unsupported list style: {other}"),
+            },
+        };
         let text_fact = self.one(entity, "block/text", "text")?;
         let owns_text = matches!(kind.as_str(), "text" | "heading" | "blockquote");
         let content = match text_fact.as_ref().filter(|_| owns_text) {
@@ -146,9 +169,13 @@ impl Scan<'_> {
             None => vec![],
         };
         let kind = match kind.as_str() {
-            "text" => BlockKind::Paragraph { content },
+            "text" => match is_list {
+                Some(true) => BlockKind::ListItem { style: list_style, content },
+                _ => BlockKind::Paragraph { content },
+            },
             "blockquote" => BlockKind::Quote { content },
             "heading" => {
+                ensure!(is_list != Some(true), "heading list items are not supported by this profile");
                 let level = self.one(entity, "block/heading-level", "number")?.context("heading level absent")?["data"]["value"]
                     .as_u64()
                     .context("invalid heading level")?;
@@ -209,9 +236,11 @@ impl Scan<'_> {
             key.clone(),
             Node {
                 entity: entity.into(),
-                memberships: BTreeMap::from([(membership.into(), membership.into())]),
-                text_fact: if owns_text { text_id.clone() } else { None },
-                inactive_text_fact: if owns_text { None } else { text_id },
+                occurrence: Occurrence::Block {
+                    placement: membership.into(),
+                    text_fact: if owns_text { text_id.clone() } else { None },
+                    inactive_text_fact: if owns_text { None } else { text_id },
+                },
             },
         );
         Ok(Block { key, kind })
