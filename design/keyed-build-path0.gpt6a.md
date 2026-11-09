@@ -3,7 +3,7 @@ type: Design
 title: "Building keyed authoring and continuous inbound sync"
 description: "Code-grounded domain boundaries, concrete interfaces, bounded coarse operations, revisable formats and a build path for complete drafting plus persistent live watch, with exploratory peer presence."
 resource: /design/keyed-build-path0.gpt6a.md
-status: proposed
+status: accepted-direction
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Grounded implementation and rebuildable formats; operator corrected polling-first interpretation to persistent live watch/sync and suggested exploratory connected-client detection"
+    title: "Grounded implementation and rebuildable formats; operator clarified persistent live watch/sync and exploratory presence, then accepted the build direction and commissioned implementation"
   - resource: /design/keyed-edit-flows0.gpt6a.md
     title: "Primary create/change/drop/reorder cases and identity obligations"
   - resource: /design/keyed-authoring0.gpt6a.md
@@ -81,10 +81,14 @@ clean next source format rather than a migration framework for that disposable
 corpus. Rebuildability removes a compatibility burden; ordinary future saves still
 need stable identities and protection for newly authored work.
 
-This is a proposed implementation design, grounded in inspected code. No new
-runtime/deployed-write evidence is claimed. The local Leaflet archive was clean
-at `600c7b5f…` during inspection. The existing interface's eight-crate count and
-exact source schema are revisable; the ninth crate below is a recommendation.
+The operator accepted this build direction on 2026-11-09 and commissioned the
+next implementation work: g on `leafbud-author-create` + `leafbud-author-keys`,
+then Sol high on connected watch/presence after parent integration review.
+Exact API sketches remain implementation choices within these boundaries.
+This design's source inspection is not runtime/deployed-write evidence. The local
+Leaflet archive was clean at `600c7b5f…` during inspection. The existing interface's
+eight-crate count and exact source schema are revisable; the shared protocol crate
+is introduced when its write-transport consumers land, not as empty scaffolding.
 
 **Operator correction:** the first checkpoint of this document proposed a
 polling-first `pull --watch`. The operator clarified that the desired capability
@@ -577,7 +581,7 @@ a deliberate fresh checkout can replace its obsolete format when wanted.
 
 ### B. Establish connected watch — proposed ticket, Sol high then g
 
-Proposed **`leafbud-editor-follow`** (not yet created): extract one-file adoption,
+**`leafbud-editor-follow`**: extract one-file adoption,
 add cooperative local locking and `watch`, with actual realtime subscriptions,
 initial catch-up, event coalescing, reconnect and a slow reconciliation backstop.
 Sol high is recommended for the connection/bootstrap and optional presence probe;
@@ -667,8 +671,8 @@ behavior. Document the deployed proof separately when performed.
   current-endpoint conflict decisions remain applicable; a transport replica in
   memory is not a historical merge base or new on-disk source of truth.
 
-Recommended next commission is **A: `leafbud-author-create` +
-`leafbud-author-keys`, g**, with the above parser/model seam as its scope. Agree
-the format/locator and protocol-crate direction at that boundary. This document
-does not turn its proposed ticket or the rest of the build path into an automatic
-implementation dispatch.
+**Commissioned:** A, `leafbud-author-create` + `leafbud-author-keys`, with g in
+`opencode://ses_e41f88509ffejyMz0pF3zg73r3`. Parent review then hands the revised
+model/adoption interfaces to Sol high for connected watch. Later native-write
+batches retain their described sequence and receive concrete commissions at their
+integration checkpoints; this acceptance does not claim them implemented.
