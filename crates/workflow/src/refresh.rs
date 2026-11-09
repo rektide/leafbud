@@ -87,13 +87,19 @@ pub struct Policy {
 
 impl RemoteReader {
     pub async fn refresh_document(&self, context: &config::Context, path: &Path, policy: Policy) -> Report {
+        let joined = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            context.workspace_root.join(path)
+        };
+        let path = std::fs::canonicalize(&joined).unwrap_or(joined);
         let mut report = Report {
-            path: path.into(),
+            path: path.clone(),
             document_id: None,
             outcome: Outcome::Failed,
             message: None,
         };
-        match self.refresh_transaction(context, path, &policy, &mut report.document_id).await {
+        match self.refresh_transaction(context, &path, &policy, &mut report.document_id).await {
             Ok((outcome, message)) => {
                 report.outcome = outcome;
                 report.message = message;

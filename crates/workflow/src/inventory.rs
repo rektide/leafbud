@@ -67,7 +67,7 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
         Ok(())
     }
     let mut inventory = Inventory::default();
-    visit(root, base, &mut inventory)?;
+    visit(&std::fs::canonicalize(root)?, base, &mut inventory)?;
     inventory.find_duplicates();
     inventory.paths.sort();
     Ok(inventory)

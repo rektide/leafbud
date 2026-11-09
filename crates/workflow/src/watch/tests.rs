@@ -1096,3 +1096,20 @@ async fn a_new_transport_stamp_domain_cannot_be_serviced_by_an_old_inflight_read
     let (report, _) = tokio::join!(run, actions);
     report.unwrap();
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn symlinked_workspace_root_does_not_invent_duplicate_identities() {
+    let http = Http::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("workspace");
+    std::fs::create_dir(&root).unwrap();
+    let path = http.seed(&root, TOKEN, "doc.mdx");
+    let alias = temp.path().join("alias");
+    std::os::unix::fs::symlink(&root, &alias).unwrap();
+    let context = config::load_at(&temp.path().join("global.toml"), temp.path(), Some(&alias), &config::Config::default(), None).unwrap();
+    let reader = http.reader();
+    let report = reader.refresh_document(&context, Path::new("doc.mdx"), refresh::Policy::default()).await;
+    assert_eq!(report.outcome, refresh::Outcome::Unchanged);
+    assert_eq!(report.path, path);
+}
