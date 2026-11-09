@@ -1,7 +1,8 @@
-//! Read-only Leaflet web client: `/home` discovery and `get_leaflet_data`.
+//! Leaflet web transport: discovery, current native reads, explicit mint/push,
+//! and receive-only live subscriptions. Workflows own effect authorization.
 //!
 //! Promotes the extraction protocol proven in experiments 01/02, not the old
-//! sidecar lifecycle. No filesystem configuration, MDX, editor decoding or writes.
+//! sidecar lifecycle. No filesystem configuration, MDX or editor decoding.
 //! Raw per-Leaflet observations survive alongside the deliberately partial view.
 
 use std::time::Duration;
@@ -17,6 +18,7 @@ pub mod live;
 mod mint;
 mod pull;
 mod push;
+pub use actions::ActionResponse;
 pub use home::{DiscoveredLeaflet, Discovery, Identity, parse_home};
 pub use mint::{MintPreparation, MintTarget};
 pub use pull::{PullSnapshot, parse_pull};
@@ -31,6 +33,8 @@ pub enum Error {
     Pull(&'static str),
     #[error("native effect protocol: {0}")]
     Native(&'static str),
+    #[error("native mint response could not be decoded ({reason}); response retained in memory, outcome uncertain")]
+    ActionResponse { reason: &'static str, response: ActionResponse },
     #[error("Leaflet transport failed")]
     Transport(#[source] reqwest::Error),
     #[error("{operation} returned HTTP {status}")]
@@ -53,6 +57,18 @@ pub enum Error {
     Rpc { status: Option<u16> },
     #[error("malformed get_leaflet_data response: {0}")]
     Response(&'static str),
+}
+
+impl Error {
+    /// Explicit access only: never rendered by diagnostics or persisted as
+    /// pending state. A bounded decoder failure must not discard the sole
+    /// response that may contain the minted capability locator.
+    pub fn into_action_response(self) -> Option<ActionResponse> {
+        match self {
+            Self::ActionResponse { response, .. } => Some(response),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

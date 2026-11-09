@@ -44,6 +44,9 @@ fn seed(publication: bool) -> (Value, Value) {
     if !publication {
         facts.push(json!({"id":LEVEL,"entity":BLOCK,"attribute":"block/heading-level","data":{"type":"number","value":1}}));
     }
+    facts.push(
+        json!({"id":"99999999-9999-4999-8999-999999999999","entity":ROOT,"attribute":"theme/page-leaflet-watermark","data":{"type":"boolean","value":true}}),
+    );
     let mut patch = vec![json!({"op":"clear"}), json!({"op":"put","key":"initialized","value":true})];
     patch.extend(facts.into_iter().map(|f| json!({"op":"put","key":f["id"],"value":f})));
     if publication {
@@ -230,6 +233,137 @@ fn wrong_rights_seed_and_publication_context_are_not_confirmed_bindings() {
     }
 }
 
+#[tokio::test]
+async fn complete_request_validation_and_final_drift_gate_precede_any_effect() {
+    let server = EffectServer::new(0, None).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = server.seed(temp.path());
+    let reader = client(&server.server);
+    let context = old::context(temp.path());
+    let original = std::fs::read(&path).unwrap();
+    let result = reader
+        .execute_compiled(&context, &path, Selection::default(), None, |doc, data, view| {
+            let mut compiled = metadata_compiler(251)(doc, data, view)?;
+            compiled.mutations.push(NativeMutation::RetractFact { fact_id: Uuid::new_v4() });
+            Ok(compiled)
+        })
+        .await;
+    assert!(result.is_err());
+    assert_eq!(server.pushes.load(Ordering::SeqCst), 0);
+    assert_eq!(std::fs::read(&path).unwrap(), original);
+    let result = reader
+        .execute_compiled(&context, &path, Selection::default(), None, |doc, data, view| {
+            let compiled = metadata_compiler(1)(doc, data, view)?;
+            server.fixture.lock().unwrap()["leaflet_data"]["description"] = "remote drift during compile".into();
+            Ok(compiled)
+        })
+        .await;
+    assert!(result.unwrap_err().to_string().contains("drift"));
+    assert_eq!(server.pushes.load(Ordering::SeqCst), 0);
+    assert_eq!(std::fs::read(&path).unwrap(), original);
+}
+
+#[tokio::test]
+async fn equal_visible_meaning_cannot_hide_a_protected_native_scope_change() {
+    let server = EffectServer::new(4, None).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = server.seed(temp.path());
+    let reader = client(&server.server);
+    let context = old::context(temp.path());
+    let before = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.sync;
+    let result = reader
+        .execute_compiled(&context, &path, Selection::default(), None, metadata_compiler(1))
+        .await
+        .unwrap();
+    assert_eq!(result.outcome, write::RecoveryOutcome::ResolvedPartial);
+    assert!(result.message.unwrap().contains("protected"));
+    assert_eq!(leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.sync, before);
+}
+
+#[tokio::test]
+async fn prepared_unsent_recovery_clears_only_attempt_and_keeps_reserved_writer_sequence() {
+    let server = EffectServer::new(0, None).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = server.seed(temp.path());
+    let reader = client(&server.server);
+    let context = old::context(temp.path());
+    let source = std::fs::read_to_string(&path).unwrap();
+    let mut doc = leafbud_mdx::parse(&source).unwrap();
+    let sync = doc.state.sync.clone();
+    let mut writer = leafbud_document::WriterState::fresh();
+    let range = writer.reserve(3).unwrap();
+    doc.state.writer = Some(writer);
+    doc.state.pending = Some(Attempt {
+        id: Uuid::new_v4(),
+        input_hash: import::hash(&doc.authored_value()),
+        desired_hash: import::hash(&doc.editor_value()),
+        effect: Effect::Push {
+            range,
+            stage: PushStage::Prepared,
+            protection: leafbud_document::Protection {
+                hash: format!("sha256:{}", "0".repeat(64)),
+                facts: vec![],
+                entities: vec![],
+                metadata_fields: vec![],
+            },
+            targets: Default::default(),
+            created_entities: vec![],
+        },
+    });
+    std::fs::write(&path, leafbud_mdx::patch_tracking(&source, &doc.state).unwrap()).unwrap();
+    let result = reader.recover_native(&context, &path, Selection::default(), true).await.unwrap();
+    assert_eq!(result.outcome, write::RecoveryOutcome::PreparedNotSent);
+    assert!(result.settled);
+    let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(after.state.pending.is_none());
+    assert_eq!(after.state.sync, sync);
+    assert_eq!(after.state.writer.unwrap().next_mutation_id, 4);
+    assert!(server.server.requests().is_empty());
+}
+
+#[tokio::test]
+async fn in_flight_external_operand_duplicate_blocks_mint_locator_patch() {
+    let temp = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    let path = temp.path().join("draft.mdx");
+    let other = external.path().join("other.mdx");
+    let id = draft(&path, "publication: null");
+    draft(&other, "publication: null");
+    let duplicate = other.clone();
+    let server = TestServer::spawn_headers(Arc::new(move |r| match r.path.as_str() {
+        "/home" => (200, vec![], home()),
+        "/new" => {
+            let mut doc = leafbud_mdx::parse(&std::fs::read_to_string(&duplicate).unwrap()).unwrap();
+            doc.state.id = id;
+            std::fs::write(&duplicate, leafbud_mdx::render(&doc).unwrap()).unwrap();
+            (307, vec![("Location".into(), format!("/{TOKEN}"))], String::new())
+        }
+        _ => panic!("duplicate must prevent verification"),
+    }))
+    .await;
+    let result = client(&server)
+        .stage_binding(
+            &old::context(temp.path()),
+            &path,
+            Selection {
+                operands: vec![path.clone(), other],
+            },
+        )
+        .await
+        .unwrap();
+    assert!(matches!(result.outcome, BindingOutcome::SourceChanged));
+    assert!(result.token.is_some() && !result.locator_persisted);
+    let doc = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(doc.state.binding.is_none());
+    assert!(matches!(
+        doc.state.pending.unwrap().effect,
+        Effect::Mint {
+            stage: MintStage::Dispatched,
+            ..
+        }
+    ));
+}
+
 struct EffectServer {
     server: TestServer,
     fixture: Arc<Mutex<Value>>,
@@ -260,6 +394,11 @@ impl EffectServer {
                 // A controlled synthetic native effect, not an implementation
                 // mirror/compiler simulator: only persisted metadata changes.
                 if mode!=1 {remote.lock().unwrap()["leaflet_data"]["title"]=last["args"]["title"].clone();}
+                if mode==4 {
+                    let mut fixture=remote.lock().unwrap();
+                    let entity=fixture["response"]["patch"].as_array().unwrap().iter().find(|p|p["value"]["attribute"]=="block/type" && p["value"]["data"]["value"]=="text").unwrap()["value"]["entity"].clone();
+                    fixture["response"]["patch"].as_array_mut().unwrap().push(json!({"op":"put","key":KIND,"value":{"id":KIND,"entity":entity,"attribute":"block/is-list","data":{"type":"boolean","value":false}}}));
+                }
                 if let Some(path)=&race {let source=std::fs::read_to_string(path).unwrap();std::fs::write(path,source.replace("Wanted title","New source title")).unwrap();}
                 if mode==3 && call==0 {(503,"{}".into())}else{(200,"{}".into())}
             }

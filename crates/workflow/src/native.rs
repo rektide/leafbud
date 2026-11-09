@@ -36,6 +36,10 @@ pub struct BindingReport {
     pub locator_persisted: bool,
     pub binding: Option<Binding>,
     pub message: Option<String>,
+    /// Sole undecoded response, retained only in process for explicit private
+    /// investigation. Never serialized in reports or saved into source state.
+    #[serde(skip)]
+    pub undecoded_mint: Option<leafbud_web::ActionResponse>,
 }
 
 pub(crate) struct Source<'a> {
@@ -187,15 +191,20 @@ impl RemoteReader {
         let token = match result {
             Ok(Some(token)) => token,
             other => {
+                let (message, undecoded_mint) = match other {
+                    Err(error) => {
+                        let message = format!("mint may have created a draft; no automatic retry: {error}");
+                        (message, error.into_action_response())
+                    }
+                    _ => ("mint returned no locator; no automatic retry".into(), None),
+                };
                 return Ok(BindingReport {
                     outcome: BindingOutcome::MintUncertain,
                     token: None,
                     locator_persisted: false,
                     binding: None,
-                    message: Some(match other {
-                        Err(e) => format!("mint may have created a draft; no automatic retry: {e}"),
-                        _ => "mint returned no locator; no automatic retry".into(),
-                    }),
+                    message: Some(message),
+                    undecoded_mint,
                 });
             }
         };
@@ -212,6 +221,7 @@ impl RemoteReader {
                 locator_persisted: false,
                 binding: None,
                 message: Some(format!("returned locator not persisted; preserve it for explicit recovery: {error:#}")),
+                undecoded_mint: None,
             });
         }
         let verification: Result<Binding> = async {
@@ -244,6 +254,7 @@ impl RemoteReader {
                         locator_persisted: true,
                         binding: Some(binding),
                         message: Some(format!("native binding verified but local source changed: {error:#}")),
+                        undecoded_mint: None,
                     });
                 }
                 Ok(BindingReport {
@@ -252,6 +263,7 @@ impl RemoteReader {
                     locator_persisted: true,
                     binding: Some(binding),
                     message: None,
+                    undecoded_mint: None,
                 })
             }
             Err(error) => Ok(BindingReport {
@@ -260,6 +272,7 @@ impl RemoteReader {
                 locator_persisted: true,
                 binding: None,
                 message: Some(format!("locator retained; verification/materialization still pending: {error:#}")),
+                undecoded_mint: None,
             }),
         }
     }
@@ -272,6 +285,10 @@ fn verify_seed(base: &str, data: &LeafletData, snapshot: &PullSnapshot, publicat
     );
     let built = import::build(base, data, snapshot)?;
     let binding = built.state.binding.context("verified seed binding missing")?;
+    ensure!(
+        built.theme.as_ref().is_some_and(|theme| theme.leaflet_watermark),
+        "mint root lacks the pinned watermark default"
+    );
     ensure!(
         data.metadata
             .permission_token_rights

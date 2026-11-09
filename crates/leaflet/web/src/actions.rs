@@ -10,6 +10,18 @@ const MAX_ASSET: usize = 4 * 1024 * 1024;
 const MAX_TOTAL: usize = 24 * 1024 * 1024;
 const MAX_ASSETS: usize = 128;
 
+pub struct ActionResponse(pub(crate) String);
+impl ActionResponse {
+    pub fn body(&self) -> &str {
+        &self.0
+    }
+}
+impl std::fmt::Debug for ActionResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ActionResponse").field("bytes", &self.0.len()).finish_non_exhaustive()
+    }
+}
+
 impl LeafletClient {
     pub(crate) async fn discover_mint_action(&self, dashboard: &Url) -> Result<String, Error> {
         let response = self.http.get(dashboard.clone()).send().await.map_err(transport)?;
@@ -93,6 +105,16 @@ pub(crate) fn mint_result(body: &str) -> Result<Option<uuid::Uuid>, Error> {
         let Some((id, value)) = line.split_once(':') else {
             return Err(Error::Native("invalid action row"));
         };
+        // Next emits repeated no-model resource-hint rows. They are not
+        // promise/model IDs and cannot select an action return. This form was
+        // also observed in the read-only deployed dashboard Flight stream.
+        if id.is_empty() && value.starts_with("HL") {
+            let hint: Value = serde_json::from_str(&value[2..]).map_err(|_| Error::Native("invalid Flight preload hint"))?;
+            if !hint.is_array() {
+                return Err(Error::Native("invalid Flight preload hint"));
+            }
+            continue;
+        }
         if id.is_empty() || !id.bytes().all(|b| b.is_ascii_hexdigit()) || rows.insert(id, value).is_some() {
             return Err(Error::Native("invalid/duplicate action row ID"));
         }

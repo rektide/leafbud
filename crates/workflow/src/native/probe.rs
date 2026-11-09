@@ -1,6 +1,7 @@
 //! Explicit opt-in deployed verification, never part of normal tests. Budget
 //! markers are created before mint and never removed/reused automatically.
 use super::*;
+use serde_json::Value;
 use std::io::Write as _;
 
 #[tokio::test]
@@ -17,7 +18,15 @@ async fn authorized_two_disposable_drafts() -> Result<()> {
     let publication = context.effective.publication.clone();
     context.workspace_root = std::fs::canonicalize(&dir)?;
     let remote = crate::RemoteOptions::default().connect().await?;
+    let selected = std::env::var("LEAFBUD_NATIVE_PROBE_CONTEXT").ok();
+    ensure!(
+        selected.as_deref().is_none_or(|v| matches!(v, "standalone" | "publication")),
+        "invalid probe context selector"
+    );
     for (label, publication) in [("standalone", None), ("publication", publication)] {
+        if selected.as_deref().is_some_and(|v| v != label) {
+            continue;
+        }
         if label == "publication" && publication.is_none() {
             eprintln!("configured publication absent; publication probe not attempted");
             continue;
@@ -37,18 +46,21 @@ async fn authorized_two_disposable_drafts() -> Result<()> {
         let path = dir.join(format!("{label}.mdx"));
         let title = format!("Leafbud verification — {label} native-effect foundation");
         let body = if label == "standalone" {
-            "<Heading level={1}>Leafbud native-effect verification.</Heading>"
+            "# Leafbud native-effect verification."
         } else {
-            "<Paragraph>Leafbud native-effect verification.</Paragraph>"
+            "Leafbud native-effect verification."
         };
         let source = format!(
-            "---\nformat: leafbud-mdx/2\ntitle: {}\npublication: {}\n\"@leafbud\": {{\"id\":\"{}\",\"state\":\"draft\"}}\n---\n\n{body}\n",
+            "---\nformat: leafbud-mdx/2\ntitle: {}\npublication: {}\ntheme: {{leafletWatermark: true}}\n\"@leafbud\": {{\"id\":\"{}\",\"state\":\"draft\"}}\n---\n\n{body}\n",
             serde_json::to_string(&title)?,
             serde_json::to_string(&publication)?,
             Uuid::new_v4()
         );
         files::write(&path, None, source.as_bytes())?;
         let result = remote.stage_binding(&context, &path, Selection::default()).await?;
+        if let Some(response) = &result.undecoded_mint {
+            std::fs::write(dir.join(format!("{label}.undecoded.flight")), response.body())?;
+        }
         // Persist a returned locator even if the guarded source could not store
         // it. This private receipt is probe bookkeeping, not a tool journal.
         std::fs::write(dir.join(format!("{label}.locator.json")), serde_json::to_vec_pretty(&result)?)?;
@@ -110,6 +122,7 @@ async fn authorized_two_disposable_drafts() -> Result<()> {
                 })
             })
             .await?;
+        std::fs::write(dir.join(format!("{label}.first-effect-report.json")), serde_json::to_vec_pretty(&report)?)?;
         ensure!(
             report.outcome == RecoveryOutcome::DesiredVerified && report.settled,
             "controlled native effect not verified; inspect pending, do not remint"
@@ -228,6 +241,98 @@ async fn authorized_two_disposable_drafts() -> Result<()> {
             )?,
         )?;
         eprintln!("{label}: mint, controlled native text/metadata, exact replay, restart settlement and unchanged read verified; left unpublished");
+    }
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "read/settle only the privately recorded authorized verification drafts; never creates"]
+async fn inspect_existing_authorized_probe() -> Result<()> {
+    ensure!(
+        std::env::var("LEAFBUD_NATIVE_PROBE").as_deref() == Ok("authorized-two-disposable-drafts"),
+        "explicit probe flag required"
+    );
+    let dir = std::fs::canonicalize(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.test-agent/native-effects/deployed"))?;
+    let mut context = crate::config::load(None, &Default::default(), None)?;
+    context.workspace_root = dir.clone();
+    let remote = crate::RemoteOptions::default().connect().await?;
+    for label in ["standalone", "publication"] {
+        let path = dir.join(format!("{label}.mdx"));
+        if !path.exists() {
+            continue;
+        }
+        let recorded: Value = serde_json::from_slice(&std::fs::read(dir.join(format!("{label}.locator.json")))?)?;
+        let source = leafbud_mdx::parse(&std::fs::read_to_string(&path)?)?;
+        if recorded["token"].is_null() {
+            ensure!(
+                source.state.binding.is_none()
+                    && matches!(
+                        &source.state.pending,
+                        Some(Attempt {
+                            effect: Effect::Mint {
+                                stage: MintStage::Dispatched,
+                                ..
+                            },
+                            ..
+                        })
+                    ),
+                "unlocated probe state differs from budget record"
+            );
+        } else {
+            ensure!(
+                source.state.binding.as_ref().is_some_and(|b| recorded["token"] == b.token.to_string()),
+                "probe locator differs from authorization record"
+            );
+        }
+        let report = remote.recover_native(&context, &path, Selection::default(), true).await?;
+        if let Some(Attempt {
+            effect: Effect::Push { targets, .. },
+            ..
+        }) = &source.state.pending
+        {
+            for node in targets.values().filter(|n| matches!(n.occurrence, leafbud_document::Occurrence::Block { .. })) {
+                let entity = node.entity.parse()?;
+                let explicit = remote.client.facts_for_entities(&[entity]).await?;
+                let found = match &node.occurrence {
+                    leafbud_document::Occurrence::Block { text_fact: Some(id), .. } => explicit.fact(entity, id.parse()?).is_some(),
+                    _ => false,
+                };
+                std::fs::write(
+                    dir.join(format!("{label}.explicit.json")),
+                    serde_json::to_vec_pretty(
+                        &serde_json::json!({"knownEntityRead":true,"knownTextFactFound":found,"returnedRows":explicit.roots[&entity].len()}),
+                    )?,
+                )?;
+                ensure!(found, "known deployed text fact not returned by explicit entity read");
+                eprintln!("{label}: deployed known-entity/known-text-fact explicit read verified");
+            }
+        }
+        if report.outcome == RecoveryOutcome::ResolvedPartial {
+            let binding = source.state.binding.as_ref().context("binding")?;
+            let observed = remote.native_observation(binding, source.state.writer.as_ref(), &[]).await?;
+            let fresh = import::build(remote.client.base_url(), &observed.data, &observed.snapshot)?;
+            let mut expected = source.clone();
+            if let Some(Attempt {
+                effect: Effect::Push { targets, .. },
+                ..
+            }) = &source.state.pending
+            {
+                expected.state.nodes.extend(targets.clone());
+            }
+            let actual = crate::editor_state::adopt(&expected, &fresh);
+            expected.state.nodes = actual.state.nodes.clone();
+            expected.publication = binding.publication.clone().map(Publication::At).unwrap_or(Publication::Standalone);
+            let a = expected.editor_value();
+            let b = actual.editor_value();
+            let keys: Vec<_> = a.as_object().context("projection")?.keys().filter(|k| a[*k] != b[*k]).collect();
+            std::fs::write(
+                dir.join(format!("{label}.comparison.json")),
+                serde_json::to_vec_pretty(&serde_json::json!({"expected":a,"actual":b}))?,
+            )?;
+            eprintln!("{label}: differing projection fields: {keys:?}");
+        }
+        std::fs::write(dir.join(format!("{label}.inspection.json")), serde_json::to_vec_pretty(&report)?)?;
+        eprintln!("{label}: {}", serde_json::to_string(&report)?);
     }
     Ok(())
 }

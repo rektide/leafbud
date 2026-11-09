@@ -80,6 +80,50 @@ fn document() -> Document {
     }
 }
 
+#[test]
+fn pending_tracking_keeps_authored_bytes_and_cannot_reset_writer_or_advance_receipts() {
+    use leafbud_document::{Attempt, Effect, Protection, PushStage, WriterState};
+    let source = render(&document()).unwrap();
+    let old = parse(&source).unwrap();
+    let mut state = old.state.clone();
+    let mut writer = WriterState::fresh();
+    let range = writer.reserve(2).unwrap();
+    state.writer = Some(writer);
+    let hash = format!("sha256:{}", "a".repeat(64));
+    state.pending = Some(Attempt {
+        id: Uuid::new_v4(),
+        input_hash: hash.clone(),
+        desired_hash: hash.clone(),
+        effect: Effect::Push {
+            range,
+            stage: PushStage::Prepared,
+            protection: Protection {
+                hash,
+                facts: vec![],
+                entities: vec![],
+                metadata_fields: vec![],
+            },
+            targets: Default::default(),
+            created_entities: vec![],
+        },
+    });
+    let pending = patch_tracking(&source, &state).unwrap();
+    assert_eq!(parse(&pending).unwrap().authored_value(), old.authored_value());
+    assert_eq!(pending.split("\n---\n").last(), source.split("\n---\n").last());
+    let mut invalid = state.clone();
+    invalid.writer.as_mut().unwrap().client_id = Uuid::new_v4();
+    assert!(patch_tracking(&pending, &invalid).is_err());
+    let mut invalid = state.clone();
+    invalid.writer = None;
+    assert!(patch_tracking(&pending, &invalid).is_err());
+    let mut invalid = state.clone();
+    invalid.sync.as_mut().unwrap().local_hash = "advanced prematurely".into();
+    assert!(patch_tracking(&pending, &invalid).is_err());
+    state.pending = None;
+    let settled = patch_tracking(&pending, &state).unwrap();
+    assert_eq!(parse(&settled).unwrap().state.writer.unwrap().next_mutation_id, 3);
+}
+
 /// An unbound, receipt-free draft with the same body.
 fn unbound() -> Document {
     let mut document = document();

@@ -174,6 +174,18 @@ impl NativeMutation {
                 } else if !data["value"].is_string() {
                     return Err(Error("invalid string/union/text"));
                 }
+                let value = &data["value"];
+                if row.attribute == "block/type"
+                    && !matches!(
+                        value.as_str(),
+                        Some("text" | "heading" | "blockquote" | "code" | "horizontal-rule" | "image" | "card")
+                    )
+                    || row.attribute == "page/type" && value != "doc"
+                    || row.attribute == "block/list-style" && !matches!(value.as_str(), Some("unordered" | "ordered"))
+                    || row.attribute == "block/heading-level" && value.as_u64().is_none_or(|v| !(1..=6).contains(&v))
+                {
+                    return Err(Error("unsupported executable union/heading value"));
+                }
             }
             Self::RetractFact { fact_id } => fact(fact_id)?,
             Self::AddLastBlock {

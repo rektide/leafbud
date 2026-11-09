@@ -62,6 +62,12 @@ impl RemoteReader {
             Some(w) => self.client.pull_writer(binding.token, wire_writer(w)).await?,
             None => self.client.pull(binding.token).await?,
         };
+        if let Some(writer) = writer {
+            ensure!(
+                snapshot.acknowledged(writer.client_id).is_none_or(|id| id < writer.next_mutation_id),
+                "native writer acknowledgment exceeds persisted reservation; explicit identity/sequence recovery required"
+            );
+        }
         let fresh = import::build(self.client.base_url(), &data, &snapshot)?;
         crate::editor_state::same_identity(binding, &fresh)?;
         ensure!(
@@ -382,6 +388,10 @@ fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
     for mutation in &compiled.mutations {
         match mutation {
             NativeMutation::AssertFact(row) => {
+                if row.attribute == "block/text" {
+                    leafbud_editor::read_text(row.data["value"].as_str().context("text payload")?)
+                        .context("generated native text fails production decoder before effects")?;
+                }
                 if let Some(id) = row.id {
                     facts.insert(id);
                 }

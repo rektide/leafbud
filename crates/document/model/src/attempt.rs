@@ -180,6 +180,7 @@ impl State {
                 if !valid_fingerprint(&protection.hash)
                     || protection.facts.len() > MAX_TARGETS
                     || protection.entities.len() > MAX_TARGETS
+                    || protection.metadata_fields.len() > 3
                     || protection
                         .metadata_fields
                         .iter()

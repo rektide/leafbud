@@ -25,6 +25,7 @@ fn bounded_action_reference_and_return_slot_not_a_uuid_scrape() {
     );
     assert_eq!(actions::mint_result("0:{\"a\":null,\"f\":[]}\n").unwrap(), None);
     for bad in [
+        ":HL{\"a\":null}\n0:{\"a\":null}\n".into(),
         format!("0:{{\"f\":[\"{TOKEN}\"]}}\n"),
         "0:{\"a\":\"$@1\"}\n1:E{\"digest\":\"private\"}\n".into(),
         "0:{\"a\":\"$@1\"}\n".into(),
@@ -156,4 +157,26 @@ async fn exact_push_replay_actual_group_acks_and_explicit_detached_reads() {
         client.facts_for_entities(&[detached]).await.unwrap().fact(detached, fact).unwrap()["future"],
         true
     );
+}
+
+#[tokio::test]
+async fn undecoded_mint_response_survives_in_memory_without_diagnostic_payload_leaks() {
+    const RESPONSE: &str = ":Zunsupported-render-row\n0:{\"a\":\"$@1\"}\n1:\"01999000-0000-7aaa-8000-000000000001\"\n";
+    let server = TestServer::spawn_headers(Arc::new(|request| {
+        let body = match request.path.as_str() {
+            "/home" => home(),
+            "/_next/static/mint.js" => JS.into(),
+            _ if request.method == "GET" => "<script src=\"/_next/static/mint.js\"></script>".into(),
+            _ => RESPONSE.into(),
+        };
+        (200, vec![("Content-Type".into(), "text/x-component".into())], body)
+    }))
+    .await;
+    let client = LeafletClient::new(&server.base_url, Some("synthetic")).unwrap();
+    let prep = client.prepare_mint(MintTarget::Publication(URI.into())).await.unwrap();
+    let error = client.mint(&prep).await.unwrap_err();
+    assert!(!format!("{error:?}").contains(TOKEN));
+    assert!(!error.to_string().contains("unsupported-render-row"));
+    assert_eq!(error.into_action_response().unwrap().body(), RESPONSE);
+    assert_eq!(server.requests().iter().filter(|r| r.method == "POST").count(), 1);
 }

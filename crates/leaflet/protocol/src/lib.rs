@@ -115,7 +115,7 @@ impl ExplicitFacts {
                 return Err(Error("unexpected explicit root"));
             }
             let rows = rows.as_array().ok_or(Error("invalid explicit fact rows"))?;
-            let mut ids = BTreeSet::new();
+            let mut ids = BTreeMap::new();
             let mut unique = Vec::new();
             for row in rows {
                 validate_fact(row)?;
@@ -123,7 +123,12 @@ impl ExplicitFacts {
                     return Err(Error("explicit row/root mismatch"));
                 }
                 // The SQL recursive walk may reach one fact at several depths.
-                if ids.insert(row.to_string()) {
+                let id = row["id"].as_str().ok_or(Error("fact ID"))?;
+                if let Some(previous) = ids.insert(id, row) {
+                    if previous != row {
+                        return Err(Error("conflicting explicit fact rows"));
+                    }
+                } else {
                     unique.push(row.clone());
                 }
             }

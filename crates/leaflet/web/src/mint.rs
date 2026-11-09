@@ -92,7 +92,13 @@ impl LeafletClient {
                 return Err(Error::Native("mint action did not return Flight; outcome uncertain"));
             }
             let body = actions::bounded_text(response, "POST createPublicationDraft", 1024 * 1024, &mut (1024 * 1024)).await?;
-            actions::mint_result(&body)
+            actions::mint_result(&body).map_err(|error| match error {
+                Error::Native(reason) => Error::ActionResponse {
+                    reason,
+                    response: actions::ActionResponse(body),
+                },
+                other => other,
+            })
         } else {
             // GET /new creates a document. Redirects are intentionally NOT
             // followed, including a forged foreign-origin Location.
