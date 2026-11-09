@@ -1158,6 +1158,86 @@ fn preparation_proposals_check_page_names_and_table_rows() {
     );
 }
 
+/// Applying a preparation is total: a stale plan, an altered source or an
+/// invalid caller-built edit is a useful error, never a panic and never a
+/// silently valid edit of a different source.
+#[test]
+fn apply_key_preparation_rejects_stale_and_invalid_input() {
+    let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}";
+    let source = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nfirst\n");
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        &source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
+    // The same length with altered bytes is not the planned source.
+    let altered = source.replace("first", "firth");
+    assert_eq!(altered.len(), source.len());
+    let error = apply_key_preparation(&altered, &plan).unwrap_err().to_string();
+    assert!(error.contains("changed since planning"), "{error}");
+    // No-op semantics hold only for the matching source.
+    let prepared = apply_key_preparation(&source, &plan).unwrap();
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let noop = prepare_keys(
+        &prepared,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
+    assert!(noop.is_noop());
+    assert!(apply_key_preparation(&source, &noop).unwrap_err().to_string().contains("changed since planning"));
+    // Invalid caller-built edits fail before any splicing: out of bounds,
+    // inside a multibyte character, and overlapping replacements.
+    let unicode = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nhéllo\n");
+    let inside = unicode.find("é").unwrap() + 1;
+    let edit = |start: usize, end: usize| TidyEdit {
+        start,
+        end,
+        text: "<Key id=\"x\" />\n".into(),
+    };
+    let document = parse(&source).unwrap();
+    for (edits, expect) in [
+        (vec![edit(source.len() + 5, source.len() + 5)], "bounds"),
+        (vec![edit(0, 80), edit(60, 90)], "overlap"),
+    ] {
+        let invalid = KeyPreparation {
+            edits,
+            main_page: None,
+            document: document.clone(),
+            assigned: 0,
+            source: source.clone(),
+        };
+        let error = apply_key_preparation(&source, &invalid).unwrap_err().to_string();
+        assert!(error.contains(expect), "{expect}: {error}");
+    }
+    let invalid = KeyPreparation {
+        edits: vec![edit(inside, inside)],
+        main_page: None,
+        document: parse(&unicode).unwrap(),
+        assigned: 0,
+        source: unicode.clone(),
+    };
+    let error = apply_key_preparation(&unicode, &invalid).unwrap_err().to_string();
+    assert!(error.contains("UTF-8"), "{error}");
+    // The multibyte body itself prepares cleanly.
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        &unicode,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
+    assert!(apply_key_preparation(&unicode, &plan).unwrap().contains("héllo"));
+}
+
 /// A page link addressing the provisional main page is retargeted to the
 /// persisted identity when preparation assigns it; unrelated prose keeps
 /// its bytes.

@@ -4,7 +4,7 @@
 //! only [`apply_key_preparation`] produces bytes, and it proves the result
 //! through the production parser before returning it.
 use super::{json, parse, parse_with_spans, patch};
-use anyhow::{Result, bail, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use leafbud_document::*;
 
 /// One nonoverlapping byte replacement in the original source (shared with
@@ -20,7 +20,9 @@ pub struct TidyEdit {
 /// edits for page links addressing the provisional main page, the proposed
 /// main-page key when `@leafbud.mainPage` is not persisted yet, and the
 /// fully prepared document those edits produce. Proposed keys are
-/// provisional until applied and persisted by the caller.
+/// provisional until applied and persisted by the caller. The plan is bound
+/// to the exact source it was planned from (in memory, never persisted), so
+/// applying validates the operand instead of splicing stale coordinates.
 #[derive(Clone, Debug)]
 pub struct KeyPreparation {
     /// Ascending edits: Key marker insertion lines (start == end) and
@@ -32,6 +34,8 @@ pub struct KeyPreparation {
     pub document: Document,
     /// How many block keys this preparation would assign.
     pub assigned: usize,
+    /// The original input this plan was computed from.
+    pub source: String,
 }
 
 impl KeyPreparation {
@@ -172,6 +176,7 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
         main_page,
         document,
         assigned: proposed.len(),
+        source: source.to_owned(),
     })
 }
 
@@ -190,11 +195,34 @@ fn unkeyed_contains(unkeyed: &[usize], parsed: &super::parse::Parsed, key: &str)
 
 /// Apply a preparation and prove the result: same proposed identities,
 /// equivalent semantic content, and a source-valid document whose blocks all
-/// carry explicit keys. Applying a no-op preparation returns the input.
+/// carry explicit keys. The plan is bound to its original input: applying it
+/// to any other source (including same-length alterations) is an error, and
+/// no-op semantics hold only for the matching source. Caller-visible edits
+/// are validated (bounded, UTF-8 aligned, ascending, nonoverlapping) before
+/// any splicing; failures are errors, never panics.
 pub fn apply_key_preparation(source: &str, preparation: &KeyPreparation) -> Result<String> {
+    ensure!(
+        source == preparation.source,
+        "preparation input changed since planning; re-plan before applying"
+    );
     if preparation.is_noop() {
         return Ok(source.to_owned());
     }
+    for TidyEdit { start, end, .. } in &preparation.edits {
+        ensure!(start <= end, "preparation edit has reversed bounds");
+        ensure!(*end <= source.len(), "preparation edit is out of bounds");
+        ensure!(
+            source.is_char_boundary(*start) && source.is_char_boundary(*end),
+            "preparation edit is not UTF-8 aligned"
+        );
+    }
+    ensure!(
+        preparation
+            .edits
+            .windows(2)
+            .all(|pair| pair[0].start <= pair[1].start && pair[0].end <= pair[1].start),
+        "preparation edits are unordered or overlap"
+    );
     let mut result = source.to_owned();
     for TidyEdit { start, end, text } in preparation.edits.iter().rev() {
         result.replace_range(start..end, text);
@@ -202,7 +230,7 @@ pub fn apply_key_preparation(source: &str, preparation: &KeyPreparation) -> Resu
     if let Some(main_page) = &preparation.main_page {
         result = patch::insert_state_line(&result, &format!("\"mainPage\": {}", json(main_page)))?;
     }
-    let parsed = parse(&result).expect("prepared source must parse");
+    let parsed = parse(&result).context("prepared source must parse")?;
     ensure!(
         parsed.semantic_value() == preparation.document.semantic_value() && parsed.state == preparation.document.state,
         "key preparation would change content/associations"
