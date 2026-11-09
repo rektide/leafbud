@@ -223,3 +223,10 @@ The next
 proposed implementation batch remains `leafbud-editor-text` +
 `leafbud-editor-structure` with g, followed by complete bind/recovery acceptance
 with Sol. A source/transport checkpoint is not a substitute for that full loop.
+
+**Subsequent operator commission:** the user selected fresh **Sol high**, rather
+than g, for this next major feature and asked to keep using new Sol high sessions
+as major work advances. Session `opencode://ses_e3d96851dffeS2cPD2vPHjGklF` now
+owns complete keyed text/structure saves and their public push integration.
+Earlier g recommendations above are historical; the current agent selection
+and rollover policy live in [AGENTS](/AGENTS.md).

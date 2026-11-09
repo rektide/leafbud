@@ -14,7 +14,7 @@ sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Operator set session cadence and complexity budget, then rejected generated-body default in favor of complete drafting on the keyed native-object foundation"
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Operator permits rebuildable formats, commissions live watch and native-default adoption, and sets future agent rollover between 240–350k while allowing active agents to finish"
+    title: "Operator commissions rebuildable keyed authoring, live watch and native-default adoption; sets 240–350k rollover and fresh Sol high sessions for continuing major features"
 ---
 
 # Leafbud work-session cadence
@@ -59,11 +59,11 @@ sources:
 
 ## Commission and agent selection
 
-- Default implementation agent: **g**. Recommend **Sol high** when a slice has
-  higher architectural concern, unresolved semantics or substantially unpaved
-  implementation work; explain briefly why the extra judgment would help.
-  The operator may explicitly select Sol high. Follow explicit selections and
-  inherited fallback rules.
+- **Use fresh Sol high sessions for major features**, continuing the build through
+  coherent batches and parent integration reviews. The operator selected this
+  over the earlier g default, beginning with the complete keyed text/structure
+  save loop. Routine bounded work may still use g where appropriate; follow
+  explicit selections and inherited fallback rules.
 - Plan coherent batches of **1–4 upcoming tickets**. A preview is a recommendation;
   keep commissioned implementation distinct from work merely queued for discussion.
 - Parent review owns architecture, evidence and integration; implementation agents

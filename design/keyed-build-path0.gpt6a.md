@@ -630,7 +630,7 @@ document. Current Beads dependencies describe **completion** dependencies:
 `bind` depends on structure/recovery. They do not prohibit developing its transport
 seam now. A binding-only checkpoint is internal work, not delivered authoring.
 
-### D. Complete ordinary saves — two existing tickets, g
+### D. Complete ordinary saves — two existing tickets, Sol high
 
 `leafbud-editor-text` + `leafbud-editor-structure`: implement block/scalar builders,
 loaded Yrs edit with coarse interior fallback, keyed page/block create/update/
@@ -782,3 +782,31 @@ actual status/pull/repeat confirmed clean correspondence and byte/mtime no-op.
 The old standalone partial remains untouched. Sol closes this checkpoint around
 256k context; next recommended implementation is fresh g on the text/structure
 compiler. Bind/recovery remain in progress pending the full ordinary save loop.
+
+### Complete keyed saves commissioned with fresh Sol high
+
+The operator superseded the g recommendation: **use fresh Sol high sessions for
+major features and keep the build moving through them**. The 240–350k rollover
+window remains active. Fresh Sol session
+`opencode://ses_e3d96851dffeS2cPD2vPHjGklF` owns
+`leafbud-editor-text` + `leafbud-editor-structure`, joined through the accepted
+native-effect foundation into a complete preview/executed `push` workflow.
+Text-only helpers or compiler-only fixtures are internal checkpoints, not the
+delivery boundary. Rotate through coherent committed handoffs if the complete
+slice needs more than one session.
+
+Two concrete structural joins belong in this batch. First, footprint preparation
+must understand preceding planned attachments before moving newly created blocks.
+Second, detaching a placement changes rooted visibility: protection/read-back must
+use explicit known-entity reads where needed to distinguish preserved detached
+facts from destructive deletion, without mixing detached rows into the active
+document projection or storing an old body. Page incoming-reference locators should
+be compared as sets, independently of traversal/order spelling.
+
+The existing selected P1 is the authorized deployed target for controlled bound
+save/revision/pull/repeat proof. New block entities inside that draft are ordinary
+edits; no additional draft mint is authorized. Unbound first-save composition in
+both contexts can be exercised end-to-end against real loopback protocol fixtures.
+Keep the known standalone partial preserved for its later deliberate recovery
+join. New major features thereafter use fresh Sol high sessions after parent
+integration review, under the operator's continuing-work instruction.
