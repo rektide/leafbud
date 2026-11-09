@@ -264,6 +264,12 @@ pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
         existing.state.main_page == next.main_page,
         "tracking settlement cannot change main-page identity; preparation persists it"
     );
+    // Correspondence already recorded: do not normalize merely because an
+    // intentional alias edit left the map in a different textual key order.
+    // All settlement guards above still apply; no receipt is advanced here.
+    if existing.state == *next {
+        return Ok(source.to_owned());
+    }
     let result = replace_envelope(source, next)?;
     let parsed = parse(&result).context("tracking settlement validation")?;
     ensure!(parsed.state == *next, "tracking settlement diverges from the intended state");

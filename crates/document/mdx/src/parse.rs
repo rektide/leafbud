@@ -63,7 +63,7 @@ impl Reader {
     fn prop<T: serde::de::DeserializeOwned>(&self, props: &mut BTreeMap<String, Value>, name: &str) -> Result<T> {
         serde_json::from_value(props.remove(name).with_context(|| format!("missing {name} property"))?).map_err(|_| anyhow::anyhow!("invalid {name} property"))
     }
-    fn valid_key(key: &str) -> bool {
+    pub(crate) fn valid_key(key: &str) -> bool {
         let mut bytes = key.bytes();
         bytes.next().is_some_and(|b| b.is_ascii_alphabetic()) && bytes.all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b))
     }
@@ -594,6 +594,116 @@ pub fn header(source: &str) -> Result<Value> {
     );
     let value = arena.get_str(decode_string_ref_data(arena.get_type_data(first)));
     frontmatter(value)
+}
+
+/// Actual JSX identity/reference attributes, selected through the production
+/// arena/decoded property meaning, not text searches over prose or code.
+pub(crate) fn rename_attributes(source: &str, old: &str, new: &str) -> Result<Vec<super::TidyEdit>> {
+    let (arena, errors) = satteri_pulldown_cmark::parse(source, satteri_pulldown_cmark::MDX_OPTIONS);
+    ensure!(errors.is_empty(), "invalid MDX syntax");
+    let reader = Reader {
+        arena,
+        keys: BTreeSet::new(),
+        reserved: BTreeSet::new(),
+        spans: vec![],
+        keyed: vec![],
+        auto: 0,
+    };
+    fn visit(reader: &Reader, id: u32, source: &str, bom: usize, old: &str, new: &str, edits: &mut Vec<super::TidyEdit>) -> Result<()> {
+        if reader.kind(id) == MdastNodeType::MdxJsxFlowElement {
+            let prop = match reader.name(id) {
+                "Key" => Some("id"),
+                "Page" => Some("name"),
+                "PageLink" => Some("page"),
+                _ => None,
+            };
+            if let Some(prop) = prop.filter(|prop| reader.string_prop(id, prop).as_deref() == Some(old)) {
+                let node = reader.arena.get_node(id);
+                let start = node.start_offset as usize + bom;
+                let end = node.end_offset as usize + bom;
+                let range = attribute_range(&source[start..end], prop)?;
+                edits.push(super::TidyEdit {
+                    start: start + range.start,
+                    end: start + range.end,
+                    text: super::json(new),
+                });
+            }
+        }
+        for &child in reader.arena.get_children(id) {
+            visit(reader, child, source, bom, old, new, edits)?;
+        }
+        Ok(())
+    }
+    let mut edits = vec![];
+    visit(&reader, 0, source, usize::from(source.starts_with('\u{feff}')) * 3, old, new, &mut edits)?;
+    Ok(edits)
+}
+
+pub(crate) fn valid_key(key: &str) -> bool {
+    Reader::valid_key(key)
+}
+
+/// Token extent only, within a parser-validated opening tag. This does not
+/// interpret MDX or choose components. Literal/expression properties already
+/// have their meaning checked by Reader; we just preserve surrounding trivia.
+fn attribute_range(tag: &str, selected: &str) -> Result<std::ops::Range<usize>> {
+    let b = tag.as_bytes();
+    let mut at = 1;
+    while at < b.len() && !b[at].is_ascii_whitespace() && b[at] != b'>' {
+        at += 1;
+    }
+    while at < b.len() {
+        while at < b.len() && b[at].is_ascii_whitespace() {
+            at += 1;
+        }
+        ensure!(at < b.len() && !b"/>".contains(&b[at]), "selected JSX property not found in opening tag");
+        let name_start = at;
+        while at < b.len() && !b[at].is_ascii_whitespace() && b[at] != b'=' {
+            at += 1;
+        }
+        let name = &tag[name_start..at];
+        while at < b.len() && b[at].is_ascii_whitespace() {
+            at += 1;
+        }
+        ensure!(b.get(at) == Some(&b'='), "unsupported JSX property token");
+        at += 1;
+        while at < b.len() && b[at].is_ascii_whitespace() {
+            at += 1;
+        }
+        let start = at;
+        let first = *b.get(at).context("missing JSX value")?;
+        if first == b'\'' || first == b'"' {
+            at += 1;
+            while at < b.len() && b[at] != first {
+                at += 1;
+            }
+            ensure!(at < b.len(), "unterminated literal attribute");
+            at += 1;
+        } else {
+            ensure!(first == b'{', "unsupported JSX property token");
+            at += 1;
+            let mut depth = 1;
+            let mut quoted = false;
+            while at < b.len() && depth > 0 {
+                match b[at] {
+                    b'\\' if quoted => {
+                        at += 2;
+                        continue;
+                    }
+                    b'"' => quoted = !quoted,
+                    b'{' if !quoted => depth += 1,
+                    b'}' if !quoted => depth -= 1,
+                    _ => {}
+                }
+                at += 1;
+            }
+            ensure!(depth == 0, "unterminated expression attribute");
+        }
+        if name == selected {
+            return Ok(start..at);
+        }
+    }
+    bail!("selected JSX property absent")
 }
 
 #[cfg(test)]

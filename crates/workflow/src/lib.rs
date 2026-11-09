@@ -1,7 +1,8 @@
-//! Small read-only remote workflows. No local document lifecycle yet.
+//! Local authoring, inventory and guarded native document workflows.
 //!
 //! Native credentials remain separate from restored TOML authoring defaults.
 
+pub mod author;
 pub mod config;
 pub mod create;
 pub mod diff;
@@ -9,6 +10,7 @@ pub mod editor_state;
 mod files;
 pub mod import;
 mod inventory;
+pub mod list;
 mod lock;
 pub mod native;
 pub mod pull;

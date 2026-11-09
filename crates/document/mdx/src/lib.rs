@@ -17,12 +17,17 @@
 //!   executed push), never from check/preview;
 //! - flat `-`/`1.` lists are one keyed block per item (each item is a native
 //!   text block with list facts); task/nested lists are unsupported input.
+mod author;
 mod keys;
 mod parse;
 mod patch;
+mod rekey;
 mod render;
+mod source;
 mod view;
 
+#[cfg(test)]
+mod author_tests;
 #[cfg(test)]
 mod tests;
 
@@ -30,9 +35,11 @@ use anyhow::Result;
 use leafbud_document::*;
 use serde_json::Value;
 
+pub use author::{MetadataEdit, edit_metadata};
 pub use keys::{KeyPreparation, KeySource, TidyEdit, apply_key_preparation, prepare_keys};
 pub use parse::{BlockSpan, PROVISIONAL_MAIN_PAGE, Parsed, header, parse, parse_with_spans};
 pub use patch::{adopt_remote, patch_tracking, prepare_binding_defaults};
+pub use rekey::rename_key;
 pub use render::{apply_markdown_tidy, plan_markdown_tidy, render};
 pub use view::render_comparison;
 

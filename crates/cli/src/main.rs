@@ -35,10 +35,12 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand, ValueEnum};
 use leafbud_workflow::{LeafletState, RemoteOptions};
 
+mod author;
 mod config;
 mod create;
 mod diff;
 mod import;
+mod list;
 mod pull;
 mod push;
 mod recover;
@@ -159,6 +161,8 @@ enum Command {
     List {
         #[arg(long)]
         state: Option<State>,
+        #[arg(long)]
+        json: bool,
     },
     /// Naming, editor and release summaries
     Status {
@@ -285,12 +289,19 @@ enum Command {
         json: bool,
     },
     /// Explicit local metadata edits (date alternatives are mutually exclusive)
+    #[command(group(clap::ArgGroup::new("edit_fields").required(true).multiple(true).args(["title", "description", "tag", "clear_tags", "published_at", "now"])))]
     Edit {
         file: PathBuf,
         #[arg(long)]
         title: Option<String>,
         #[arg(long)]
         description: Option<String>,
+        /// Replace the entire ordered tag list (repeat for each tag)
+        #[arg(long, value_name = "TAG", conflicts_with = "clear_tags")]
+        tag: Vec<String>,
+        /// Explicitly replace tags with [] (not additive/removal by name)
+        #[arg(long)]
+        clear_tags: bool,
         #[arg(long, value_name = "TIME")]
         published_at: Option<String>,
         #[arg(long, conflicts_with = "published_at")]
@@ -438,6 +449,61 @@ async fn main() -> ExitCode {
         publication: cli.publication.clone(),
         ..Default::default()
     };
+    if let Command::List { state, json } = &cli.command {
+        return match list::run(
+            cli.root.as_deref(),
+            &flags,
+            leafbud_workflow::list::Request {
+                state: state.map(|s| match s {
+                    State::Draft => LeafletState::Draft,
+                    State::Published => LeafletState::Published,
+                }),
+            },
+            *json,
+        ) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("leafbud: {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    let author_operation = match &cli.command {
+        Command::Edit {
+            file,
+            title,
+            description,
+            tag,
+            clear_tags,
+            published_at,
+            now,
+        } => Some((
+            file,
+            author::Operation::Edit(leafbud_workflow::author::MetadataEdit {
+                title: title.clone(),
+                description: description.clone(),
+                tags: if *clear_tags || !tag.is_empty() { Some(tag.clone()) } else { None },
+                published_at: if *now {
+                    Some(jiff::Timestamp::now().to_string())
+                } else {
+                    published_at.clone()
+                },
+            }),
+        )),
+        Command::Keys {
+            command: KeysCommand::Rename { file, old, new },
+        } => Some((file, author::Operation::Rename(old, new))),
+        _ => None,
+    };
+    if let Some((file, operation)) = author_operation {
+        return match author::run(cli.root.as_deref(), &flags, file, operation) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("leafbud: {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Recover { file, yes, take, json } = &cli.command {
         return match recover::run(
             options,

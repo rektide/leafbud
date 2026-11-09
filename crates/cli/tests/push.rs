@@ -137,6 +137,84 @@ async fn complete_cli_both_contexts_preview_first_combined_revision_pull_and_unc
 }
 
 #[tokio::test]
+async fn confirmed_key_rename_preserves_receipts_and_no_effect_push_and_metadata_classification() {
+    let (server, store) = server(false).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("doc.mdx");
+    assert!(
+        cli(&server.base_url, root.path(), &["create", "doc.mdx", "--title", "Title", "--standalone"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    std::fs::write(&path, format!("{}\n<Key id='old' />\nText\n\n<Key id='link' />\n<PageLink page='details' />\n\n<Page name='details' kind='linear'>\n\n<Key id='inside' />\nInside\n\n</Page>\n", std::fs::read_to_string(&path).unwrap())).unwrap();
+    invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await;
+    let before = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let requests = server.requests().len();
+    let pushes = store.lock().unwrap().pushes;
+    for (old, new) in [("old", "intro"), ("details", "appendix"), (before.state.main_page.as_deref().unwrap(), "start")] {
+        let out = cli(&server.base_url, root.path(), &["keys", "rename", "doc.mdx", old, new])
+            .output()
+            .await
+            .unwrap();
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    }
+    assert_eq!(server.requests().len(), requests, "rename cannot access the remote");
+    let renamed = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(renamed.editor_value(), before.editor_value());
+    assert_eq!(renamed.state.sync, before.state.sync);
+    assert_eq!(renamed.state.writer, before.state.writer);
+    let bytes = std::fs::read(&path).unwrap();
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let preview = invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--json"], 0).await;
+    assert_eq!(preview["items"][0]["outcome"], "unchanged");
+    let repeat = invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await;
+    assert_eq!(repeat["items"][0]["effects"], json!({}));
+    assert_eq!(repeat["items"][0]["outcome"], "unchanged");
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["status", "doc.mdx", "--json"], 0).await["items"][0]["outcome"],
+        "clean"
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    assert!(
+        cli(&server.base_url, root.path(), &["edit", "doc.mdx", "--published-at", "2026-11-09T00:00:00Z"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["status", "doc.mdx", "--json"], 0).await["items"][0]["outcome"],
+        "clean"
+    );
+    for fields in [
+        vec!["--title", "Changed title"],
+        vec!["--description", "Changed description"],
+        vec!["--tag", "one", "--tag", "two"],
+    ] {
+        let current = std::fs::read(&path).unwrap();
+        let mut args = vec!["edit", "doc.mdx"];
+        args.extend(fields);
+        let requests = server.requests().len();
+        let out = cli(&server.base_url, root.path(), &args).output().await.unwrap();
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+        assert_eq!(server.requests().len(), requests);
+        let edited = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(edited.state.sync, before.state.sync);
+        assert_eq!(
+            invoke(&server.base_url, root.path(), &["status", "doc.mdx", "--offline", "--json"], 0).await["items"][0]["outcome"],
+            "local-changed"
+        );
+        std::fs::write(&path, current).unwrap();
+    }
+}
+
+#[tokio::test]
 async fn cli_decision_partial_recreation_and_usage_contracts() {
     let (server, store) = server(false).await;
     let root = tempfile::tempdir().unwrap();
@@ -221,6 +299,20 @@ async fn cli_terminal_recovery_previews_reuses_then_accepts_remote_without_retro
     );
     let old = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.pending.unwrap();
     let original = std::fs::read(&path).unwrap();
+    let requests = server.requests().len();
+    let pending_doc = leafbud_mdx::parse(std::str::from_utf8(&original).unwrap()).unwrap();
+    for args in [
+        vec!["edit", "doc.mdx", "--title", "Not applied"],
+        vec!["keys", "rename", "doc.mdx", &pending_doc.pages[0].blocks[0].key, "not-applied"],
+    ] {
+        let out = cli(&server.base_url, root.path(), &args).output().await.unwrap();
+        assert_eq!(out.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&out.stderr).contains("recover"));
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+    }
+    let listing = invoke(&server.base_url, root.path(), &["list", "--json"], 0).await;
+    assert_eq!(listing["items"][0]["pending"], true);
+    assert_eq!(server.requests().len(), requests);
     let entities = store.lock().unwrap().entities.clone();
     let pushes = store.lock().unwrap().pushes;
     let preview = invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--take", "local", "--json"], 0).await;
@@ -275,6 +367,41 @@ async fn cli_terminal_recovery_previews_reuses_then_accepts_remote_without_retro
     assert_eq!(store.lock().unwrap().pushes, pushes);
     assert_eq!(std::fs::read(&path).unwrap(), bytes);
     assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+    let before_authoring = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let old_key = &before_authoring.pages[0].blocks[0].key;
+    assert!(
+        cli(&server.base_url, root.path(), &["keys", "rename", "doc.mdx", old_key, "recovered-intro"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    assert!(
+        cli(&server.base_url, root.path(), &["edit", "doc.mdx", "--description", "Author description"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    let after_authoring = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(after_authoring.state.last_resolution, before_authoring.state.last_resolution);
+    assert_eq!(after_authoring.state.sync, before_authoring.state.sync);
+    assert_eq!(after_authoring.state.writer, before_authoring.state.writer);
+    let listing = invoke(&server.base_url, root.path(), &["list", "--json"], 0).await;
+    assert_eq!(listing["items"][0]["last_resolution"], true);
+    let mut future = leafbud_mdx::header(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    future["@leafbud"]["lastResolution"]["futureDirection"] = true.into();
+    let future_source = format!("---\n{}\n---\n\n<Key id='recovered-intro' />\nText\n", serde_json::to_string(&future).unwrap());
+    std::fs::write(&path, &future_source).unwrap();
+    for args in [
+        vec!["edit", "doc.mdx", "--title", "Not applied"],
+        vec!["keys", "rename", "doc.mdx", "recovered-intro", "nope"],
+    ] {
+        assert_eq!(cli(&server.base_url, root.path(), &args).output().await.unwrap().status.code(), Some(1));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), future_source);
+    }
 }
 
 #[tokio::test]
