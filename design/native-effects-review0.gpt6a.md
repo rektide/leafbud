@@ -3,7 +3,7 @@ type: Review
 title: "Native-effect checkpoint review: defaults and uncertain creation"
 description: "Parent review of the 0.14 native-effect foundation, deployed partial/uncertain results, the operator-selected explicit default-adoption rule and the bounded next commissions."
 resource: /design/native-effects-review0.gpt6a.md
-status: correction-in-progress
+status: accepted-compiler-foundation
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
@@ -13,7 +13,7 @@ sources:
   - resource: /design/native-effects0.gpt61s.md
     title: "Implementation checkpoint, 249-test gate and exact deployed evidence limits"
   - resource: /design/native-default-adoption0.gpt61s.md
-    title: "Implemented explicit defaults/selected-locator checkpoint at 0.15, 262-test gate and P1 description-only terminal partial"
+    title: "Implemented explicit defaults/selected-locator checkpoint and completed description correction: 267-test gate and actual original-intent P1 settlement/status/pull/no-op"
   - resource: /design/frontmatter0.gpt61s.md
     title: "Existing description contract: missing/null and empty string represent the same clear intent"
   - resource: /design/keyed-build-path0.gpt6a.md
@@ -182,18 +182,44 @@ push or CRDT initialization. The old standalone theme partial remains separate
 read-only evidence; a general terminal accept/replan capability is not required
 just to normalize description clearing.
 
+### Correction accepted and P1 settled
+
+The correction landed at `c1571aef`, with the receipt update at `999c5cff`.
+Parent inspected the shared `canonical_description`, authoritative publication
+clear precedence in incoming mapping, and preservation of equivalent authored
+spelling in adoption. This is a coherent semantic correction across comparisons,
+not a verifier exception. The reported final gate is **267/267 regular workspace
+tests**, four deployment-only tests ignored, plus formatting, strict clippy and
+document checks.
+
+The separately authorized create-free P1 test passed: the original pending
+input/desired fingerprints matched unchanged before normal recovery; actual
+terminal desired intent and protected scope verified; tracking-only settlement
+promoted associations, cleared pending and established a receipt. Actual status
+is clean, endpoints equal, pull unchanged, and a controlled empty compiler repeat
+preserved bytes/mtime. There was no new content effect, description insertion,
+push replay, independent CRDT encoding or creation. P1 remains a human-selected
+object rather than proof of the lost original action result's attribution.
+
+The original standalone partial was inspected read-only and remains unchanged.
+The accepted result is a **compiler-ready native-effect/default/recovery
+foundation**, not the complete ordinary authoring loop or a general terminal
+accept-current/replan capability. Both bind/recovery tickets remain in progress
+until their full dependencies and acceptance are met.
+
 ## Current commissions and next join
 
 - **Default adoption/corrective join:** fresh Sol high,
-  `opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf`, owns production code/tests and a new
-  implementation receipt. Existing bind/recovery tickets remain the work anchors.
+  `opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf`, completed its code/tests/receipt and
+  closes at approximately 256k reported context. Further implementation uses a
+  fresh agent under the operator's 240–350k rollover policy.
 - **Read-only candidate inspection:** retained native-effect Sol,
   `opencode://ses_e4121e55dffeF009EbMiG1Xinz`, owns private scratch findings only.
   It completed the bounded shortlist at 310.4k reported context; the operator has
   selected P1, and this session will not be continued for production code.
 
-These tasks are independent. Parent joins the corrected first-binding semantics
-and the human's now-recorded recovery selection for create-free testing. The next
+The corrected first-binding semantics and selected-object proof are now joined.
+The next
 proposed implementation batch remains `leafbud-editor-text` +
 `leafbud-editor-structure` with g, followed by complete bind/recovery acceptance
 with Sol. A source/transport checkpoint is not a substitute for that full loop.

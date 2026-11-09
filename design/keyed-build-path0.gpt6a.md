@@ -775,3 +775,10 @@ title/text effects are acknowledged. A description-only terminal mismatch is
 receiving a narrow correction under the existing clear semantics (absent/null/
 empty string), followed by create-free recovery. Neither additional creation nor
 retroactive mutation of dispatched intent is part of that correction.
+
+That correction is now accepted through `999c5cff`, with **267/267 regular tests**.
+P1's original hashes matched unchanged, normal terminal recovery settled it, and
+actual status/pull/repeat confirmed clean correspondence and byte/mtime no-op.
+The old standalone partial remains untouched. Sol closes this checkpoint around
+256k context; next recommended implementation is fresh g on the text/structure
+compiler. Bind/recovery remain in progress pending the full ordinary save loop.
