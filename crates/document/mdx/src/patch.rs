@@ -3,7 +3,7 @@
 //! envelope (identity/binding/nodes/receipts) so successful pushes never
 //! reformat the author's body; [`adopt_remote`] additionally adopts changed
 //! remote content and owned author fields for guarded refresh.
-use super::{parse, yaml};
+use super::{json, parse, yaml};
 use anyhow::{Context, Result, bail, ensure};
 use leafbud_document::*;
 use serde_json::{Value, json};
@@ -113,43 +113,81 @@ fn patch_key(lines: &mut Vec<String>, key: &str, patch: &Patch) -> Result<()> {
     Ok(())
 }
 
-/// Persist one indented mapping entry at the top of the reserved `@leafbud`
-/// envelope (used for main-page identity during preparation). A block-style
-/// envelope keeps its other lines byte-for-byte; a flow-style envelope is
-/// regenerated in normalized form because it has no per-line structure.
+/// Byte range of the value following a column-0 mapping key's colon on its
+/// own line. Returns None when the line carries no value (block style: the
+/// value, if any, lives on following indented lines). A trailing comment is
+/// not part of the value range.
+fn line_value_range(line: &str) -> Option<(usize, usize)> {
+    let body = line.trim_end_matches(['\r', '\n']);
+    let first = body.chars().next()?;
+    let colon = if first == '"' || first == '\'' {
+        let close = body[1..].find(first)? + 1;
+        body[close + 1..].find(':')? + close + 1
+    } else {
+        body.find(':')?
+    };
+    let rest = &body[colon + 1..];
+    let trimmed = rest.trim_start();
+    if trimmed.is_empty() || trimmed.starts_with('#') {
+        return None;
+    }
+    Some((body.len() - trimmed.len(), body.len()))
+}
+
+/// Persist one mapping entry in the reserved `@leafbud` envelope (used for
+/// main-page identity during preparation). Envelope shape is detected from
+/// the envelope line's own syntax, not its surroundings: a block-style
+/// envelope keeps every other line byte-for-byte and the entry joins at the
+/// children's measured indentation; a flow-style envelope is edited as the
+/// literal JSON mapping it must be, preserving its flow spelling. No full
+/// document parse happens here; callers prove the composed result.
 pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
     let (key, value) = line.split_once(':').context("state line must be a mapping entry")?;
-    let (lines, _) = split_managed(source)?;
+    let parsed_value: Value = serde_json::from_str(value.trim()).with_context(|| format!("parsing prepared state line {line:?}"))?;
+    ensure!(key == "\"mainPage\"", "preparation does not own state field {key}");
+    let (lines, body) = split_managed(source)?;
     let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for preparation")?;
     if lines.iter().any(|l| column_key(l).is_some_and(|k| k == key)) {
         bail!("frontmatter key {key:?} already exists elsewhere; refusing nested insertion");
     }
-    let block_style = lines.get(envelope + 1).is_some_and(|l| l.starts_with(' ') || l.trim().is_empty());
-    if !block_style {
-        let mut document = parse(source)?;
-        let value: Value = serde_json::from_str(value.trim()).with_context(|| format!("parsing prepared state line {line:?}"))?;
-        apply_state_line(&mut document, key, value)?;
-        return replace_envelope(source, &document.state);
-    }
-    let (mut lines, body) = split_managed(source)?;
-    let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope")?;
     let newline = if source.contains("\r\n") { "\r\n" } else { "\n" };
-    let inserted = format!("  {line}{newline}");
-    lines.splice(envelope + 1..envelope + 1, vec![inserted]);
-    Ok(reassemble(source, &lines, &body))
-}
-
-/// Apply one typed state entry to a parsed document. Only the fields
-/// preparation is allowed to persist exist here; anything else is refused.
-fn apply_state_line(document: &mut Document, key: &str, value: Value) -> Result<()> {
-    match key {
-        "\"mainPage\"" => {
-            let main: Option<String> = serde_json::from_value(value).context("mainPage value")?;
-            let main = main.context("mainPage cannot be cleared through preparation")?;
-            document.state.main_page = Some(main);
-            Ok(())
+    match line_value_range(&lines[envelope]) {
+        // Flow style: edit the literal JSON mapping in place.
+        Some((start, end)) => {
+            let raw = &lines[envelope][start..end];
+            let mut flow: Value = serde_json::from_str(raw)
+                .with_context(|| "reserved envelope is flow-style but its value is not literal JSON")?;
+            let Some(map) = flow.as_object_mut() else {
+                bail!("reserved envelope is flow-style but its value is not a mapping");
+            };
+            let name: String = serde_json::from_str(key).context("state line key")?;
+            ensure!(map.insert(name, parsed_value).is_none(), "state key {key:?} already exists in the envelope");
+            let mut updated = lines[envelope].clone();
+            updated.replace_range(start..end, &json(&flow));
+            let mut lines = lines;
+            lines[envelope] = updated;
+            Ok(reassemble(source, &lines, &body))
         }
-        _ => bail!("preparation does not own state field {key}"),
+        // Block style: splice one indented line at the children's measured
+        // indentation, keeping every existing line byte-for-byte.
+        None => {
+            let extent = value_extent(&lines, envelope);
+            let child = lines[envelope + 1..extent].iter().find(|l| !l.trim().is_empty());
+            let indent = child
+                .map(|l| l.len() - l.trim_start().len())
+                .unwrap_or(2);
+            if child.is_some_and(|l| l.trim_start().starts_with('\t')) {
+                bail!("envelope children use tab indentation; refusing to mix indentation");
+            }
+            for l in &lines[envelope..extent] {
+                if l.trim_start().starts_with(&format!("{key}:")) {
+                    bail!("state key {key:?} already exists in the envelope");
+                }
+            }
+            let mut lines = lines;
+            lines.splice(envelope + 1..envelope + 1, vec![format!("{}{line}{newline}", " ".repeat(indent))]);
+            Ok(reassemble(source, &lines, &body))
+        }
     }
 }
 

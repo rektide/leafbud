@@ -976,7 +976,7 @@ fn preparation_assigns_stable_keys_and_persists_main_page() {
     assert!(prepared.contains("<Key id=\"b-2\" />\nfirst paragraph"));
     // The multi-item list is split by per-item markers with bytes preserved.
     assert!(prepared.contains("<Key id=\"b-3\" />\n- item one\n<Key id=\"b-4\" />\n- item two"));
-    assert!(prepared.contains("\"mainPage\": \"p-1\""), "main-page identity persisted in the envelope");
+    assert!(prepared.contains("\"mainPage\":\"p-1\""), "main-page identity persisted in the flow envelope");
     let parsed = parse_with_spans(&prepared).unwrap();
     assert!(parsed.unkeyed().is_empty());
     assert_eq!(parsed.document.state.main_page.as_deref(), Some("p-1"));
@@ -1098,6 +1098,132 @@ fn preparation_and_tidy_address_blocks_through_interleaved_definitions() {
     assert!(tidied.contains("about wrapped") && !tidied.contains("<Paragraph>\n<Run text={{\"about wrapped\"}}"));
     assert!(tidied.contains("main wrapped") && !tidied.contains("<Paragraph>\n<Run text={{\"main wrapped\"}}"));
     assert_eq!(parse(&tidied).unwrap(), parse(&wrapped).unwrap());
+}
+
+/// Proposals from the caller's key sources must respect every existing
+/// identity: page names, keyed blocks and confirmed/retired table rows —
+/// not just the block keys of previous checks.
+#[test]
+fn preparation_proposals_check_page_names_and_table_rows() {
+    let bound = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}";
+    let unprepared = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}";
+    let shape = |state: &str| {
+        format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-keep\" />\nkept\n\nadded\n\n<Page name=\"p-taken\" kind=\"linear\">\n\nabout\n\n</Page>\n")
+    };
+    let (bound, unprepared) = (shape(bound), shape(unprepared));
+    let plan = |source: &str, block: &str, page: &str| {
+        let (mut block, mut page) = (|| block.to_owned(), || page.to_owned());
+        prepare_keys(
+            source,
+            KeySource {
+                block: &mut block,
+                page: &mut page,
+            },
+        )
+    };
+    let (mut b, mut p) = (counter("b"), counter("p"));
+    assert!(
+        prepare_keys(
+            &bound,
+            KeySource {
+                block: &mut b,
+                page: &mut p,
+            },
+        )
+        .is_ok(),
+        "fresh spellings prepare"
+    );
+    for colliding in ["p-taken", "b-gone", "b-keep", "p-main"] {
+        let error = plan(&bound, colliding, "p-fresh").unwrap_err().to_string();
+        assert!(error.contains("collides"), "{colliding}: {error}");
+    }
+    // The main-page proposal is checked just as strictly once it applies.
+    for colliding in ["p-taken", "b-gone", "b-keep", "b-auto-1"] {
+        let error = plan(&unprepared, "b-fresh", colliding).unwrap_err().to_string();
+        assert!(error.contains("collides"), "{colliding}: {error}");
+    }
+    // The main-page proposal spelling is validated too.
+    let (mut b, mut p) = (counter("b"), || "1bad".to_owned());
+    assert!(
+        prepare_keys(
+            &unprepared,
+            KeySource {
+                block: &mut b,
+                page: &mut p,
+            },
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("spelling")
+    );
+}
+
+/// A page link addressing the provisional main page is retargeted to the
+/// persisted identity when preparation assigns it; unrelated prose keeps
+/// its bytes.
+#[test]
+fn preparation_retargets_links_to_the_provisional_main_page() {
+    let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}";
+    let literal = format!(
+        "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nprose mentioning p-auto spelling\n\n<PageLink page=\"p-auto\" />\n"
+    );
+    let expression = literal.replace("page=\"p-auto\"", "page={\"p-auto\"}");
+    for (source, expect_link) in [
+        (literal, "<PageLink page=\"p-1\" />"),
+        (expression, "<PageLink page={\"p-1\"} />"),
+    ] {
+        let (mut block, mut page) = (counter("b"), counter("p"));
+        let plan = prepare_keys(
+            &source,
+            KeySource {
+                block: &mut block,
+                page: &mut page,
+            },
+        )
+        .unwrap();
+        let prepared = apply_key_preparation(&source, &plan).unwrap();
+        assert!(prepared.contains("prose mentioning p-auto spelling"), "unrelated prose is untouched");
+        assert!(prepared.contains(expect_link), "the link follows the persisted identity: {prepared}");
+        assert!(prepared.contains("\"mainPage\":\"p-1\""), "the flow envelope keeps its flow spelling");
+        let parsed = parse_with_spans(&prepared).unwrap();
+        assert!(parsed.unkeyed().is_empty());
+        assert_eq!(
+            parsed.document.editor_value()["main"]["blocks"][1]["content"]["page"],
+            json!({"kind": "new", "key": "p-1"})
+        );
+    }
+}
+
+/// Valid envelope shapes must prepare correctly: a flow mapping followed by
+/// a blank separator line, and a block mapping whose children use four-space
+/// indentation. Neither may panic or silently corrupt the frontmatter.
+#[test]
+fn preparation_handles_flow_blank_line_and_four_space_block_envelopes() {
+    let id = "\"id\": \"00000000-0000-0000-0000-000000000000\"";
+    let flow_blank = format!("---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {{{id}, \"state\": \"draft\"}}\n\n---\n\nfirst\n");
+    let wide_block = format!("---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\":\n    {id}\n    \"state\": \"draft\"\n---\n\nfirst\n");
+    for (source, expect) in [
+        (flow_blank, "\"mainPage\":\"p-1\""),
+        (wide_block, "    \"mainPage\": \"p-1\"\n"),
+    ] {
+        let (mut block, mut page) = (counter("b"), counter("p"));
+        let plan = prepare_keys(
+            &source,
+            KeySource {
+                block: &mut block,
+                page: &mut page,
+            },
+        )
+        .unwrap();
+        let prepared = apply_key_preparation(&source, &plan).unwrap();
+        assert!(prepared.contains(expect), "envelope shape: {prepared}");
+        let parsed = parse_with_spans(&prepared).unwrap();
+        assert_eq!(parsed.document.state.main_page.as_deref(), Some("p-1"));
+        assert!(parsed.unkeyed().is_empty());
+        // Unrelated frontmatter lines and the body keep their bytes.
+        assert!(prepared.contains("format: leafbud-mdx/2\ntitle: T"));
+        assert!(prepared.ends_with("first\n"));
+    }
 }
 
 #[test]

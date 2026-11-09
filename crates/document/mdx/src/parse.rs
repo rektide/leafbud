@@ -12,12 +12,18 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Provisional main-page key while `@leafbud.mainPage` is not yet persisted.
 /// Deterministic (never random) so previews cannot present churn as identity.
+/// A document that explicitly owns this spelling elsewhere yields
+/// `p-auto-2`, `p-auto-3`, … for the provisional main page.
 pub const PROVISIONAL_MAIN_PAGE: &str = "p-auto";
-pub(crate) use PROVISIONAL_MAIN_PAGE as PROVISIONAL_PAGE;
 
 struct Reader {
     arena: Arena<Mdast>,
     keys: BTreeSet<String>,
+    /// Explicit identities known to exist but not yet traversed (Key marker
+    /// ids, Page names, node-table rows). Provisional allocation skips them
+    /// so a new object can never collide with a supplied later key or borrow
+    /// a confirmed/retired association.
+    reserved: BTreeSet<String>,
     /// Byte spans of each block in document order (parser-derived; relative
     /// to the BOM-stripped source the arena was built from).
     spans: Vec<(u32, u32)>,
@@ -63,6 +69,10 @@ impl Reader {
     }
     fn register(&mut self, key: String) -> Result<String> {
         ensure!(Self::valid_key(&key), "invalid source key spelling");
+        // Consume this occurrence's pre-reserved spelling; a second explicit
+        // use of the same spelling no longer finds it reserved and fails the
+        // duplicate check below.
+        self.reserved.remove(&key);
         ensure!(self.keys.insert(key.clone()), "duplicate source key");
         Ok(key)
     }
@@ -72,10 +82,67 @@ impl Reader {
         loop {
             self.auto += 1;
             let key = format!("b-auto-{}", self.auto);
-            if !self.keys.contains(&key) {
+            if !self.keys.contains(&key) && !self.reserved.contains(&key) {
                 self.keys.insert(key.clone());
                 return key;
             }
+        }
+    }
+    /// Deterministic provisional main-page key (`p-auto`, then `p-auto-2`,
+    /// …), skipping every reserved or allocated spelling. Never persisted.
+    fn provisional_page(&mut self) -> String {
+        let mut n = 1;
+        loop {
+            let key = if n == 1 { PROVISIONAL_MAIN_PAGE.to_owned() } else { format!("{PROVISIONAL_MAIN_PAGE}-{n}") };
+            if !self.keys.contains(&key) && !self.reserved.contains(&key) {
+                self.keys.insert(key.clone());
+                return key;
+            }
+            n += 1;
+        }
+    }
+    /// Leniently read one string property, for reserving spellings ahead of
+    /// allocation. Malformed markers still fail the real traversal.
+    fn string_prop(&self, id: u32, name: &str) -> Option<String> {
+        let data = self.arena.get_type_data(id);
+        for i in 0..decode_mdx_jsx_attr_count(data) {
+            let (kind, attr, value) = decode_mdx_jsx_attr(data, i);
+            if self.arena.get_str(attr) != name {
+                continue;
+            }
+            return match kind {
+                MDX_ATTR_LITERAL_PROP => Some(self.arena.get_str(value).to_owned()),
+                MDX_ATTR_EXPRESSION_PROP => serde_json::from_str::<Value>(self.arena.get_str(value))
+                    .ok()?
+                    .as_str()
+                    .map(str::to_owned),
+                _ => None,
+            };
+        }
+        None
+    }
+    /// Reserve every explicit identity anywhere in the source tree before
+    /// any provisional allocation: Key marker ids and Page names, whatever
+    /// container they appear in and however their attributes are spelled.
+    fn reserve_explicit(&mut self, id: u32) {
+        if matches!(self.kind(id), MdastNodeType::MdxJsxFlowElement | MdastNodeType::MdxJsxTextElement) {
+            match self.name(id) {
+                "Key" => {
+                    if let Some(key) = self.string_prop(id, "id") {
+                        self.reserved.insert(key);
+                    }
+                }
+                "Page" => {
+                    if let Some(name) = self.string_prop(id, "name") {
+                        self.reserved.insert(name);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let children: Vec<u32> = self.arena.get_children(id).to_vec();
+        for child in children {
+            self.reserve_explicit(child);
         }
     }
     fn inline(&self, parent: u32, marks: &[Mark], out: &mut Vec<Inline>) -> Result<()> {
@@ -364,6 +431,11 @@ impl Parsed {
     pub fn main_page_provisional(&self) -> bool {
         self.document.state.main_page.is_none()
     }
+    /// The main page's provisional key spelling while identity is not
+    /// persisted (preparation substitutes the assigned key for it).
+    pub fn provisional_main_key(&self) -> Option<&str> {
+        self.main_page_provisional().then(|| self.document.pages[0].key.as_str())
+    }
 }
 
 pub fn parse(source: &str) -> Result<Document> {
@@ -376,6 +448,7 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     let mut reader = Reader {
         arena,
         keys: BTreeSet::new(),
+        reserved: BTreeSet::new(),
         spans: vec![],
         keyed: vec![],
         auto: 0,
@@ -413,12 +486,20 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     // Implicit main page: top-level Key markers and ordinary blocks, in order.
     // Named Page definitions are lifted out wherever they appear; their
     // position among main blocks is not semantic.
+    //
+    // Before allocating any provisional identity, reserve every explicit
+    // source identity (Key ids, Page names) plus every node-table row: a new
+    // unkeyed object must not collide with a supplied later spelling or
+    // silently adopt a confirmed/retired association.
+    for &id in &children {
+        reader.reserve_explicit(id);
+    }
+    for key in document.state.nodes.keys() {
+        reader.reserved.insert(key.clone());
+    }
     let main_key = match document.state.main_page.as_deref() {
         Some(key) => reader.register(key.to_owned())?,
-        None => {
-            reader.keys.insert(PROVISIONAL_PAGE.into());
-            PROVISIONAL_PAGE.into()
-        }
+        None => reader.provisional_page(),
     };
     let mut main_blocks = Vec::new();
     // Source-position bookkeeping for the final document-order grouping:
@@ -598,6 +679,49 @@ mod tests {
                 &source[span.start..span.end]
             );
         }
+    }
+
+    #[test]
+    fn provisional_keys_never_borrow_supplied_or_confirmed_identities() {
+        let base = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\"}";
+        // A later explicit key is reserved before provisional allocation, so
+        // an earlier unkeyed block does not false-collide with it.
+        let source = format!(
+            "---\nformat: leafbud-mdx/2\ntitle: T\n{base}\n---\n\nnew first\n\n<Key id=\"b-auto-1\" />\nkept\n"
+        );
+        let parsed = parse_with_spans(&source).unwrap();
+        assert_eq!(parsed.document.pages[0].blocks[0].key, "b-auto-2", "the supplied later spelling is skipped");
+        assert_eq!(parsed.document.pages[0].blocks[1].key, "b-auto-1");
+        // A retired node row is reserved: a new block never borrows its
+        // confirmed association.
+        let retired = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-auto-1\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}";
+        let source = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{retired}\n---\n\nfresh\n");
+        let parsed = parse_with_spans(&source).unwrap();
+        assert_eq!(parsed.document.pages[0].blocks[0].key, "b-auto-2");
+        let value = parsed.document.editor_value();
+        assert_eq!(value["main"]["blocks"][0]["association"], json!({"kind": "new", "key": "b-auto-2"}), "no hidden association adopted");
+        assert_eq!(value["retired"][0]["entity"], "e-gone", "the row stays retired");
+    }
+
+    #[test]
+    fn provisional_main_page_yields_to_explicit_p_auto_identities() {
+        let base = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}";
+        // A named page owning the p-auto spelling forces the provisional
+        // main-page key to skip it.
+        let source = format!(
+            "---\nformat: leafbud-mdx/2\ntitle: T\n{base}\n---\n\nhello\n\n<Page name=\"p-auto\" kind=\"linear\">\n\nabout\n\n</Page>\n"
+        );
+        let parsed = parse_with_spans(&source).unwrap();
+        assert_eq!(parsed.document.pages[0].key, "p-auto-2");
+        assert_eq!(parsed.document.pages[1].key, "p-auto");
+        // A retired page row keyed p-auto is equally reserved.
+        let retired = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"nodes\": {\"p-auto\": {\"entity\": \"e-old-main\", \"kind\": \"page\", \"references\": []}}}";
+        let source = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{retired}\n---\n\nhello\n");
+        let parsed = parse_with_spans(&source).unwrap();
+        assert_eq!(parsed.document.pages[0].key, "p-auto-2");
+        let value = parsed.document.editor_value();
+        assert_eq!(value["main"]["association"], json!({"kind": "new", "key": "p-auto-2"}));
+        assert_eq!(value["retired"][0]["entity"], "e-old-main");
     }
 
     #[test]

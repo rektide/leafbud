@@ -4,7 +4,7 @@
 //! only [`apply_key_preparation`] produces bytes, and it proves the result
 //! through the production parser before returning it.
 use super::{json, parse, parse_with_spans, patch};
-use anyhow::{Result, ensure};
+use anyhow::{Result, bail, ensure};
 use leafbud_document::*;
 
 /// One nonoverlapping byte replacement in the original source (shared with
@@ -16,13 +16,15 @@ pub struct TidyEdit {
     pub text: String,
 }
 
-/// A proposed preparation: insertion edits for missing block keys, the
-/// proposed main-page key when `@leafbud.mainPage` is not persisted yet, and
-/// the fully prepared document those edits produce. Proposed keys are
+/// A proposed preparation: insertion edits for missing block keys, retarget
+/// edits for page links addressing the provisional main page, the proposed
+/// main-page key when `@leafbud.mainPage` is not persisted yet, and the
+/// fully prepared document those edits produce. Proposed keys are
 /// provisional until applied and persisted by the caller.
 #[derive(Clone, Debug)]
 pub struct KeyPreparation {
-    /// Ascending insertion edits (start == end) of Key marker lines.
+    /// Ascending edits: Key marker insertion lines (start == end) and
+    /// provisional-main-page link retargets (exact attribute replacements).
     pub edits: Vec<TidyEdit>,
     /// Proposed main-page key; None when identity is already persisted.
     pub main_page: Option<String>,
@@ -52,15 +54,23 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
     let KeySource { block, page } = keys;
     let parsed = parse_with_spans(source)?;
     let unkeyed = parsed.unkeyed();
+    let provisional_main = parsed.provisional_main_key().map(str::to_owned);
     // Propose keys in document order; insertions stay in ascending span order.
     let mut proposed: Vec<(usize, String)> = vec![];
+    // Every existing identity is claimed: page names (including the main
+    // page's persisted key), keyed blocks, and confirmed/retired node-table
+    // rows. The provisional spellings being replaced are not durable and do
+    // not reserve their namespace.
     let mut claimed: Vec<String> = parsed
         .document
         .pages
         .iter()
-        .flat_map(|page| page.blocks.iter().map(|block| block.key.clone()))
-        .filter(|key| !unkeyed_contains(&unkeyed, &parsed, key))
+        .flat_map(|page| {
+            std::iter::once(page.key.clone()).chain(page.blocks.iter().map(|block| block.key.clone()))
+        })
+        .filter(|key| Some(key.as_str()) != provisional_main.as_deref() && !unkeyed_contains(&unkeyed, &parsed, key))
         .collect();
+    claimed.extend(parsed.document.state.nodes.keys().cloned());
     for &index in &unkeyed {
         let key = block();
         ensure!(
@@ -81,15 +91,22 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
         .collect();
     let main_page = document.state.main_page.is_none().then(page);
     if let Some(main) = &main_page {
-        for page in &mut document.pages {
-            if page.key == super::parse::PROVISIONAL_PAGE {
-                page.key = main.clone();
-            }
-            for block in &mut page.blocks {
-                if let BlockKind::PageLink { page: target } = &mut block.kind
-                    && target == super::parse::PROVISIONAL_PAGE
-                {
-                    *target = main.clone();
+        ensure!(
+            main.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) && main.chars().all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c)),
+            "proposed main-page key {main:?} is not a valid source key spelling"
+        );
+        ensure!(!claimed.contains(main), "proposed main-page key {main:?} collides with an existing key");
+        if let Some(provisional) = &provisional_main {
+            for page in &mut document.pages {
+                if page.key == *provisional {
+                    page.key = main.clone();
+                }
+                for block in &mut page.blocks {
+                    if let BlockKind::PageLink { page: target } = &mut block.kind
+                        && target == provisional
+                    {
+                        *target = main.clone();
+                    }
                 }
             }
         }
@@ -105,7 +122,9 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
         }
     }
     // Insertion edits: one Key marker line before each new block's span,
-    // keeping the file's line-ending convention.
+    // keeping the file's line-ending convention. Page links addressing the
+    // provisional main page are retargeted to the persisted identity in the
+    // same plan, replacing only the attribute spelling inside their block.
     let newline = if source.contains("\r\n") { "\r\n" } else { "\n" };
     let mut edits = vec![];
     for (index, key) in &proposed {
@@ -116,10 +135,37 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
             text: format!("<Key id={} />{newline}", json(key)),
         });
     }
+    if let (Some(provisional), Some(main)) = (&provisional_main, &main_page) {
+        let mut index = 0;
+        for page in &parsed.document.pages {
+            for block in &page.blocks {
+                if matches!(&block.kind, BlockKind::PageLink { page: target } if target == provisional) {
+                    let span = &parsed.spans[index];
+                    let block_source = &source[span.start..span.end];
+                    let forms = [
+                        format!("page={{{}}}", json(provisional)),
+                        format!("page=\"{provisional}\""),
+                        format!("page='{provisional}'"),
+                    ];
+                    let found = forms.iter().find(|form| block_source.contains(form.as_str()));
+                    let Some(form) = found else {
+                        bail!("page link addressing the provisional main page has an unsupported attribute spelling");
+                    };
+                    let at = span.start + block_source.find(form.as_str()).expect("checked");
+                    edits.push(TidyEdit {
+                        start: at,
+                        end: at + form.len(),
+                        text: form.replace(provisional.as_str(), main),
+                    });
+                }
+                index += 1;
+            }
+        }
+    }
     edits.sort_by_key(|edit| edit.start);
     ensure!(
-        edits.windows(2).all(|pair| pair[0].start <= pair[1].start),
-        "internal error: unsorted preparation edits"
+        edits.windows(2).all(|pair| pair[0].end <= pair[1].start),
+        "internal error: overlapping preparation edits"
     );
     Ok(KeyPreparation {
         edits,
