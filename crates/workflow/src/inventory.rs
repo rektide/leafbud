@@ -45,8 +45,8 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                     }
                 };
                 let state = &header["@leafbud"];
-                let binding = &state["binding"];
-                let origin = binding.get("baseUrl").and_then(Value::as_str);
+                let locator = native_locator(state);
+                let origin = locator.as_ref().map(|(origin, _)| *origin);
                 if let Some(id) = state["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
                     inventory.ids.entry(id).or_default().push(path.clone());
                 }
@@ -59,7 +59,7 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                 }
                 // Only bound documents participate in binding identity;
                 // unbound local drafts have no (origin, token) pair yet.
-                if let (Some(origin), Some(token)) = (origin, binding.get("token").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok())) {
+                if let Some((origin, token)) = locator {
                     inventory.index.entry((origin.to_owned(), token)).or_default().push(path.clone());
                 }
             }
@@ -83,11 +83,7 @@ impl Inventory {
                 continue;
             };
             let state = &header["@leafbud"];
-            let binding = &state["binding"];
-            if let (Some(base), Some(token)) = (
-                binding.get("baseUrl").and_then(Value::as_str),
-                binding.get("token").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()),
-            ) {
+            if let Some((base, token)) = native_locator(state) {
                 let paths = self.index.entry((base.into(), token)).or_default();
                 if !paths.contains(path) {
                     paths.push(path.clone());
@@ -114,5 +110,20 @@ impl Inventory {
             .iter()
             .find(|(_, paths)| paths.iter().any(|p| p == path))
             .map(|((_, token), _)| *token)
+    }
+}
+
+/// A returned-but-not-yet-verified mint locator participates in duplicate
+/// protection too. Do not require parsing the source body to retain this fact.
+pub(crate) fn native_locator(state: &Value) -> Option<(&str, Uuid)> {
+    let binding = &state["binding"];
+    if let (Some(base), Some(token)) = (binding["baseUrl"].as_str(), binding["token"].as_str().and_then(|v| Uuid::parse_str(v).ok())) {
+        return Some((base, token));
+    }
+    let effect = &state["pending"]["effect"];
+    if effect["kind"] == "mint" && effect["stage"]["phase"] == "located" {
+        Some((effect["baseUrl"].as_str()?, Uuid::parse_str(effect["stage"]["token"].as_str()?).ok()?))
+    } else {
+        None
     }
 }

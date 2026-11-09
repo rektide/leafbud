@@ -10,6 +10,7 @@ mod files;
 pub mod import;
 mod inventory;
 mod lock;
+pub mod native;
 pub mod pull;
 pub mod refresh;
 pub mod status;

@@ -22,6 +22,9 @@ impl WriterState {
         }
     }
     pub fn reserve(&mut self, count: usize) -> Result<MutationRange, &'static str> {
+        if self.next_mutation_id == 0 || self.next_mutation_id > MAX_ID {
+            return Err("invalid writer high-water mark");
+        }
         if count == 0 || count > MAX_TARGETS {
             return Err("invalid mutation reservation size");
         }
@@ -70,6 +73,7 @@ pub enum Effect {
     Push {
         range: MutationRange,
         stage: PushStage,
+        protection: Protection,
         /// Proposed associations carry actual allocated IDs, not success.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
         targets: BTreeMap<String, Node>,
@@ -84,6 +88,16 @@ pub enum Effect {
 pub enum MintContext {
     Standalone,
     Publication(String),
+}
+
+/// Compact scope witness, not executable mutations or a saved base snapshot.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Protection {
+    pub hash: String,
+    pub facts: Vec<Uuid>,
+    pub entities: Vec<Uuid>,
+    pub metadata_fields: Vec<String>,
 }
 impl MintContext {
     pub fn publication(&self) -> Option<&str> {
@@ -131,10 +145,10 @@ impl State {
     /// Lifecycle validation shared by parser and effect entrypoints. Pending
     /// locator without a complete binding and bound-without-receipt are valid.
     pub fn validate_attempt(&self) -> Result<(), &'static str> {
-        if let Some(writer) = &self.writer {
-            if writer.next_mutation_id == 0 || writer.next_mutation_id > MAX_ID || self.binding.is_none() {
-                return Err("writer requires binding and a safe positive sequence");
-            }
+        if let Some(writer) = &self.writer
+            && (writer.next_mutation_id == 0 || writer.next_mutation_id > MAX_ID || self.binding.is_none())
+        {
+            return Err("writer requires binding and a safe positive sequence");
         }
         let Some(attempt) = &self.pending else {
             return Ok(());
@@ -147,13 +161,12 @@ impl State {
                 if base_url.is_empty() || publication.publication().is_some_and(str::is_empty) || self.sync.is_some() || self.writer.is_some() {
                     return Err("incoherent mint attempt");
                 }
-                if let Some(binding) = &self.binding {
-                    if !matches!(stage, MintStage::Located { token } if *token == binding.token)
+                if let Some(binding) = &self.binding
+                    && (!matches!(stage, MintStage::Located { token } if *token == binding.token)
                         || binding.base_url != *base_url
-                        || binding.publication.as_deref() != publication.publication()
-                    {
-                        return Err("mint binding differs from pending locator/context");
-                    }
+                        || binding.publication.as_deref() != publication.publication())
+                {
+                    return Err("mint binding differs from pending locator/context");
                 }
             }
             Effect::Push {
@@ -161,8 +174,19 @@ impl State {
                 stage,
                 targets,
                 created_entities,
+                protection,
             } => {
                 let writer = self.writer.as_ref().ok_or("push requires a writer")?;
+                if !valid_fingerprint(&protection.hash)
+                    || protection.facts.len() > MAX_TARGETS
+                    || protection.entities.len() > MAX_TARGETS
+                    || protection
+                        .metadata_fields
+                        .iter()
+                        .any(|v| !matches!(v.as_str(), "title" | "description" | "tags"))
+                {
+                    return Err("invalid protected-scope witness");
+                }
                 if range.first == 0
                     || range.last < range.first
                     || range.last >= writer.next_mutation_id
@@ -172,10 +196,10 @@ impl State {
                 {
                     return Err("invalid pending mutation range/targets");
                 }
-                if let PushStage::Dispatched { through } | PushStage::Partial { through } = stage {
-                    if *through < range.first || *through > range.last {
-                        return Err("invalid dispatched high-water mark");
-                    }
+                if let PushStage::Dispatched { through } | PushStage::Partial { through } = stage
+                    && (*through < range.first || *through > range.last)
+                {
+                    return Err("invalid dispatched high-water mark");
                 }
             }
         }

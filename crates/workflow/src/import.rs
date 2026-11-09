@@ -128,8 +128,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     // or public record URI is invented merely to write a local source.
     let title = string("publication_title")?
         .filter(|s| !s.trim().is_empty())
-        .or_else(|| data.metadata.title.clone().filter(|s| !s.trim().is_empty() && s != "Untitled"))
-        .or(content.derived_title)
+        .or_else(|| data.metadata.title.clone().filter(|s| !s.trim().is_empty()))
         .unwrap_or_else(|| "Untitled".into());
     let publication_uri = publication.clone();
     let publication = match publication {
@@ -193,12 +192,12 @@ fn local_index(root: &Path, base: &str) -> Result<BTreeMap<Uuid, Vec<PathBuf>>> 
                     "legacy springleaf managed source requires explicit namespace conversion before import (duplicate checkout refused)"
                 );
                 let binding = &header["@leafbud"]["binding"];
-                if binding.is_object() && binding["baseUrl"] == base {
-                    let token = binding["token"].as_str().context("managed file token missing")?;
-                    index
-                        .entry(Uuid::parse_str(token).context("managed file token invalid")?)
-                        .or_default()
-                        .push(path);
+                if let Some((origin, token)) = crate::inventory::native_locator(&header["@leafbud"]) {
+                    if origin == base {
+                        index.entry(token).or_default().push(path);
+                    }
+                } else if binding.is_object() && binding["baseUrl"] == base {
+                    bail!("managed file token missing/invalid");
                 }
             }
         }
@@ -271,6 +270,33 @@ fn destination(root: &Path, title: &str, id: Uuid, to: Option<&Path>) -> Result<
     Ok(path)
 }
 
+/// Initial filename/display convenience only. Never substitutes a first heading
+/// for persisted author-title metadata in a bound observation or save read-back.
+fn display_title(document: &Document) -> String {
+    if document.title != "Untitled" {
+        return document.title.clone();
+    }
+    document
+        .pages
+        .first()
+        .and_then(|p| {
+            p.blocks.iter().find_map(|b| match &b.kind {
+                leafbud_document::BlockKind::Heading { content, .. } | leafbud_document::BlockKind::Paragraph { content } => {
+                    let text: String = content
+                        .iter()
+                        .map(|i| match i {
+                            leafbud_document::Inline::Run { text, .. } => text.as_str(),
+                            leafbud_document::Inline::HardBreak => "\n",
+                        })
+                        .collect();
+                    (!text.trim().is_empty()).then_some(text)
+                }
+                _ => None,
+            })
+        })
+        .unwrap_or_else(|| document.title.clone())
+}
+
 impl RemoteReader {
     pub async fn import(&self, context: &config::Context, request: Request) -> Result<Report> {
         ensure!(request.all ^ request.locator.is_some(), "select one locator or --all");
@@ -338,7 +364,7 @@ impl RemoteReader {
                     };
                     return Ok(Some((path.clone(), outcome)));
                 }
-                let path = destination(&root, &document.title, id, request.to.as_deref())?;
+                let path = destination(&root, &display_title(&document), id, request.to.as_deref())?;
                 let _document_guard = store
                     .document(document.state.id)?
                     .context("document busy in another Leafbud operation; retry later")?;

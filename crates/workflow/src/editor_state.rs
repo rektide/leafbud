@@ -103,20 +103,24 @@ pub(crate) fn remote_change(existing: &Document, observed_hash: &str) -> Change 
     }
 }
 
-pub(crate) struct Observed {
+pub struct Observed {
     pub data: LeafletData,
     pub merged: Document,
     pub agreement: Agreement,
+    /// Keep actual current fact/CRDT bytes for the keyed compiler; the typed
+    /// document is not sufficient to reconstruct an existing Yjs document.
+    pub snapshot: leafbud_web::PullSnapshot,
 }
 
-pub(crate) struct ObservationError {
+#[derive(Debug)]
+pub struct ObservationError {
     pub kind: &'static str,
     pub message: String,
     pub remote_hash: Option<String>,
 }
 
 impl RemoteReader {
-    pub(crate) async fn observe_editor(&self, existing: &Document) -> Result<Observed, ObservationError> {
+    pub async fn observe_editor(&self, existing: &Document) -> Result<Observed, ObservationError> {
         let error = |kind, message: String| ObservationError {
             kind,
             message,
@@ -169,11 +173,16 @@ impl RemoteReader {
                 });
             }
         }
-        Ok(Observed { data, merged, agreement })
+        Ok(Observed {
+            data,
+            merged,
+            agreement,
+            snapshot,
+        })
     }
 }
 
-fn same_identity(binding: &leafbud_document::Binding, fresh: &Document) -> Result<()> {
+pub(crate) fn same_identity(binding: &leafbud_document::Binding, fresh: &Document) -> Result<()> {
     let b = fresh.state.binding.as_ref().expect("built documents are bound");
     for (equal, name) in [
         (binding.base_url == b.base_url && binding.token == b.token, "origin/token"),
@@ -237,7 +246,7 @@ fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, Str
 ///
 /// Explicit-null standalone versus inherited intent must survive adoption:
 /// a bound document always carries the confirmed association explicitly.
-fn adopt(existing: &Document, fresh: &Document) -> Document {
+pub(crate) fn adopt(existing: &Document, fresh: &Document) -> Document {
     let rename = reconcile_keys(existing, fresh);
     let key = |k: &str| rename.get(k).cloned().unwrap_or_else(|| k.to_owned());
     let block = |block: &Block| Block {

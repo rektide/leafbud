@@ -20,7 +20,10 @@ fn fixture_content_to_real_mdx_and_back_without_loss() {
     let data = data(&fixture);
     let pull = parse_pull(fixture["response"].clone()).unwrap();
     let document = build("https://leaflet.pub", &data, &pull).unwrap();
-    assert_eq!(document.title, "Synthetic title");
+    assert_eq!(
+        document.title, "Untitled",
+        "persisted metadata is independent of first-heading display fallback"
+    );
     assert_eq!(document.publication, leafbud_document::Publication::Standalone);
     assert!(document.extra.is_empty());
     let source = leafbud_mdx::render(&document).unwrap();

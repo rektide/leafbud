@@ -37,7 +37,8 @@ impl Recorded {
 }
 
 /// Test-supplied reply function: request → (status, json body).
-type Responder = Arc<dyn Fn(&Recorded) -> (u16, String) + Send + Sync>;
+type Responder = Arc<dyn Fn(&Recorded) -> (u16, Vec<(String, String)>, String) + Send + Sync>;
+type SimpleResponder = Arc<dyn Fn(&Recorded) -> (u16, String) + Send + Sync>;
 
 /// Handle to a running test server. Dropping it stops the accept loop.
 pub struct TestServer {
@@ -49,7 +50,15 @@ pub struct TestServer {
 impl TestServer {
     /// Spawn on 127.0.0.1:0. `respond` maps each request to a
     /// `(status, json-body)` reply.
-    pub async fn spawn(respond: Responder) -> Self {
+    pub async fn spawn(respond: SimpleResponder) -> Self {
+        Self::spawn_headers(Arc::new(move |r| {
+            let (status, body) = respond(r);
+            (status, vec![], body)
+        }))
+        .await
+    }
+
+    pub async fn spawn_headers(respond: Responder) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind loopback");
         let port = listener.local_addr().expect("local addr").port();
         let requests: Arc<Mutex<Vec<Recorded>>> = Arc::new(Mutex::new(Vec::new()));
@@ -87,9 +96,9 @@ async fn accept_loop(listener: TcpListener, requests: Arc<Mutex<Vec<Recorded>>>,
         let respond = respond.clone();
         tokio::spawn(async move {
             if let Ok((stream, recorded)) = read_request(stream).await {
-                let (status, body) = respond(&recorded);
+                let (status, headers, body) = respond(&recorded);
                 requests.lock().expect("requests lock").push(recorded);
-                write_response(stream, status, &body).await.ok();
+                write_response(stream, status, &headers, &body).await.ok();
             }
         });
     }
@@ -143,17 +152,21 @@ async fn read_request(stream: TcpStream) -> std::io::Result<(TcpStream, Recorded
     Ok((reader.into_inner(), recorded))
 }
 
-async fn write_response(mut stream: TcpStream, status: u16, body: &str) -> std::io::Result<()> {
+async fn write_response(mut stream: TcpStream, status: u16, headers: &[(String, String)], body: &str) -> std::io::Result<()> {
     let reason = match status {
         200 => "OK",
         400 => "Bad Request",
         401 => "Unauthorized",
         _ => "Status",
     };
-    let head = format!(
-        "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-        body.len()
-    );
+    let mut head = format!("HTTP/1.1 {status} {reason}\r\nContent-Length: {}\r\nConnection: close\r\n", body.len());
+    if !headers.iter().any(|(k, _)| k.eq_ignore_ascii_case("content-type")) {
+        head.push_str("Content-Type: application/json\r\n");
+    }
+    for (key, value) in headers {
+        head.push_str(&format!("{key}: {value}\r\n"));
+    }
+    head.push_str("\r\n");
     stream.write_all(head.as_bytes()).await?;
     stream.write_all(body.as_bytes()).await?;
     stream.shutdown().await

@@ -11,11 +11,16 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
+mod actions;
 mod home;
 pub mod live;
+mod mint;
 mod pull;
+mod push;
 pub use home::{DiscoveredLeaflet, Discovery, Identity, parse_home};
+pub use mint::{MintPreparation, MintTarget};
 pub use pull::{PullSnapshot, parse_pull};
+pub use push::PushAccepted;
 
 pub const DEFAULT_BASE_URL: &str = "https://leaflet.pub";
 
@@ -159,6 +164,8 @@ impl LeafletData {
 pub struct LeafletClient {
     http: reqwest::Client,
     base: Url,
+    has_cookie: bool,
+    session: Uuid,
 }
 
 impl std::fmt::Debug for LeafletClient {
@@ -176,7 +183,7 @@ impl LeafletClient {
                 status: status.as_u16(),
             });
         }
-        let body = response.text().await.map_err(transport)?;
+        let body = actions::bounded_text(response, operation, 16 * 1024 * 1024, &mut (16 * 1024 * 1024)).await?;
         serde_json::from_str(&body).map_err(|_| Error::Native("invalid JSON response"))
     }
     pub fn new(base_url: &str, auth_token: Option<&str>) -> Result<Self, Error> {
@@ -208,7 +215,12 @@ impl LeafletClient {
             .timeout(Duration::from_secs(30))
             .build()
             .map_err(transport)?;
-        Ok(Self { http, base })
+        Ok(Self {
+            http,
+            base,
+            has_cookie: auth_token.is_some(),
+            session: Uuid::new_v4(),
+        })
     }
 
     pub fn base_url(&self) -> &str {
@@ -307,6 +319,8 @@ pub fn parse_rpc(body: &str) -> Result<LeafletData, Error> {
     LeafletData::from_raw(raw)
 }
 
+#[cfg(test)]
+mod native_tests;
 #[cfg(test)]
 mod tests;
 
