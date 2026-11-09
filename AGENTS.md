@@ -13,6 +13,8 @@ updated:
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Operator set session cadence and complexity budget, then rejected generated-body default in favor of complete drafting on the keyed native-object foundation"
+  - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
+    title: "Operator permits rebuilding local data and revising formats; requests persistent live watch/sync and exploratory peer-presence detection"
 ---
 
 # Leafbud work-session cadence
@@ -41,6 +43,15 @@ sources:
   basic requirements. A text-only existing-block proof can be an internal commit,
   but must not be presented as a sufficient authoring milestone. Reduce mechanism
   complexity rather than excluding the normal user actions that make it useful.
+- Local content currently on this computer, including `~/l`, is rebuildable.
+  Formats and earlier design choices may be revised when useful; avoid building
+  migration machinery solely to preserve this disposable corpus.
+- Include **persistent live watch/sync from Leaflet** in the build direction.
+  Repeated one-shot pulls alone do not fulfill that request. Reuse guarded
+  adoption inside a connected subscription-driven session; polling/full reads
+  can backstop missed events and reconnects. Detecting other attached clients
+  is exploratory, not a settled requirement or proof that an editor is idle.
+  Code-grounded proposal: [build path and live sync](design/keyed-build-path0.gpt6a.md).
 
 ## Commission and agent selection
 

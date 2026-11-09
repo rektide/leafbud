@@ -1,15 +1,18 @@
 ---
 type: Design
 title: "Building keyed authoring and continuous inbound sync"
-description: "Code-grounded domain boundaries, concrete interfaces, bounded coarse operations, source-format changes and a dependency-ordered build path for complete drafting plus continuous pull."
+description: "Code-grounded domain boundaries, concrete interfaces, bounded coarse operations, revisable formats and a build path for complete drafting plus persistent live watch, with exploratory peer presence."
 resource: /design/keyed-build-path0.gpt6a.md
 status: proposed
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-09
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Operator requested implementation grounding, domain/crate organization, right-sized bulk fallbacks and live inbound sync; confirmed local data is rebuildable and formats are revisable"
+    title: "Grounded implementation and rebuildable formats; operator corrected polling-first interpretation to persistent live watch/sync and suggested exploratory connected-client detection"
   - resource: /design/keyed-edit-flows0.gpt6a.md
     title: "Primary create/change/drop/reorder cases and identity obligations"
   - resource: /design/keyed-authoring0.gpt6a.md
@@ -48,6 +51,12 @@ sources:
     title: "Source-inspected CVR incremental pull and null-cookie/cache-miss full-snapshot behavior"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/cvr.ts
     title: "Source-inspected clear/put/del patches, unchanged cookies and mutation acknowledgment changes"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/yjsRealtime.tsx
+    title: "Source-inspected per-document Yjs channel, presence enablement/tracking, peer suppression, hello fallback, awareness and doc-update messages"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/components/Blocks/TextBlock/useCollabText.tsx
+    title: "Separate ephemeral live text path and debounced durable Replicache writes"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/supabase/browserClient.ts
+    title: "Browser realtime connection uses deployment public Supabase URL/key; CLI discovery/auth adaptation is unproven"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/mutations.ts
     title: "Re-read membership-preserving moveBlock and addLastBlock"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/app/api/rpc/%5Bcommand%5D/push.ts
@@ -59,7 +68,9 @@ sources:
 ## Recommendation
 
 Build **one document synchronization workflow with two directions**: explicit
-keyed saves to Leaflet, and continuous guarded adoption from Leaflet. Keep the
+keyed saves to Leaflet, and a persistent live connection following Leaflet changes
+into local files. Reuse guarded adoption as an internal operation, not as a
+substitute for the live session. Keep the
 existing source identities and native objects; bound complexity with whole-block
 text interiors, whole-page ordering passes and whole-body local rendering where
 those are adequate. The [flows](keyed-edit-flows0.gpt6a.md) remain the behavioral
@@ -75,6 +86,13 @@ runtime/deployed-write evidence is claimed. The local Leaflet archive was clean
 at `600c7b5f…` during inspection. The existing interface's eight-crate count and
 exact source schema are revisable; the ninth crate below is a recommendation.
 
+**Operator correction:** the first checkpoint of this document proposed a
+polling-first `pull --watch`. The operator clarified that the desired capability
+is continuous watch/sync with a live Leaflet connection. This revision makes
+subscription-driven watch the deliverable; polling becomes its backstop. Peer
+presence is an exploratory scheduling opportunity, not a requirement to build a
+multiplayer editor before watch is useful.
+
 ## 1. What the code actually needs
 
 | Current seam | Concrete change | Why it matters |
@@ -87,7 +105,7 @@ exact source schema are revisable; the ninth crate below is a recommendation.
 | `import::build` can derive title from first prose | Separate initial import's display-title choice from bound observation's persisted metadata | Inserting a heading cannot masquerade as a document rename |
 | `mdx::update` combines metadata/body/state patching | Expose separate tool-state settlement and remote-content adoption operations | Successful push must not reformat the author's body |
 | `web::pull` accepts only a clear-prefixed full snapshot and uses one fixed group | Add explicit client-group and acknowledgment interfaces; retain full reads | Recovery needs the writer's group, not the read-only group |
-| Pull's `try_refresh` is a private command-shaped operation | Extract a reusable per-document cycle | One-shot pull and continuous pull can share decisions and writes |
+| Pull's `try_refresh` is a private command-shaped operation | Extract a reusable per-document cycle | One-shot pull and connected watch can share adoption decisions and writes |
 | File writes re-read bytes then rename | Add cooperative operation locking and accurately describe the remaining race | Pull watcher and explicit push must not race each other |
 
 These changes are more important than a clever diff. The existing pure text
@@ -139,10 +157,10 @@ document/model/src/  content.rs tracking.rs agreement.rs
 document/mdx/src/    parse.rs keys.rs render.rs patch.rs view.rs
 leaflet/editor/src/  graph.rs observe.rs text/{read,write}.rs
                     write/{blocks,pages,order,metadata}.rs verify.rs
-leaflet/web/src/     pull.rs push.rs mint.rs actions.rs
+leaflet/web/src/     pull.rs push.rs mint.rs actions.rs live.rs
 workflow/src/
   workspace/        config.rs inventory.rs files.rs lock.rs
-  editor/           observe.rs agreement.rs adopt.rs save.rs recovery.rs follow.rs
+  editor/           observe.rs agreement.rs adopt.rs save.rs recovery.rs watch.rs
 ```
 
 The tree names ownership; it is not an instruction to create every file empty.
@@ -252,7 +270,7 @@ verify(desired, expected_associations, before, after) -> Verification
 // workflow: owns acquisition, local files and execution
 pull_one(context, path, policy) -> PullOutcome
 push_one(context, path, policy) -> SaveOutcome
-follow(context, selection, options, cancellation) -> FollowReport
+watch(context, selection, options, cancellation) -> WatchReport
 ```
 
 `ObservedEditor` retains the current raw fact map and typed projection together.
@@ -264,6 +282,12 @@ untouched scope. None is an alternate mutable document representation.
 Keep helpers ordinary functions and explicit structs. One transport seam for
 loopback/fake responses is sufficient; there is no need for a backend trait per
 command or a generic graph-reconciliation framework.
+
+The live transport stays in `web::live`: connection/join/heartbeat/reconnect and
+typed incoming events. `workflow::editor::watch` owns subscriptions selected from
+the local inventory, coalescing and scheduling, adoption and reports. Neither
+the MDX parser nor the pure native compiler owns a socket. A separate realtime
+crate is unnecessary for this one backend.
 
 ## 4. A bounded fallback ladder
 
@@ -319,14 +343,21 @@ for normal drafting. Its accepted interface can remain unimplemented honestly.
 
 ### User behavior
 
-Proposed spelling: **`leafbud pull --watch --all`**, or selected file operands.
-`--interval` configures polling; begin with a conservative interval such as 30s,
-one in-flight document cycle, and per-origin backoff. It means saved editor state
-arrives locally without rerunning a command. It is not character-level live
-co-editing, and it does not automatically push local file changes.
+Proposed spelling: **`leafbud watch --all`**, or selected file operands. It opens
+and maintains a live connection, subscribes to the selected documents, catches
+up their current state and applies subsequent remote changes to local files.
+The session reports connecting/live/reconnecting/degraded state separately from
+whether an individual file is clean, dirty or conflicted. One-shot `pull` remains
+useful, but repeatedly calling it on a timer does not complete this capability.
 
-Manual push can coexist with it. Both directions use the same classification,
-identity reconciliation and per-document operation lock. Pull-follow is useful
+The first delivery follows durable editor changes through live notifications.
+Explicit push remains available while watching. Automatically pushing local file
+changes is a further direction policy over the same session, not implied by the
+inbound request. The lower-latency Yjs stream is a concrete extension described
+below; durable changes and ephemeral keystrokes must have different receipt rules.
+
+Both directions use the same classification,
+identity reconciliation and per-document operation lock. Live watch is useful
 before the full push implementation lands; do not leave it until publishing.
 
 | Observed situation | Follow action |
@@ -339,21 +370,22 @@ before the full push implementation lands; do not leave it until publishing.
 | Pending push/mint | Defer adoption to recovery; do not erase attempt evidence |
 | Local parser error while editing | Preserve and retry after a later valid file state |
 | Missing/inaccessible remote or new unsupported content | Report blocked/unavailable; retain local file |
-| Temporary transport failure | Back off, mark stale; resume from fresh observation |
+| Temporary transport failure | Reconnect with backoff, mark stale; catch up after rejoin |
 
 Reject persistent `--take remote` with watch in the initial interface. A one-shot
 resolution is a deliberate decision about current differences; continuously
 discarding every future local edit would be a different product mode. Polling
-continues after conflicts, but receipt baselines never advance merely because a
-new remote snapshot was fetched.
+backstops and subscriptions continue after conflicts, but receipt baselines never
+advance merely because a new remote snapshot was fetched.
 
-Workspace selection is rescanned between rounds; filename changes follow the
+Workspace selection is rescanned periodically; filename changes follow the
 same document/binding identity. Duplicate bindings stay loud. `--all` follows
 existing local bindings. New remote document discovery remains `import`; a future
 opt-in discover-and-import mode can compose it without conflating the two jobs.
 Missing local files are not silently recreated and remote omissions do not prune.
 
-Report transitions rather than printing every clean poll. Machine watch output
+Report transitions rather than printing every notification or clean catch-up.
+Machine watch output
 should be versioned JSON Lines with document/path, outcome and observation time;
 one-shot pull retains its existing JSON report. Cancellation finishes or abandons
 the current read safely, emits a final summary and releases the lock. No daemon,
@@ -365,6 +397,9 @@ Pinned Leaflet implements more than our current reader uses:
 
 - `index.tsx` subscribes to Supabase `rootEntity:<root>` broadcast `poke`, calls
   pull on notification and reconnect, and uses a five-minute poll backstop.
+- `yjsRealtime.tsx` has a separate `yjs:<root>` topic with `doc-update`,
+  `awareness`, `hello` and presence events. It carries faster text/cursor state,
+  while Replicache remains the durable source.
 - `serverPullData.ts` + `cvr.ts` implement a server-side client-view record (CVR).
   The returned opaque cookie selects a base; changed facts/extras arrive as
   `put`/`del`, and an unchanged view can produce an empty patch.
@@ -375,11 +410,40 @@ Pinned Leaflet implements more than our current reader uses:
 The browser comment saying every pull is full is stale relative to those
 implementation files. This is source evidence, not a verified deployment contract.
 
-**First implementation:** run the existing full-snapshot acquisition on a timer.
-Extract the per-file cycle instead of repeatedly invoking the CLI or building a
-second synchronization model. Fetch metadata too: standalone title and lifecycle
-must not be skipped because the fact payload appears unchanged. Bound network
-work and measure request volume over the actual selected corpus.
+### First implementation: a connected session
+
+1. Resolve the deployment's realtime URL/public project key and actual channel
+   access requirements. The browser uses `NEXT_PUBLIC_SUPABASE_API_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`; Leafbud's existing cookie HTTP client does not
+   yet implement this bootstrap. Verify a bounded discovery/configuration adapter,
+   rather than hardcoding an assumed production project or claiming the cookie
+   alone is sufficient.
+2. Maintain an origin-scoped connection, multiplexing document topics where the
+   chosen client supports it. Subscribe to `rootEntity:<root>` and wait for join
+   confirmation before initial catch-up. Events received while that read runs
+   mark the document dirty for another pass, closing the subscribe/read race.
+3. Coalesce pokes per document into one pending refresh and allow only one read
+   cycle per document at a time. An event arriving during that cycle queues one
+   more pass; it is not discarded when the earlier request completes. Begin with
+   bounded serial work across documents rather than a sophisticated scheduler.
+4. Acquire the current facts and metadata, classify and adopt with the existing
+   per-file rules. Full snapshots are an acceptable first content acquisition
+   mechanism: the connection and event lifecycle are still continuously live.
+5. Rejoin and catch up after every connection gap. Use a slow, configurable
+   reconciliation sweep for missed pokes and metadata changes that may not emit
+   them. An unavailable subscription reports degraded state; polling fallback
+   must not be labeled a healthy live connection.
+
+A small session state holds connection status, per-document subscription state,
+dirty/in-flight flags, current observation and last result. No persistent event
+queue is needed. Reuse a maintained Supabase/Phoenix client if it proves the join,
+heartbeat, broadcast, presence and reconnect cases; otherwise isolate a narrow
+adapter over an established WebSocket library. Dependency selection is a concrete
+implementation check, not evidence that a suitable Rust client is already wired.
+
+Fetch metadata too: standalone title and lifecycle must not be skipped because
+facts appear unchanged. Slow sweep intervals can differ from event-driven reads.
+Measure actual requests/subscriptions before adding adaptive rate machinery.
 
 **Next transport improvement:** add `RemoteView { rows, cookie, acknowledgments }`
 in memory, one per origin/token/group. Apply each response to a candidate map,
@@ -391,11 +455,53 @@ requests a full read; repeated invalid full reads fail rather than loop forever.
 Process restart starts with no cookie and no replica. A cookie is never saved
 without its base map, and neither is an agreement receipt or an MDX sidecar.
 
-**Then, if latency warrants it:** verified Supabase notification subscription
-wakes the same cycle; it carries no authoritative content. Reconnect pulls and
-polling remain. Verify channel/auth discovery and metadata-only notification
-coverage before relying on it. No need to implement browser Yjs broadcasts or
-local CRDT editing sessions to keep saved remote documents refreshed.
+### Other attached clients: a promising, bounded experiment
+
+The operator's speculative presence idea has a source-backed foothold:
+
+- Leaflet joins `yjs:<root>` only after an editor registers a text document.
+  It enables presence explicitly and tracks a random connection key with an
+  `awarenessClientID`. Presence sync/join/leave exposes peers on that topic.
+- It suppresses text/awareness broadcasts when no peer is observed. Recent remote
+  broadcasts and `hello` provide a fallback for older clients or broken presence.
+- These are editor connections, not authenticated unique people or a complete
+  account-wide inventory of open tabs. A page without a mounted text editor may
+  have no Yjs presence. Disconnect or missing presence means unknown, not zero.
+
+Expose **`observed-peers(n)` / `no-peers-observed` / `unknown`**, with freshness,
+as advisory session information. Presence must not grant write authority, clear
+a conflict, disable change subscriptions or prove it is safe to overwrite.
+
+Probe a receive-only presence subscription first: can it obtain the state/diffs
+without tracking a Leafbud peer or publishing cursor awareness? This is not yet
+verified. Tracking our watcher would make the existing browser count it as a
+peer and could enable broadcasts it otherwise suppresses; that is a real change
+in traffic, not passive observation. Do not fabricate an awareness client or send
+`hello` just to obtain a connected-user count.
+
+If the probe works, start with a small scheduling rule: retain lightweight
+`rootEntity` subscriptions for all selected documents; prioritize catch-up and
+optionally keep richer in-memory state for documents with peers or recent
+activity. Quiet documents still receive pokes and periodic catch-up. Presence
+inspection itself requires per-document subscriptions; it is not a free global
+"which documents are active?" directory. Avoid making an adaptive controller a
+dependency of the first watch implementation.
+
+### Faster live text is a distinct extension seam
+
+`doc-update` contains entity ID, base64 Yjs delta and schema version. We could
+load the block's durable baseline into Yrs and maintain an in-memory live view
+from those messages. `useCollabText.tsx` shows a separate debounced write into
+Replicache, so a received delta is not proof of persisted content. It can arrive
+before the outer graph references its entity or before durable acknowledgment.
+
+Recommend event-driven durable-file adoption first, and assess a live text overlay
+next if that latency matters. Such an overlay needs bounded buffering, schema and
+causal checks, gap recovery and an explicit policy for whether ephemeral content
+ever reaches the file. It must not advance the durable agreement receipt or echo
+received deltas back as locally authored edits. Full reobservation remains the
+coarse recovery path. This preserves a route to tighter live sync without making
+cursor collaboration or an unsaved-text authority model prerequisites.
 
 ## 6. Save and follow share one correctness boundary
 
@@ -469,17 +575,22 @@ split/join source actions parse; preparation repeats without changes. Fixture
 imports use the same format. No migration subsystem is required for `~/l`;
 a deliberate fresh checkout can replace its obsolete format when wanted.
 
-### B. Keep the local checkout current — proposed ticket, g
+### B. Establish connected watch — proposed ticket, Sol high then g
 
 Proposed **`leafbud-editor-follow`** (not yet created): extract one-file adoption,
-add cooperative local locking and `pull --watch`, first using full snapshots.
-This can land after A while write transport is being prepared, because it only
-depends on observation/adoption. It must not wait for native push or publication.
+add cooperative local locking and `watch`, with actual realtime subscriptions,
+initial catch-up, event coalescing, reconnect and a slow reconciliation backstop.
+Sol high is recommended for the connection/bootstrap and optional presence probe;
+g can carry the well-defined loop and fixture integration once that seam is
+verified. This can land after A while write transport is being prepared, because
+it depends on observation/adoption. It must not wait for native push or publication.
 
 Acceptance: browser-like fixture edits appear locally; local dirty/conflicted
-files survive; equal polls preserve mtime; rename/duplicate/source-race/reconnect
-cases behave as above. Incremental transport and notifications are later
-improvements to this same behavior, not prerequisites hidden in the ticket.
+files survive; equal refreshes preserve mtime; events during catch-up are retained;
+rename/duplicate/source-race/reconnect cases behave as above. A connection probe
+must establish deployment bootstrap/channel access before claiming live watch.
+Incremental pulls and presence-based prioritization can follow; the persistent
+subscription is in this ticket's initial delivery, not postponed behind polling.
 
 ### C. Establish reliable native effects — two existing tickets, Sol high
 
@@ -530,7 +641,9 @@ insertion, split/join/delete/order and continuous inbound refresh are in this pa
 | No-op | No mutations, no rekeying, unchanged local bytes/mtime |
 | Recreate one shared occurrence | Selected placement targets new entity; other occurrence still targets old entity |
 | Partial/acknowledged failure | No false success receipt; planned IDs retained; rooted absence not treated as noncreation |
-| Follow dirty/converged/unsupported | Correct disposition without refreshing the agreement baseline on conflict |
+| Watch dirty/converged/unsupported | Correct disposition without refreshing the agreement baseline on conflict |
+| Subscribe/catch-up/reconnect | Event during an in-flight read causes another pass; reconnect repairs missed events |
+| Presence experiment | Observed peer is distinguishable from unavailable presence; zero observation does not suppress pokes |
 | Full/delta/reset (later optimization) | Same complete current projection; empty patch not interpreted as empty content |
 | Writer + follower overlap | Cooperative serialization; pending save is not adopted away |
 | Local editor saves during acquisition | New source preserved; successful remote effect can remain locally unsettled |
@@ -547,7 +660,7 @@ behavior. Document the deployed proof separately when performed.
 - [Keyed authoring](keyed-authoring0.gpt6a.md): retains its complete-drafting and
   object-continuity direction; adds the explicit early follow capability.
 - [Accepted interface](authoring-interface0.gpt6a.md): retains command meanings
-  and deliberate recreation; proposes `pull --watch` and a ninth wire-only crate.
+  and deliberate recreation; proposes persistent `watch` and a ninth wire-only crate.
 - [Frontmatter](frontmatter0.gpt61s.md): preserves ownership and compact evidence,
   proposes a clean next format and more explicit occurrence locators.
 - [Earlier sync design](document-sync1.gpt61s.md#4-shared-classification-and-current-endpoint-resolution):

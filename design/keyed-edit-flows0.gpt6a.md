@@ -10,6 +10,8 @@ generated:
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Operator requested concrete new/changed/dropped-block flows, reordering alternatives and a durable receiving-session seed"
+  - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
+    title: "Connected these flows to the code-grounded build path, bounded fallbacks and persistent live watch proposal"
   - resource: /design/keyed-authoring0.gpt6a.md
     title: "Current complete-drafting design with stable keyed native objects"
   - resource: /crates/document/model/src/lib.rs
@@ -51,6 +53,11 @@ The central rule is **reuse the object named by a confirmed association; create
 only genuinely new objects; remove placements deliberately**. We edit a changed
 block's loaded CRDT rather than replace the document with a fresh body. Reordering
 uses the outer fact graph, not Yrs text updates.
+
+The [code-grounded build path](keyed-build-path0.gpt6a.md) maps these cases to
+concrete module/crate boundaries and implementation batches, makes bulk fallbacks
+explicit, and adds the operator's persistent live watch/sync direction. It also
+records that local files are rebuildable and the format can be revised.
 
 Evidence has different standing:
 
