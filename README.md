@@ -1,3 +1,21 @@
+---
+type: ProjectGuide
+title: Leafbud
+description: "Current capabilities, commands, source contracts and verification map for Leafbud."
+resource: /README.md
+status: active
+updated:
+  at: 2026-11-09
+  by: model:openai/gpt-6.1-sol#high
+sources:
+  - resource: "opencode://ses_e416ba4e7ffeZ1ThfycXYgNh5S"
+    title: "Connected watch implementation, shared guarded refresh and locking, current usage, tests and passive deployed CLI verification"
+  - resource: /design/connected-watch0.gpt61s.md
+    title: "Implementation receipt and exact proof limits for connected inbound follow"
+  - resource: /design/keyed-build-path0.gpt6a.md
+    title: "Accepted complete-authoring and early connected-follow direction"
+---
+
 # leafbud
 
 Local-first MDX authoring for [leaflet.pub](https://leaflet.pub)
@@ -7,10 +25,11 @@ push saves the Leaflet editor, publish releases, pull adopts web edits.
 Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
-external-tool human diff, guarded pull, layered config, version 0.11.0.** The accepted authoring interface
+external-tool human diff, guarded pull, connected inbound `watch`, passive
+advisory presence, cooperative writer locks, layered config, version 0.13.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
-`push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
+`push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
 `keys rename`, `remote`, `pubs`, `auth`, `config`), all-applicable
 `tidy` with `--keys` narrowing, eight domain-grouped crates, and
 operation-specific YAML preservation. The workspace now matches that
@@ -19,9 +38,9 @@ destination shape. Implemented versus pending:
 | implemented | not implemented |
 | --- | --- |
 | `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
-| `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; `leafbud-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
+| `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning, flat lists and strict Yrs text decoding | canvas, nested/task lists, interactive/other unsupported editor content |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -42,15 +61,15 @@ crates/
     editor/    leafbud-editor: fact graph, Yrs text state, bindings,
                 bounded pure observation; write planning still pending
     web/       leafbud-web: cookie auth, discovery, RPC/actions,
-                read-only discovery/metadata/content pulls; writes pending
+                 read-only pulls and receive-only live subscriptions; writes pending
     records/   leafbud-records: generated pinned lexicon record types,
                validation, wire-shape helpers — see LEAFLET-PIN.md
   atproto/     leafbud-atproto: hand-rolled ATProto surface — handle→DID→PDS
                identity resolution, XRPC client, sessions, public reads
   workflow/    leafbud-workflow: local files, config, inventory,
-                layered config, native reads, guarded draft import and pull
+                 guarded import/pull, shared refresh, cooperative locks, live follow
   cli/         leafbud (binary): thin Clap/rendering layer;
-                 reads/import/check/status/pull/config implemented; native writes pending
+                  reads/import/create/check/status/diff/pull/watch/tidy/config; native writes pending
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
@@ -258,7 +277,7 @@ unreadable/invalid/ambiguous/racing files or failed remote reads give 1 when all
 items fail, 4 when mixed. Usage errors give 2.
 
 **Editor receipts:** new imports and verified pull settlements use
-`leaflet-editor/2`. Local hashes cover supported editor content/metadata and
+`leaflet-editor/3`. Local hashes cover supported editor content/metadata and
 object/occurrence associations—not custom author fields, publication date,
 delivery/naming intent, source-key spelling or non-entry page-definition layout.
 Title, description, tags, publication association, watermark and contributors
@@ -266,11 +285,13 @@ remain editor-owned. Remote hashes conservatively cover current meaningful
 fact payloads/unknown fields, extras and mapped metadata; unsupported conversion
 does not erase observed evidence. Unknown content still blocks adoption.
 
-Existing `leaflet-import/1` hashes keep their old whole-document interpretation.
-They cannot supply a new scoped historical baseline: differing endpoints are
-`unverified`; verified equal supported endpoints are `converged`. An explicit
-`pull` can settle that current correspondence into the new profile without
-rewriting the body; status cannot. Unknown profiles block managed mutation.
+Confirmed native associations are spelling-independent; new keyed objects carry
+their explicit source identity, and locally retired associations remain visible
+as omissions. Only current format/profile is supported: historical
+`leaflet-import/1` and `leaflet-editor/2` receipts are not migrated or reinterpreted.
+A current bound document with **no receipt** has no historical direction:
+differing endpoints stay preserved; equal verified endpoints can settle through
+pull/watch without rewriting the body. Status never settles receipts.
 No saved body, ancestor, sidecar or CRDT snapshot was added.
 
 **Last verified live rename gap** (status implementation session): the 27 files in `~/l` use
@@ -396,7 +417,7 @@ history, no server CAS):
 | Remote-only change (editor content or metadata) | `updated` — adopted; body rewritten only when page content actually changed |
 | Remote change outside the supported projection (e.g. latent inactive text) | `receipts-only` — witness settled, author text and body untouched |
 | Both changed to the same thing | `converged` — receipts settle without a body rewrite |
-| Legacy receipt, differing current endpoints | `needs-decision` — no scoped historical baseline inferred |
+| No receipt, differing current endpoints | `needs-decision` — no historical baseline inferred (unknown profiles fail) |
 | Local-only change, or diverged local and remote edits | `needs-decision` — file preserved verbatim |
 | Missing remote, published lifecycle, unsupported content, broken bindings | explicit per-file outcome; nothing is pruned or created |
 
@@ -406,8 +427,9 @@ changes bindings or ignores unsupported content. Source identities are stable:
 imported deterministic keys are first-association choices, key renames survive
 refresh wherever the binding identifies the same remote object, and document
 IDs never re-mint. Writes re-verify remote identity after content acquisition
-and are atomic against the original local bytes (a concurrent user edit aborts
-the write). Exit codes follow the accepted contract: 0 success/no-op,
+and use the [cooperative lock and original-byte guard](#connected-inbound-watch)
+against local races. Atomic replacement is **not** filesystem CAS against an
+uncooperative editor. Exit codes follow the accepted contract: 0 success/no-op,
 1 operational failure, 3 needs-decision, 4 partial/diverged batches.
 
 Before the project rename, the live 27-file workspace refreshed as an exact no-op: full repeat run after
@@ -419,6 +441,86 @@ that the renamed binary has migrated live data.
 
 Current implementation/verification handoff:
 [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md).
+
+## Connected inbound watch
+
+```sh
+leafbud --root /path/to/current-checkout watch drafts/chosen.mdx
+leafbud watch --all --json                     # versioned JSON Lines, not one JSON array
+leafbud watch --all --presence                 # passive advisory observation only
+leafbud watch --all --backstop 300 --rescan 5   # seconds; these are the defaults
+```
+
+`watch` maintains an actual origin-scoped Leaflet connection and adopts durable
+saved editor edits into existing **current-format bound drafts**. It never pushes,
+prepares keys, creates remote objects, imports undiscovered documents or prunes
+missing files. Local-only edits are normal `local-dirty`; divergent edits become
+`needs-decision`. Invalid, unknown owned state, pending recovery evidence,
+unsupported content, unbound sources, duplicates and unavailable remotes stay
+explicit and preserved. No persistent `--take remote` exists: use a separate
+one-shot `pull FILE --take remote` for a deliberate current-content decision.
+
+Initial live catch-up waits for acknowledged topic join, then uses the same
+typed guarded refresh as pull: complete metadata plus null-cookie facts, identity
+and lifecycle checks, native-association key reconciliation, verified receipts and
+atomic local replacement. Pokes coalesce; a poke during a read queues another
+pass. Rejoin catches up after gaps. Reads are serial and round-robin, with bounded
+per-file retry backoff so busy/erroring documents do not stall other files or the
+socket. The slow backstop reconciles missed events and metadata; if a subscription
+or bootstrap is unavailable, its HTTP reads are labeled **`degraded-poll`**, never
+a healthy live connection. Discovery/read/leave waits and retries are bounded.
+
+Rescans follow explicit selections by stable local UUID through workspace renames;
+`--all` follows the local inventory for this origin, including loud broken managed
+files and new local bindings. A removed source is not recreated, a replacement
+identity at an explicit old path is not silently selected, and duplicate UUIDs or
+bindings block adoption. External explicit operands work, but rename discovery
+outside the workspace is not recursive. New remote discovery remains `import`.
+
+**Locks and races.** Pull, watch, tidy and import cooperate through OS-released
+advisory locks at `$XDG_CONFIG_HOME/leafbud/locks` (else `~/.config/leafbud/locks`),
+keyed by stable local UUID, not filename. Import also serializes one origin/token
+binding before checking whether it already exists. A busy one-shot operation
+reports a preserved per-file failure; watch backs off and retries. New local
+drafts use random identity plus no-clobber creation. Lock files deliberately remain;
+their presence says nothing about ownership, and no stale-owner cleanup runs.
+Use the same user config directory for cooperating processes. Each transaction
+rereads/revalidates selection after acquisition and holds its lock through remote
+observation/adoption. External editors need not cooperate: a source save across
+awaits aborts replacement through the byte guard, but the final check-to-rename
+window is not an atomic filesystem compare-and-swap.
+
+**Reports and interruption.** `--json` emits `version: 1` JSONL transitions of
+types `connection`, `subscription`, `inventory`, `document`, optional `presence`,
+then `summary`, each with local `observed_at` time (SystemTime epoch seconds/nanos).
+Document events carry path, nullable local UUID, outcome, safe message and
+`acquisition` (`live`, `degraded-poll`, or `inventory`), not remote root IDs or bodies.
+Repeated unchanged dispositions are quiet; writes and actual state transitions
+are reported. The summary contains refresh/write/cancel counts and latest selected
+file outcomes. Ctrl-C/SIGTERM abandons pending HTTP safely, releases locks, performs
+bounded best-effort topic leaves and exits 0 with a summary. Per-file problems are
+reported state, not a session-wide operational exit; startup/reporting errors exit 1,
+usage errors 2. A stopped summary does not mean every file was clean or observed.
+
+**Bootstrap and presence.** Default discovery reads bounded same-origin public
+Next assets using a separate cookie-free client. For deployments that need an
+explicit override, set both `LEAFBUD_REALTIME_PROJECT_URL` and
+`LEAFBUD_REALTIME_ANON_KEY`, or use `--project-url URL --anon-key PUBLIC_ANON_JWT`.
+No project URL/key is hardcoded. Public topic access is not HTTP authorization;
+normal Leaflet cookie credentials remain independently scoped to that origin.
+`--presence` never tracks Leafbud as a peer or sends awareness/hello/content.
+It reports `unknown`, `no_peers_observed`, or `{"observed_peers": n}` in JSON, with observation
+time and subscription status. These are observed connections, not unique people,
+write authority or proof that a document is idle; quiet roots keep poke subscriptions.
+
+Production HTTP/WebSocket loopback tests cover actual poke-to-file adoption,
+in-flight pokes, reconnect, local saves, preserved conflicts/state, fair retries,
+selection changes and locking. A separate passive deployed CLI smoke freshly
+imported one current-format scratch draft, maintained live readiness through a
+23-second window, observed fresh empty presence, and preserved bytes/mtime on
+unchanged catch-up. It made no remote edits and observed no deployed poke; deployed
+poke-to-file adoption is **not claimed**. `~/l` remains untouched and format-stale.
+Receipt and reusable APIs: [connected watch](design/connected-watch0.gpt61s.md).
 
 ## Markdown-first rich text and deliberate tidy
 
@@ -498,6 +600,9 @@ PDS or leaflet draft.
 - Markdown-first rich text (approved design): [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
 - Markdown round-trip implementation receipt: [`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md)
 - Offline create/key-preparation batch (format 2) receipt: [`design/author-create-keys0.glm53m.md`](design/author-create-keys0.glm53m.md)
+- Corrected authoring foundation: [`design/authoring-corrections0.glm53m.md`](design/authoring-corrections0.glm53m.md)
+- Production live adapter and receiving contract: [`design/live-transport0.gpt61s.md`](design/live-transport0.gpt61s.md)
+- Integrated guarded live watch, locks and actual proof limits: [`design/connected-watch0.gpt61s.md`](design/connected-watch0.gpt61s.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
 
 Never commit credentials or real response bodies; see
