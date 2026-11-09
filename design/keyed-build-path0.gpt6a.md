@@ -47,6 +47,8 @@ sources:
     title: "Executed Yrs/Yjs interop and unsafe independent replacement/delta/retry evidence; its LCS is not the proposed production algorithm"
   - resource: /experiments/15-live-connection/live-connection0.gpt61s.md
     title: "Reviewed commissioned Sol probe: deployed passive joins/presence, maintained Phoenix client lifecycle evidence and production watch API handoff"
+  - resource: /design/authoring-review0.gpt6a.md
+    title: "Parent review of landed batch A and concrete correction/transport join conditions"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/index.tsx
     title: "Source-inspected rootEntity poke subscription, reconnect pull, poll backstop and browser push batching"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/serverPullData.ts
@@ -695,3 +697,9 @@ The independent connection/presence probe ran alongside A in Sol session
 Parent reviewed its source, lifecycle tests and handoff, accepting the transport
 recommendation while retaining the explicit nonempty-presence and deployed
 poke-to-file proof limits. Watch integration follows the model/adoption join.
+
+Batch A landed through `6aee3dd9`; [parent review](authoring-review0.gpt6a.md)
+accepts its core choices and commissions focused corrections to preparation,
+identity projection, tracking settlement and status before adoption integration.
+A fresh g correction pass and an independent Sol production transport checkpoint
+run in parallel, with separate owned files and an explicit parent join.
