@@ -14,7 +14,7 @@ sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Operator set session cadence and complexity budget, then rejected generated-body default in favor of complete drafting on the keyed native-object foundation"
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Operator permits rebuilding local data and revising formats; requests persistent live watch/sync and exploratory presence; selects explicit adoption of omitted native defaults at first binding"
+    title: "Operator permits rebuildable formats, commissions live watch and native-default adoption, and sets future agent rollover between 240–350k while allowing active agents to finish"
 ---
 
 # Leafbud work-session cadence
@@ -71,11 +71,14 @@ sources:
 
 ## Session size and rotation
 
-- Operator target: **160–350k tokens per working agent session**. Budget toward a
-  coherent result within that range; do not manufacture work to meet the lower
-  bound or treat the upper bound as a goal. Use reported context when available.
-- Continue a session when retained context is valuable and capacity permits.
-  Rotate to fresh instances at coherent checkpoints as scope/context warrants.
+- For future working-agent sessions, **roll over at a coherent checkpoint between
+  240–350k reported context tokens**. Prepare the handoff as the session approaches
+  that window and complete rollover by 350k; nominal model capacity is not the
+  operating budget. Smaller completed slices may end normally—never manufacture
+  work to reach the lower bound. Use reported context, not cumulative lifetime
+  token usage, when available.
+- Continue a session when retained context is valuable within that rollover
+  budget. Rotate earlier when scope or a natural completion warrants it.
   Before rotating, commit owned work and leave a concise handoff with code/design
   pointers, verification, unresolved decisions and the next useful slice.
 
