@@ -3,6 +3,7 @@
 //! envelope (identity/binding/nodes/receipts) so successful pushes never
 //! reformat the author's body; [`adopt_remote`] additionally adopts changed
 //! remote content and owned author fields for guarded refresh.
+//! [`prepare_binding_defaults`] is separate pre-content-write preparation.
 use super::{json, parse, yaml};
 use anyhow::{Context, Result, bail, ensure};
 use leafbud_document::*;

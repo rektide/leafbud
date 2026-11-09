@@ -25,7 +25,11 @@ fn fixture_content_to_real_mdx_and_back_without_loss() {
         "persisted metadata is independent of first-heading display fallback"
     );
     assert_eq!(document.publication, leafbud_document::Publication::Standalone);
-    assert!(document.extra.is_empty());
+    assert_eq!(
+        document.extra,
+        BTreeMap::from([("contributors".into(), json!([]))]),
+        "retain an actually observed empty contributor field"
+    );
     let source = leafbud_mdx::render(&document).unwrap();
     assert!(source.contains("Synthetic body copy"));
     assert!(!source.contains("AQPY"));

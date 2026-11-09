@@ -263,7 +263,18 @@ async fn inspect_existing_authorized_probe() -> Result<()> {
         }
         let recorded: Value = serde_json::from_slice(&std::fs::read(dir.join(format!("{label}.locator.json")))?)?;
         let source = leafbud_mdx::parse(&std::fs::read_to_string(&path)?)?;
-        if recorded["token"].is_null() {
+        let selected = dir.join(format!("{label}.selected-p1.private.json"));
+        let selected_token = if recorded["token"].is_null() && selected.exists() {
+            // Original response evidence remains unchanged. A later explicit
+            // human selection establishes a recovery object, not attribution.
+            let selected: Value = serde_json::from_slice(&std::fs::read(selected)?)?;
+            ensure!(selected["selection"] == "human-selected-P1", "unknown recovery selection record");
+            selected["selectionReport"]["token"].as_str().map(str::parse::<Uuid>).transpose()?
+        } else {
+            None
+        };
+        let token = recorded["token"].as_str().map(str::parse::<Uuid>).transpose()?.or(selected_token);
+        if token.is_none() {
             ensure!(
                 source.state.binding.is_none()
                     && matches!(
@@ -279,10 +290,19 @@ async fn inspect_existing_authorized_probe() -> Result<()> {
                 "unlocated probe state differs from budget record"
             );
         } else {
-            ensure!(
-                source.state.binding.as_ref().is_some_and(|b| recorded["token"] == b.token.to_string()),
-                "probe locator differs from authorization record"
-            );
+            let known = source
+                .state
+                .binding
+                .as_ref()
+                .map(|b| b.token)
+                .or_else(|| match &source.state.pending.as_ref()?.effect {
+                    Effect::Mint {
+                        stage: MintStage::Located { token },
+                        ..
+                    } => Some(*token),
+                    _ => None,
+                });
+            ensure!(known == token, "probe locator differs from authorization record");
         }
         let report = remote.recover_native(&context, &path, Selection::default(), true).await?;
         if let Some(Attempt {
@@ -334,5 +354,261 @@ async fn inspect_existing_authorized_probe() -> Result<()> {
         std::fs::write(dir.join(format!("{label}.inspection.json")), serde_json::to_vec_pretty(&report)?)?;
         eprintln!("{label}: {}", serde_json::to_string(&report)?);
     }
+    Ok(())
+}
+
+/// Human selection relayed by parent ses_e4217c526ffeXeHByo5ZswnB3F. This test
+/// cannot create a draft or discover/select a different candidate. It is also
+/// restart-safe: a push is only observed, never independently re-encoded.
+#[tokio::test]
+#[ignore = "requires explicit P1 recovery selection; only existing authorized verification objects"]
+async fn authorized_selected_p1_create_free_materialization() -> Result<()> {
+    ensure!(
+        std::env::var("LEAFBUD_NATIVE_PROBE").as_deref() == Ok("authorized-selected-p1"),
+        "explicit selected-P1 authorization flag required"
+    );
+    let root = std::fs::canonicalize(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.test-agent/native-effects"))?;
+    let dir = root.join("deployed");
+    ensure!(
+        dir.join("standalone.started").exists() && dir.join("publication.started").exists(),
+        "existing consumed creation budgets required; no mint in this harness"
+    );
+    let catalogue: Value = serde_json::from_slice(&std::fs::read(root.join("recovery-candidates/catalogue.private.json"))?)?;
+    let candidate = catalogue["candidates"]
+        .as_array()
+        .context("private candidate catalogue")?
+        .iter()
+        .find(|c| c["label"] == "P1")
+        .context("human-selected P1 missing")?;
+    let token: Uuid = candidate["token"].as_str().context("P1 token missing")?.parse()?;
+    let mut context = crate::config::load(None, &Default::default(), None)?;
+    context.workspace_root = dir.clone();
+    let remote = crate::RemoteOptions::default().connect().await?;
+    let path = dir.join("publication.mdx");
+    // Read-only check of the original standalone attempt; no policy rewrite,
+    // receipt settlement or independent re-encoding of its dispatched intent.
+    let standalone = dir.join("standalone.mdx");
+    let old = std::fs::read(&standalone)?;
+    let standalone_report = remote.recover_native(&context, &standalone, Selection::default(), false).await?;
+    ensure!(std::fs::read(&standalone)? == old, "standalone inspection changed original evidence");
+    std::fs::write(
+        dir.join("standalone.default-policy-inspection.json"),
+        serde_json::to_vec_pretty(&standalone_report)?,
+    )?;
+    let original_bytes = std::fs::read(&path)?;
+    let source = leafbud_mdx::parse(std::str::from_utf8(&original_bytes)?)?;
+    let local_id = source.state.id;
+    if let Some(Attempt {
+        id,
+        effect: Effect::Mint { publication, stage, .. },
+        ..
+    }) = &source.state.pending
+    {
+        ensure!(
+            publication.publication() == candidate["publication"].as_str(),
+            "selected candidate differs from pinned pending publication"
+        );
+        match stage {
+            MintStage::Dispatched | MintStage::Located { .. } => {
+                let selected = remote.select_mint_locator(&context, &path, Selection::default(), *id, token).await?;
+                std::fs::write(
+                    dir.join("publication.selected-p1.private.json"),
+                    serde_json::to_vec_pretty(&serde_json::json!({
+                        "parentSelectionSession":"opencode://ses_e4217c526ffeXeHByo5ZswnB3F",
+                        "implementationSession":"opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf",
+                        "selection":"human-selected-P1", "originalAttribution":"not-established",
+                        "previousAttempt":source.state.pending, "selectionReport":selected,
+                    }))?,
+                )?;
+                ensure!(
+                    matches!(selected.outcome, BindingOutcome::PendingMaterialization),
+                    "selected P1 did not verify/prepare; retained, no remint/retry"
+                );
+            }
+            MintStage::Prepared => anyhow::bail!("probe never dispatched; selected-locator handoff is not applicable"),
+        }
+    }
+    let source = leafbud_mdx::parse(&std::fs::read_to_string(&path)?)?;
+    ensure!(
+        source.state.binding.as_ref().is_some_and(|b| b.token == token),
+        "binding differs from human-selected recovery object"
+    );
+    if matches!(
+        source.state.pending.as_ref().map(|a| &a.effect),
+        Some(Effect::Mint {
+            stage: MintStage::Located { .. },
+            ..
+        })
+    ) {
+        let report = remote
+            .execute_compiled(&context, &path, Selection::default(), None, |desired, data, view| {
+                let fresh = import::build(remote.client.base_url(), data, view)?;
+                ensure!(
+                    desired.pages.len() == 1 && desired.pages[0].blocks.len() == 1 && desired.description.is_none() && desired.tags.is_empty(),
+                    "controlled probe requires its original single-block source without extra metadata"
+                );
+                let authored = &desired.pages[0].blocks[0];
+                let leafbud_document::BlockKind::Paragraph { content } = &authored.kind else {
+                    anyhow::bail!("controlled publication paragraph required")
+                };
+                ensure!(
+                    content
+                        == &vec![leafbud_document::Inline::Run {
+                            text: "Leafbud native-effect verification.".into(),
+                            marks: vec![]
+                        }],
+                    "controlled source text differs; no write"
+                );
+                let native_main = fresh.state.nodes[&fresh.pages[0].key].clone();
+                let mut native_block = fresh.state.nodes[&fresh.pages[0].blocks[0].key].clone();
+                let leafbud_document::Occurrence::Block {
+                    placement,
+                    text_fact: None,
+                    inactive_text_fact: None,
+                } = &native_block.occurrence
+                else {
+                    anyhow::bail!("controlled publication seed is no longer empty; no independent CRDT initialization")
+                };
+                let text_id = Uuid::new_v4();
+                native_block.occurrence = leafbud_document::Occurrence::Block {
+                    placement: placement.clone(),
+                    text_fact: Some(text_id.to_string()),
+                    inactive_text_fact: None,
+                };
+                Ok(Compiled {
+                    mutations: vec![
+                        NativeMutation::UpdatePublicationDraft(leafbud_protocol::PublicationMetadata {
+                            title: Some(desired.title.clone()),
+                            ..Default::default()
+                        }),
+                        NativeMutation::AssertFact(leafbud_protocol::AssertFact {
+                            id: Some(text_id),
+                            entity: native_block.entity.parse()?,
+                            attribute: "block/text".into(),
+                            data: serde_json::json!({"type":"text","value":crate::pull::tests::yrs_payload("Leafbud native-effect verification.", None)}),
+                        }),
+                    ],
+                    targets: [(desired.pages[0].key.clone(), native_main), (authored.key.clone(), native_block)].into(),
+                    created_entities: vec![],
+                    allocated_facts: vec![text_id],
+                })
+            })
+            .await?;
+        std::fs::write(dir.join("publication.selected-p1.effect.json"), serde_json::to_vec_pretty(&report)?)?;
+        if report.outcome == RecoveryOutcome::ResolvedPartial {
+            inspect_selected_partial(&remote, &path, &dir).await?;
+        }
+        ensure!(
+            report.outcome == RecoveryOutcome::DesiredVerified && report.settled,
+            "controlled P1 effect not verified; retain pending and inspect, no re-encoding"
+        );
+    } else if source.state.pending.is_some() {
+        let report = remote.recover_native(&context, &path, Selection::default(), true).await?;
+        if report.outcome == RecoveryOutcome::ResolvedPartial {
+            inspect_selected_partial(&remote, &path, &dir).await?;
+        }
+        ensure!(
+            report.outcome == RecoveryOutcome::DesiredVerified && report.settled,
+            "existing P1 push is not fully resolved; no retry/re-encoding"
+        );
+    }
+    let doc = leafbud_mdx::parse(&std::fs::read_to_string(&path)?)?;
+    ensure!(
+        doc.state.id == local_id && doc.state.pending.is_none() && doc.state.sync.is_some(),
+        "P1 source identity/settlement mismatch"
+    );
+    let observed = remote.observe_editor(&doc).await.map_err(|_| anyhow::anyhow!("P1 final observation failed"))?;
+    ensure!(
+        observed.agreement.endpoints_equal && observed.agreement.state == "clean" && observed.data.observed_state() == LeafletState::Draft,
+        "P1 final read-back is not clean unpublished desired state"
+    );
+    for node in doc
+        .state
+        .nodes
+        .values()
+        .filter(|n| matches!(n.occurrence, leafbud_document::Occurrence::Block { .. }))
+    {
+        let entity = node.entity.parse()?;
+        let explicit = remote.client.facts_for_entities(&[entity]).await?;
+        let leafbud_document::Occurrence::Block { text_fact: Some(id), .. } = &node.occurrence else {
+            anyhow::bail!("P1 verified text fact missing")
+        };
+        ensure!(explicit.fact(entity, id.parse()?).is_some(), "P1 explicit known text fact read failed");
+    }
+    let bytes = std::fs::read(&path)?;
+    let mtime = std::fs::metadata(&path)?.modified()?;
+    let pull = remote.refresh_document(&context, &path, Default::default()).await;
+    ensure!(pull.outcome == crate::refresh::Outcome::Unchanged, "P1 pull was not unchanged");
+    let no_op = remote
+        .execute_compiled(&context, &path, Selection::default(), None, |_, _, _| {
+            Ok(Compiled {
+                mutations: vec![],
+                targets: BTreeMap::new(),
+                created_entities: vec![],
+                allocated_facts: vec![],
+            })
+        })
+        .await?;
+    ensure!(
+        no_op.outcome == RecoveryOutcome::DesiredVerified && std::fs::read(&path)? == bytes && std::fs::metadata(&path)?.modified()? == mtime,
+        "P1 repeat was not exact no-op"
+    );
+    std::fs::write(
+        dir.join("publication.selected-p1.evidence.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "selection":"human-selected-P1", "originalMintAttribution":"not-established", "creationCalls":0,
+            "verifiedSeedAndRights":true, "defaultsRecordedInSource":true, "controlledTitleAndText":"verified",
+            "knownTextFactRead":"verified", "wholeDesiredAndProtectedScope":"verified", "pull":"unchanged", "repeat":"byte-and-mtime-noop",
+            "lifecycle":"unpublished-draft", "completeKeyedCompiler":false, "standalone":standalone_report,
+        }))?,
+    )?;
+    eprintln!(
+        "P1: human-selected existing recovery target; verified defaults, controlled text/title, full read-back, known text fact, unchanged pull/repeat; no creation/publication/mail. Standalone remains {:?}, original evidence preserved.",
+        standalone_report.outcome
+    );
+    Ok(())
+}
+
+async fn inspect_selected_partial(remote: &RemoteReader, path: &Path, dir: &Path) -> Result<()> {
+    let source = leafbud_mdx::parse(&std::fs::read_to_string(path)?)?;
+    let binding = source.state.binding.as_ref().context("selected binding")?;
+    let observed = remote.native_observation(binding, source.state.writer.as_ref(), &[]).await?;
+    let fresh = import::build(remote.client.base_url(), &observed.data, &observed.snapshot)?;
+    let mut expected = source.clone();
+    if let Some(Attempt {
+        effect: Effect::Push { targets, .. },
+        ..
+    }) = &source.state.pending
+    {
+        expected.state.nodes.extend(targets.clone());
+    }
+    let actual = crate::editor_state::adopt(&expected, &fresh);
+    expected.state.nodes = actual.state.nodes.clone();
+    let a = expected.editor_value();
+    let b = actual.editor_value();
+    let differences: Vec<_> = a.as_object().context("projection")?.keys().filter(|k| a[*k] != b[*k]).collect();
+    let protection_matches = match source.state.pending.as_ref().map(|a| &a.effect) {
+        Some(Effect::Push { protection, .. }) => protection_hash(&observed, protection) == protection.hash,
+        _ => false,
+    };
+    let mut known_text_facts = 0;
+    for node in actual.state.nodes.values() {
+        if let leafbud_document::Occurrence::Block { text_fact: Some(id), .. } = &node.occurrence {
+            let entity = node.entity.parse()?;
+            let explicit = remote.client.facts_for_entities(&[entity]).await?;
+            ensure!(
+                explicit.fact(entity, id.parse()?).is_some(),
+                "selected partial's known text fact not found through explicit entity read"
+            );
+            known_text_facts += 1;
+        }
+    }
+    std::fs::write(
+        dir.join("publication.selected-p1.comparison.private.json"),
+        serde_json::to_vec_pretty(
+            &serde_json::json!({"expected":a,"actual":b,"differences":differences,"protectedScopeMatches":protection_matches,"explicitKnownTextFacts":known_text_facts}),
+        )?,
+    )?;
+    eprintln!("P1 terminal partial; differing projection fields: {differences:?}; old intent retained, no retry/re-encoding");
     Ok(())
 }

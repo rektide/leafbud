@@ -112,9 +112,11 @@ impl RemoteReader {
         })
     }
 
-    /// Finite observation/settlement only. Never remints, recompiles or replays.
-    /// `settle` permits tracking-only writes with finality AND complete desired
-    /// correspondence. Otherwise the report is read-only and retains evidence.
+    /// Finite observation/preparation/settlement. Never remints or replays.
+    /// For a located mint, `settle` permits guarded first-binding/default source
+    /// preparation, still pending materialization (not `settled`). For a push it
+    /// permits tracking-only settlement with terminal complete correspondence.
+    /// With `settle == false`, observation never changes the source.
     pub async fn recover_native(&self, context: &config::Context, path: &Path, selection: Selection, settle: bool) -> Result<RecoveryReport> {
         let mut source = Source::open(context, path, selection)?;
         self.recover_locked(&mut source, settle).await

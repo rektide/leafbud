@@ -59,12 +59,16 @@ fn narrow_defaults_patch_preserves_explicit_values_trivia_body_and_tracking_guar
         let original = leafbud_mdx::parse(&text).unwrap();
         let mut remote = verified("https://leaflet.pub", false);
         remote.extra.insert("contributors".into(), json!(["did:plc:actual-observed"]));
+        remote.description = Some("native metadata not selected for adoption".into());
+        remote.tags = vec!["native tags are not defaults".into()];
         let prepared = leafbud_mdx::prepare_binding_defaults(&text, &remote).unwrap();
         let after = leafbud_mdx::parse(&prepared).unwrap();
         assert!(prepared.starts_with("\u{feff}---\r\n"));
         assert!(prepared.contains("# author comment\r\ntitle: 'Desired title' # spelling\r\ncustom: {chosen: true}\r\ndate: 2026-11-09\r\n"));
         assert_eq!(prepared.split("---\r\n").nth(2), text.split("---\r\n").nth(2));
         assert_eq!(after.pages, original.pages);
+        assert_eq!(after.description, original.description);
+        assert_eq!(after.tags, original.tags);
         assert_eq!(after.state, original.state, "pure preparation does not settle tracking");
         assert_eq!(after.publication, Publication::Standalone);
         assert_eq!(after.theme.unwrap().leaflet_watermark, !explicit);
@@ -768,4 +772,48 @@ async fn explicit_locator_selection_rejects_stale_attempt_changed_source_replace
         assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
         assert!(server.requests().is_empty());
     }
+}
+
+#[tokio::test]
+async fn bound_explicit_retarget_and_inherit_are_diagnosed_before_compiler_or_push() {
+    for publication in [Publication::Inherit, Publication::At(URI.into())] {
+        let server = EffectServer::new(0, None).await;
+        let temp = tempfile::tempdir().unwrap();
+        let path = server.seed(temp.path());
+        let mut doc = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        doc.publication = publication;
+        let text = leafbud_mdx::render(&doc).unwrap();
+        std::fs::write(&path, &text).unwrap();
+        let error = client(&server.server)
+            .execute_compiled(&old::context(temp.path()), &path, Selection::default(), None, |_, _, _| {
+                panic!("retarget must fail before compilation")
+            })
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("retargeting is unsupported"));
+        assert!(server.server.requests().is_empty());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+    }
+}
+
+#[tokio::test]
+async fn omitted_description_does_not_adopt_or_hide_native_empty_string_on_acknowledged_readback() {
+    let server = EffectServer::new(0, None).await;
+    server.fixture.lock().unwrap()["leaflet_data"]["description"] = "".into();
+    let temp = tempfile::tempdir().unwrap();
+    let path = server.seed(temp.path());
+    let mut doc = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    doc.description = None;
+    std::fs::write(&path, leafbud_mdx::render(&doc).unwrap()).unwrap();
+    let result = client(&server.server)
+        .execute_compiled(&old::context(temp.path()), &path, Selection::default(), None, metadata_compiler(1))
+        .await
+        .unwrap();
+    assert_eq!(result.outcome, write::RecoveryOutcome::ResolvedPartial);
+    assert_eq!(result.acknowledged, Some(1));
+    let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(after.description.is_none());
+    assert_eq!(after.state.sync, doc.state.sync);
+    assert_eq!(after.state.pending.as_ref().unwrap().input_hash, import::hash(&doc.authored_value()));
+    assert_eq!(after.state.pending.as_ref().unwrap().desired_hash, import::hash(&doc.editor_value()));
 }
