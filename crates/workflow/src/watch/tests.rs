@@ -143,7 +143,7 @@ enum Wire {
     Drop,
     Join,
 }
-struct Socket {
+pub(crate) struct Socket {
     project: PublicProject,
     commands: mpsc::UnboundedSender<Wire>,
     joins: Arc<AtomicUsize>,
@@ -153,7 +153,7 @@ struct Socket {
     task: tokio::task::JoinHandle<()>,
 }
 impl Socket {
-    async fn new() -> Self {
+    pub(crate) async fn new() -> Self {
         use base64::Engine;
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -222,7 +222,7 @@ impl Socket {
             task,
         }
     }
-    fn options(&self) -> Options {
+    pub(crate) fn options(&self) -> Options {
         Options {
             project: Some(self.project.clone()),
             rescan: Duration::from_millis(30),
@@ -242,7 +242,7 @@ impl Socket {
             ..Default::default()
         }
     }
-    fn poke(&self) {
+    pub(crate) fn poke(&self) {
         self.commands.send(Wire::Poke).unwrap();
     }
 }
@@ -261,7 +261,7 @@ async fn until(mut test: impl FnMut() -> bool) {
     .await
     .expect("condition deadline");
 }
-async fn outcome(events: &mut mpsc::UnboundedReceiver<Event>, wanted: refresh::Outcome) -> refresh::Report {
+pub(crate) async fn outcome(events: &mut mpsc::UnboundedReceiver<Event>, wanted: refresh::Outcome) -> refresh::Report {
     tokio::time::timeout(Duration::from_secs(6), async {
         loop {
             if let Detail::Document { report, .. } = events.recv().await.expect("watch events").detail
@@ -329,7 +329,7 @@ async fn actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identi
 
 // Event owns only small transition metadata, never remote content. This helper
 // explicitly clones the few variants observed by these tests.
-fn copy_event(event: &Event) -> Event {
+pub(crate) fn copy_event(event: &Event) -> Event {
     Event {
         version: event.version,
         observed_at: event.observed_at,

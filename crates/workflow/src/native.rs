@@ -1,6 +1,6 @@
-//! Native-effect foundation. `stage_binding` mints/verifies a seed and leaves a
-//! pending materialization, NOT a saved desired document. No CLI push is exposed.
-//! The complete compiler joins the internal request runner in `native::write`.
+//! Guarded native saves and finite recovery. `stage_binding` alone leaves a
+//! pending materialization; `save_native` joins the complete pure editor compiler
+//! to preparation, native effects and verified tracking settlement.
 use crate::{RemoteReader, config, files, import, inventory, lock};
 use anyhow::{Context, Result, ensure};
 use leafbud_document::{Attempt, Binding, Document, Effect, MintContext, MintStage, Publication, State};

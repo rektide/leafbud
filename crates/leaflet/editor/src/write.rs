@@ -113,7 +113,7 @@ impl Builder<'_> {
 
 /// Current raw facts remain beside typed meaning; they are not persisted as a
 /// second body. Recreation forks only the selected occurrence's entity.
-pub fn compile(desired: &Document, observed: &Document, facts: &[Value], recreate: &BTreeSet<String>) -> Result<Compiled> {
+pub fn compile(desired: &Document, observed: &Document, facts: &[Value], persisted_title: Option<&str>, recreate: &BTreeSet<String>) -> Result<Compiled> {
     preflight(desired)?;
     let binding = desired.state.binding.as_ref().context("compiler requires a verified binding")?;
     let current = observe(facts, &binding.root, desired.state.id)?;
@@ -139,6 +139,6 @@ pub fn compile(desired: &Document, observed: &Document, facts: &[Value], recreat
     blocks::prepare(&mut builder, &current, recreate)?;
     order::prepare(&mut builder, &current, mint)?;
     pages::references(&mut builder)?;
-    metadata::prepare(&mut builder, observed)?;
+    metadata::prepare(&mut builder, observed, persisted_title)?;
     Ok(builder.result)
 }

@@ -7,6 +7,7 @@ struct Server {
     http: TestServer,
     store: Arc<Mutex<store::Store>>,
     hook: Arc<Mutex<Option<Hook>>>,
+    lose_response: Arc<std::sync::atomic::AtomicBool>,
 }
 type Hook = Box<dyn FnMut(&Recorded, &mut store::Store) + Send>;
 impl Server {
@@ -15,6 +16,8 @@ impl Server {
         let state = store.clone();
         let hook: Arc<Mutex<Option<Hook>>> = Arc::new(Mutex::new(None));
         let action = hook.clone();
+        let lose_response = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let loss = lose_response.clone();
         let http = TestServer::spawn_headers(Arc::new(move |r| match r.path.as_str() {
             "/home" => (200, vec![], home()),
             "/lish/did:plc:synthetic/garden/dashboard" if r.method == "GET" => (200, vec![], "<script src=\"/_next/static/mint.js\"></script>".into()),
@@ -31,11 +34,24 @@ impl Server {
                 if let Some(action) = &mut *action.lock().unwrap() {
                     action(r, &mut state);
                 }
-                (200, vec![], response.to_string())
+                (
+                    if r.path == "/api/rpc/push" && loss.swap(false, Ordering::SeqCst) {
+                        503
+                    } else {
+                        200
+                    },
+                    vec![],
+                    response.to_string(),
+                )
             }
         }))
         .await;
-        Self { http, store, hook }
+        Self {
+            http,
+            store,
+            hook,
+            lose_response,
+        }
     }
     fn reader(&self) -> RemoteReader {
         client(&self.http)
@@ -610,4 +626,221 @@ async fn desired_visible_without_writer_finality_stays_pending_on_restart() {
     assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "pending");
     assert_eq!(std::fs::read(&path).unwrap(), text);
     assert_eq!(server.store.lock().unwrap().pushes, pushes);
+}
+
+#[tokio::test]
+async fn connected_follower_preserves_actual_pending_save_then_adopts_a_native_remote_save() {
+    async fn writable(server: &Server, root: &Path, path: &Path) -> SaveReport {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                match server
+                    .reader()
+                    .save_native(
+                        &old::context(root),
+                        path,
+                        Selection::default(),
+                        SaveOptions {
+                            yes: true,
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                {
+                    Ok(result) => break result,
+                    Err(error) if error.to_string().contains("document busy") => tokio::time::sleep(std::time::Duration::from_millis(5)).await,
+                    Err(error) => panic!("save failed: {error:#}"),
+                }
+            }
+        })
+        .await
+        .expect("writer receives cooperative lock")
+    }
+    use crate::{
+        refresh::Outcome,
+        watch::{
+            self,
+            tests::{Socket, copy_event, outcome},
+        },
+    };
+    let server = Server::new(true).await;
+    let socket = Socket::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = source(temp.path());
+    assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "saved");
+    let context = old::context(temp.path());
+    let reader = server.reader();
+    let (cancel, receiver) = tokio::sync::watch::channel(false);
+    let (tx, mut events) = tokio::sync::mpsc::unbounded_channel();
+    let run = reader.watch(
+        &context,
+        watch::Request {
+            files: vec![path.clone()],
+            all: false,
+        },
+        socket.options(),
+        receiver,
+        |event| {
+            tx.send(copy_event(event)).unwrap();
+            Ok(())
+        },
+    );
+    let actions = async {
+        outcome(&mut events, Outcome::Unchanged).await;
+        let mut desired = read(&path);
+        desired.pages[0].blocks[1] = paragraph("B", "Local saved revision");
+        write(&path, &desired);
+        server.store.lock().unwrap().no_ack = true;
+        assert_eq!(writable(&server, temp.path(), &path).await.outcome, "pending");
+        let pending = std::fs::read(&path).unwrap();
+        socket.poke();
+        outcome(&mut events, Outcome::Pending).await;
+        assert_eq!(std::fs::read(&path).unwrap(), pending, "follower must not adopt away the real unresolved save");
+        let doc = read(&path);
+        let writer = doc.state.writer.as_ref().unwrap();
+        {
+            let mut store = server.store.lock().unwrap();
+            store.no_ack = false;
+            store
+                .acks
+                .entry(writer.client_group_id.to_string())
+                .or_default()
+                .insert(writer.client_id.to_string(), writer.next_mutation_id - 1);
+        }
+        assert_eq!(writable(&server, temp.path(), &path).await.outcome, "saved");
+        socket.poke();
+        outcome(&mut events, Outcome::Unchanged).await;
+        let doc = read(&path);
+        let node = &doc.state.nodes["B"];
+        let entity: Uuid = node.entity.parse().unwrap();
+        let (id, base) = {
+            let store = server.store.lock().unwrap();
+            let row = store.one(&node.entity, "block/text").unwrap();
+            (
+                row["id"].as_str().unwrap().parse::<Uuid>().unwrap(),
+                row["data"]["value"].as_str().unwrap().to_owned(),
+            )
+        };
+        let payload = leafbud_editor::write_text(
+            Some(&base),
+            &[Inline::Run {
+                text: "Remote native saved change".into(),
+                marks: vec![Mark::Strong],
+            }],
+        )
+        .unwrap()
+        .unwrap();
+        let binding = doc.state.binding.as_ref().unwrap();
+        let target = leafbud_protocol::Target {
+            token: binding.token,
+            root: binding.root.parse().unwrap(),
+            entity_set: binding.entity_set.parse().unwrap(),
+        };
+        let writer = leafbud_protocol::Writer {
+            client_id: Uuid::new_v4(),
+            client_group_id: Uuid::new_v4(),
+        };
+        let request = leafbud_protocol::encode_pushes(
+            target,
+            writer,
+            1,
+            0,
+            &[NativeMutation::AssertFact(leafbud_protocol::AssertFact {
+                id: Some(id),
+                entity,
+                attribute: "block/text".into(),
+                data: json!({"type":"text","value":payload}),
+            })],
+            &leafbud_protocol::WriteScope {
+                entities: [entity].into(),
+                facts: [id].into(),
+                publication: true,
+            },
+            Default::default(),
+        )
+        .unwrap();
+        let client = leafbud_web::LeafletClient::new(&server.http.base_url, Some("synthetic")).unwrap();
+        client.send_push(&request[0]).await.unwrap();
+        socket.poke();
+        outcome(&mut events, Outcome::Updated).await;
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("Remote native saved change"));
+        assert_eq!(read(&path).state.nodes["B"], doc.state.nodes["B"]);
+        assert_eq!(writable(&server, temp.path(), &path).await.outcome, "unchanged");
+        cancel.send_replace(true);
+    };
+    let (report, ()) = tokio::join!(run, actions);
+    assert_eq!(report.unwrap().writes, 1);
+}
+
+#[tokio::test]
+async fn acknowledged_unrepresentable_intermediate_graph_is_partial_not_a_fresh_plan() {
+    let server = Server::new(true).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = source(temp.path());
+    assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "saved");
+    let mut desired = read(&path);
+    let old_receipt = desired.state.sync.clone();
+    desired.pages[0].blocks.push(paragraph("D", "New block with a skipped native kind assertion"));
+    write(&path, &desired);
+    *server.hook.lock().unwrap() = Some(Box::new(|request, store| {
+        if request.path == "/api/rpc/push" {
+            let body = request.body_json();
+            let kind = body["pushRequest"]["mutations"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|m| m["name"] == "assertFact" && m["args"]["attribute"] == "block/type")
+                .unwrap()["args"]["id"]
+                .as_str()
+                .unwrap()
+                .to_owned();
+            store.facts.remove(&kind);
+        }
+    }));
+    let result = save(&server, temp.path(), &path, true).await;
+    assert_eq!(result.outcome, "partial", "{result:?}");
+    assert_eq!(read(&path).state.sync, old_receipt);
+    let pushes = server.store.lock().unwrap().pushes;
+    assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "pending");
+    assert_eq!(server.store.lock().unwrap().pushes, pushes);
+}
+
+#[tokio::test]
+async fn full_keyed_request_loss_retries_identical_bytes_without_duplicate_objects() {
+    let server = Server::new(true).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = source(temp.path());
+    server.lose_response.store(true, Ordering::SeqCst);
+    let result = save(&server, temp.path(), &path, true).await;
+    assert_eq!(result.outcome, "saved", "{result:?}");
+    let requests: Vec<_> = server.http.requests().into_iter().filter(|r| r.path == "/api/rpc/push").collect();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].body, requests[1].body, "same Yrs bytes, IDs, group and mutation reservation");
+    assert_eq!(read(&path).pages[0].blocks.len(), 3);
+    assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "unchanged");
+    assert_eq!(server.http.request_count("/api/rpc/push"), 2);
+}
+
+#[tokio::test]
+async fn display_title_fallback_is_not_a_persisted_metadata_noop() {
+    for publication in [false, true] {
+        let server = Server::new(publication).await;
+        let temp = tempfile::tempdir().unwrap();
+        let path = source(temp.path());
+        let text = std::fs::read_to_string(&path).unwrap().replace("Desired title", "Untitled");
+        std::fs::write(&path, text).unwrap();
+        assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "saved");
+        {
+            let stored = server.store.lock().unwrap();
+            assert_eq!(
+                if publication {
+                    stored.extras.get("publication_title").cloned().unwrap_or_default()
+                } else {
+                    stored.data["title"].clone()
+                },
+                json!("Untitled")
+            );
+        }
+        assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "unchanged");
+    }
 }

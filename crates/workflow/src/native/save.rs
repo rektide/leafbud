@@ -47,6 +47,16 @@ fn effects(mutations: &[NativeMutation]) -> BTreeMap<String, usize> {
     result
 }
 
+fn compile(desired: &Document, data: &LeafletData, snapshot: &PullSnapshot, recreate: &BTreeSet<String>) -> Result<leafbud_editor::write::Compiled> {
+    let current = import::build(&desired.state.binding.as_ref().context("binding")?.base_url, data, snapshot)?;
+    let persisted_title = if desired.state.binding.as_ref().expect("above").publication.is_some() {
+        snapshot.extras.get("publication_title").and_then(serde_json::Value::as_str)
+    } else {
+        data.metadata.title.as_deref()
+    };
+    leafbud_editor::write::compile(desired, &current, &snapshot.facts, persisted_title, recreate)
+}
+
 impl RemoteReader {
     pub async fn save_native(&self, context: &config::Context, path: &Path, selection: Selection, options: SaveOptions) -> Result<SaveReport> {
         let mut source = Source::open(context, path, selection)?;
@@ -58,7 +68,18 @@ impl RemoteReader {
         }
         let mut summary = BTreeMap::new();
         if source.document.state.pending.is_some() {
-            let recovered = self.recover_locked(&mut source, options.yes).await?;
+            let recovered = match self.recover_locked(&mut source, options.yes).await {
+                Ok(result) => result,
+                Err(error) => {
+                    return Ok(SaveReport {
+                        outcome: "pending",
+                        effects: summary,
+                        message: Some(format!(
+                            "prior attempt retained; observation/settlement unavailable, no new request compiled: {error:#}"
+                        )),
+                    });
+                }
+            };
             match recovered.outcome {
                 RecoveryOutcome::DesiredVerified => {
                     return Ok(SaveReport {
@@ -127,8 +148,7 @@ impl RemoteReader {
         }
         if !options.yes {
             let desired = prepared(&source.text)?;
-            let current = import::build(self.client.base_url(), &before.data, &before.snapshot)?;
-            let compiled = leafbud_editor::write::compile(&desired, &current, &before.snapshot.facts, &options.recreate)?;
+            let compiled = compile(&desired, &before.data, &before.snapshot, &options.recreate)?;
             write::protection(&before, &compiled)?;
             return Ok(SaveReport {
                 outcome: if compiled.mutations.is_empty() { "unchanged" } else { "would-save" },
@@ -138,12 +158,22 @@ impl RemoteReader {
         }
         let result = self
             .execute_locked(&mut source, options.take_local.then_some(witness.as_str()), |desired, data, snapshot| {
-                let current = import::build(self.client.base_url(), data, snapshot)?;
-                let compiled = leafbud_editor::write::compile(desired, &current, &snapshot.facts, &options.recreate)?;
+                let compiled = compile(desired, data, snapshot, &options.recreate)?;
                 summary.extend(effects(&compiled.mutations));
                 Ok(compiled)
             })
-            .await?;
+            .await;
+        let result = match result {
+            Ok(result) => result,
+            Err(error) if source.document.state.pending.is_some() => {
+                return Ok(SaveReport {
+                    outcome: "pending",
+                    effects: summary,
+                    message: Some(format!("known native attempt retained; no independent replan: {error:#}")),
+                });
+            }
+            Err(error) => return Err(error),
+        };
         Ok(SaveReport {
             outcome: match result.outcome {
                 RecoveryOutcome::DesiredVerified => {

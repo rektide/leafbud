@@ -537,4 +537,4 @@ fn emit_document(emit: &mut impl FnMut(&Event) -> Result<()>, entry: &mut Entry,
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

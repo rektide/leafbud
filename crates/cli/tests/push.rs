@@ -191,3 +191,153 @@ async fn cli_decision_partial_recreation_and_usage_contracts() {
         Some(1)
     );
 }
+
+/// No creation route is called: the source MUST already be the settled,
+/// human-selected P1. Both old creation slots stay consumed and standalone stays
+/// byte/mtime untouched. All locators/content evidence is private ignored data.
+#[tokio::test]
+#[ignore = "requires existing selected P1 edit authorization; never creates a draft"]
+async fn authorized_selected_p1_complete_bound_cli_save() {
+    use leafbud_document::{Block, BlockKind, Inline, Mark};
+    assert_eq!(std::env::var("LEAFBUD_KEYED_PROBE").as_deref(), Ok("authorized-selected-p1"));
+    let root = std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.test-agent/native-effects")).unwrap();
+    let dir = root.join("deployed");
+    let path = dir.join("publication.mdx");
+    let budgets = [dir.join("standalone.started"), dir.join("publication.started")];
+    let budget_bytes = [std::fs::read(&budgets[0]).unwrap(), std::fs::read(&budgets[1]).unwrap()];
+    let standalone = dir.join("standalone.mdx");
+    let standalone_bytes = std::fs::read(&standalone).unwrap();
+    let standalone_mtime = std::fs::metadata(&standalone).unwrap().modified().unwrap();
+    let catalogue: Value = serde_json::from_slice(&std::fs::read(root.join("recovery-candidates/catalogue.private.json")).unwrap()).unwrap();
+    let candidate = catalogue["candidates"].as_array().unwrap().iter().find(|c| c["label"] == "P1").unwrap();
+    let original_source = std::fs::read_to_string(&path).unwrap();
+    let original = leafbud_mdx::parse(&original_source).unwrap();
+    assert!(original.state.pending.is_none() && original.state.sync.is_some());
+    let binding = original.state.binding.clone().expect("P1 must be already bound: NO MINT");
+    assert_eq!(binding.token.to_string(), candidate["token"].as_str().unwrap());
+    assert_eq!(original.pages.len(), 1);
+    assert_eq!(original.pages[0].blocks.len(), 1);
+    let baseline_evidence = dir.join("publication.keyed-before.private.json");
+    assert!(
+        !baseline_evidence.exists(),
+        "proof already started; inspect actual source/pending rather than rerun or recreate old intent"
+    );
+    std::fs::write(&baseline_evidence,serde_json::to_vec_pretty(&json!({"session":"opencode://ses_e3d96851dffeS2cPD2vPHjGklF","source":original_source,"binding":binding,"originalMintAttribution":"not-established; human-selected-P1"})).unwrap()).unwrap();
+    async fn live(dir: &Path, args: &[&str]) -> Value {
+        let output = Command::new(env!("CARGO_BIN_EXE_leafbud"))
+            .arg("--root")
+            .arg(dir)
+            .args(args)
+            .output()
+            .await
+            .unwrap();
+        std::fs::write(dir.join(format!("publication.keyed-{}.stdout.private.json", args[0])), &output.stdout).unwrap();
+        assert!(output.status.success(), "CLI failed; inspect private stdout/source; no replan/remint");
+        serde_json::from_slice(&output.stdout).unwrap()
+    }
+    let a = original.pages[0].blocks[0].key.clone();
+    let b = format!("b-keyed-{}", leafbud_document::Uuid::new_v4());
+    let c = format!("b-keyed-{}", leafbud_document::Uuid::new_v4());
+    let paragraph = |key: &str, text: &str| Block {
+        key: key.into(),
+        kind: BlockKind::Paragraph {
+            content: vec![Inline::Run {
+                text: text.into(),
+                marks: vec![],
+            }],
+        },
+    };
+    let mut baseline = original.clone();
+    baseline.pages[0].blocks = vec![
+        original.pages[0].blocks[0].clone(),
+        paragraph(&b, "Bravo and delta."),
+        paragraph(&c, "Charlie retained when detached."),
+    ];
+    let baseline_source = leafbud_mdx::render(&baseline).unwrap();
+    std::fs::write(&path, &baseline_source).unwrap();
+    let preview = live(&dir, &["push", "publication.mdx", "--json"]).await;
+    assert_eq!(preview["items"][0]["outcome"], "would-save");
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), baseline_source);
+    let first_report = live(&dir, &["push", "publication.mdx", "--yes", "--json"]).await;
+    assert_eq!(first_report["items"][0]["outcome"], "saved");
+    let first = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(first.state.nodes[&a], original.state.nodes[&a]);
+    assert_eq!(first.state.binding, Some(binding.clone()));
+    assert_eq!(first.state.id, original.state.id);
+    let h = format!("b-keyed-{}", leafbud_document::Uuid::new_v4());
+    let d = format!("b-keyed-{}", leafbud_document::Uuid::new_v4());
+    let mut revised = first.clone();
+    revised.pages[0].blocks = vec![
+        Block {
+            key: h.clone(),
+            kind: BlockKind::Heading {
+                level: 2,
+                content: vec![Inline::Run {
+                    text: "Keyed save verification, not the title".into(),
+                    marks: vec![],
+                }],
+            },
+        },
+        Block {
+            key: b.clone(),
+            kind: BlockKind::Paragraph {
+                content: vec![
+                    Inline::Run {
+                        text: "Bravo é😀e\u{301}".into(),
+                        marks: vec![
+                            Mark::Strong,
+                            Mark::Link {
+                                href: "https://example.test/keyed".into(),
+                            },
+                        ],
+                    },
+                    Inline::HardBreak,
+                    Inline::Run {
+                        text: "retained paragraph and text fact".into(),
+                        marks: vec![Mark::Em],
+                    },
+                ],
+            },
+        },
+        paragraph(&d, "Delta split into a new keyed block."),
+        first.pages[0].blocks[0].clone(),
+    ];
+    let revised_source = leafbud_mdx::render(&revised).unwrap();
+    std::fs::write(&path, &revised_source).unwrap();
+    let preview2 = live(&dir, &["push", "publication.mdx", "--json"]).await;
+    assert_eq!(preview2["items"][0]["outcome"], "would-save");
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), revised_source);
+    let revised_report = live(&dir, &["push", "publication.mdx", "--yes", "--json"]).await;
+    assert_eq!(revised_report["items"][0]["outcome"], "saved");
+    let final_source = std::fs::read_to_string(&path).unwrap();
+    let final_doc = leafbud_mdx::parse(&final_source).unwrap();
+    assert_eq!(final_doc.state.binding, Some(binding));
+    assert_eq!(final_doc.state.id, original.state.id);
+    assert_eq!(final_doc.title, original.title);
+    for key in [&a, &b] {
+        assert_eq!(final_doc.state.nodes[key], first.state.nodes[key]);
+    }
+    assert!(!final_doc.state.nodes.contains_key(&c));
+    assert_eq!(final_doc.pages[0].blocks.iter().map(|b| &b.key).collect::<Vec<_>>(), vec![&h, &b, &d, &a]);
+    let before = std::fs::read(&path).unwrap();
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let pull = live(&dir, &["pull", "publication.mdx", "--json"]).await;
+    assert_eq!(pull["unchanged"], 1);
+    let repeat = live(&dir, &["push", "publication.mdx", "--yes", "--json"]).await;
+    assert_eq!(repeat["items"][0]["outcome"], "unchanged");
+    assert_eq!(repeat["items"][0]["effects"], json!({}));
+    let status = live(&dir, &["status", "publication.mdx", "--json"]).await;
+    assert_eq!(status["items"][0]["outcome"], "clean");
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+    assert_eq!(std::fs::read(&standalone).unwrap(), standalone_bytes);
+    assert_eq!(std::fs::metadata(&standalone).unwrap().modified().unwrap(), standalone_mtime);
+    for i in 0..2 {
+        assert_eq!(std::fs::read(&budgets[i]).unwrap(), budget_bytes[i]);
+    }
+    std::fs::write(dir.join("publication.keyed-proof.private.json"),serde_json::to_vec_pretty(&json!({
+        "session":"opencode://ses_e3d96851dffeS2cPD2vPHjGklF","baseline":first_report,"revision":revised_report,"previewBaseline":preview,"previewRevision":preview2,
+        "retainedNodes":[&a,&b],"droppedNode":c,"detachedEntity":first.state.nodes[&c].entity,"finalDocument":final_doc,"pull":pull,"repeat":repeat,"status":status,
+        "draftCreationCalls":0,"standaloneUntouched":true,"budgetsUnchanged":true,"lifecycle":"unpublished-draft","originalMintAttribution":"not-established; human-selected-P1"
+    })).unwrap()).unwrap();
+}

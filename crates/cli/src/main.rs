@@ -50,7 +50,7 @@ mod watch;
 #[command(
     name = "leafbud",
     version,
-    about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, status, guarded pull, check and config)"
+    about = "Local-first MDX authoring for leaflet.pub (keyed editor saves, guarded pull, connected watch, diff and native reads)"
 )]
 struct Cli {
     /// Document workspace: explicit root > global workspace setting > cwd

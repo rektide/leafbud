@@ -2,13 +2,14 @@ use super::*;
 use leafbud_document::canonical_description;
 use leafbud_protocol::{LeafletMetadata, PublicationMetadata};
 
-pub(super) fn prepare(builder: &mut Builder<'_>, current: &Document) -> Result<()> {
+pub(super) fn prepare(builder: &mut Builder<'_>, current: &Document, persisted_title: Option<&str>) -> Result<()> {
     let desired = builder.desired;
     ensure!(
         desired.extra.get("contributors") == current.extra.get("contributors"),
         "contributor permission edits are unsupported"
     );
-    let title = (desired.title != current.title).then(|| desired.title.clone());
+    // The reader's display fallback (e.g. Untitled) is not persisted metadata.
+    let title = (Some(desired.title.as_str()) != persisted_title).then(|| desired.title.clone());
     let description = canonical_description(desired.description.as_deref());
     let description_changed = description != canonical_description(current.description.as_deref());
     if desired.state.binding.as_ref().expect("bound").publication.is_some() {

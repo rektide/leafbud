@@ -1,5 +1,5 @@
-//! Compiler receiving seam. Kept crate-private until the COMPLETE keyed
-//! compiler is commissioned/joined; there is deliberately no narrow public push.
+//! Native request execution and terminal achievement verification. The public
+//! save workflow supplies the complete pure editor compiler, not arbitrary bytes.
 use super::*;
 use leafbud_document::{EDITOR_PROFILE, Node, Protection, PushStage, Sync, WriterState};
 use leafbud_protocol::{BatchLimits, NativeMutation, Target, WriteScope, Writer};
@@ -257,9 +257,9 @@ impl RemoteReader {
         }
     }
 
-    /// Internal compiler join. No public CLI or caller-supplied encoded bytes.
-    /// Essential drift/complete-request/read-back gates apply in this seam now.
-    #[allow(dead_code)] // Joined to the complete public save workflow in the compiler batch.
+    /// Controlled compiler seam for protocol/failure fixtures and opt-in probes.
+    /// Production callers use save_native, which supplies the full compiler.
+    #[cfg(test)]
     pub(crate) async fn execute_compiled(
         &self,
         context: &config::Context,
@@ -415,8 +415,14 @@ impl RemoteReader {
         match self.recover_locked(source, true).await {
             Ok(result) => Ok(result),
             Err(error) => {
-                let mut result = report(if source.check().is_err() { RecoveryOutcome::SourceChanged } else { RecoveryOutcome::Uncertain });
-                result.message = Some(format!("request may have applied; pending evidence retained after read-back failure: {error:#}"));
+                let mut result = report(if source.check().is_err() {
+                    RecoveryOutcome::SourceChanged
+                } else {
+                    RecoveryOutcome::Uncertain
+                });
+                result.message = Some(format!(
+                    "request may have applied; pending evidence retained after read-back failure: {error:#}"
+                ));
                 Ok(result)
             }
         }
@@ -427,12 +433,31 @@ impl RemoteReader {
 // applied graph that the complete typed content observer correctly rejects.
 // Compilation and desired verification separately require supported full meaning.
 fn observed_binding(binding: &Binding, data: &LeafletData, snapshot: &PullSnapshot) -> Result<()> {
-    ensure!(data.metadata.id == binding.token && data.metadata.root_entity.as_deref() == Some(binding.root.as_str()), "native origin/token/root changed");
-    ensure!(data.observed_state() == LeafletState::Draft && import::association(data)? == binding.publication, "native lifecycle/publication changed");
-    let sets: BTreeSet<_> = data.metadata.permission_token_rights.iter().filter(|r| r.read == Some(true)).filter_map(|r| r.entity_set.as_deref()).collect();
+    ensure!(
+        data.metadata.id == binding.token && data.metadata.root_entity.as_deref() == Some(binding.root.as_str()),
+        "native origin/token/root changed"
+    );
+    ensure!(
+        data.observed_state() == LeafletState::Draft && import::association(data)? == binding.publication,
+        "native lifecycle/publication changed"
+    );
+    let sets: BTreeSet<_> = data
+        .metadata
+        .permission_token_rights
+        .iter()
+        .filter(|r| r.read == Some(true))
+        .filter_map(|r| r.entity_set.as_deref())
+        .collect();
     ensure!(sets == BTreeSet::from([binding.entity_set.as_str()]), "native readable entity set changed");
-    let entries: Vec<_> = snapshot.facts.iter().filter(|r| r["entity"] == binding.root && r["attribute"] == "root/page").collect();
-    ensure!(entries.len() == 1 && entries[0]["id"] == binding.entry_fact && entries[0]["data"]["type"] == "ordered-reference", "native entry identity changed");
+    let entries: Vec<_> = snapshot
+        .facts
+        .iter()
+        .filter(|r| r["entity"] == binding.root && r["attribute"] == "root/page")
+        .collect();
+    ensure!(
+        entries.len() == 1 && entries[0]["id"] == binding.entry_fact && entries[0]["data"]["type"] == "ordered-reference",
+        "native entry identity changed"
+    );
     Ok(())
 }
 
@@ -442,7 +467,6 @@ fn wire_writer(writer: &WriterState) -> Writer {
         client_id: writer.client_id,
     }
 }
-#[allow(dead_code)]
 fn wire_target(binding: &Binding) -> Result<Target> {
     Ok(Target {
         token: binding.token,
@@ -451,7 +475,6 @@ fn wire_target(binding: &Binding) -> Result<Target> {
     })
 }
 
-#[allow(dead_code)]
 fn scope(before: &Observation, compiled: &Compiled, binding: &Binding) -> Result<WriteScope> {
     let mut scope = WriteScope {
         publication: binding.publication.is_some(),
@@ -469,7 +492,6 @@ fn scope(before: &Observation, compiled: &Compiled, binding: &Binding) -> Result
     Ok(scope)
 }
 
-#[allow(dead_code)]
 pub(super) fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
     let mut facts = BTreeSet::new();
     let mut fields = BTreeSet::new();
