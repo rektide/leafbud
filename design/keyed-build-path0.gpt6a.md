@@ -767,3 +767,11 @@ operator's subsequent choices: explicitly adopt verified omitted native defaults
 into first-bound source, and inspect publication candidates read-only for human
 selection. Separate Sol sessions own those follow-ups; complete compiler/save
 acceptance remains open.
+
+The operator selected P1 as the existing publication verification draft. The
+[0.15 default-adoption checkpoint](native-default-adoption0.gpt61s.md) implements
+that explicit locator recovery and verified source defaults; P1's controlled
+title/text effects are acknowledged. A description-only terminal mismatch is
+receiving a narrow correction under the existing clear semantics (absent/null/
+empty string), followed by create-free recovery. Neither additional creation nor
+retroactive mutation of dispatched intent is part of that correction.

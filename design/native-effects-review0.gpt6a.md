@@ -12,6 +12,10 @@ sources:
     title: "Reviewed native-effect code and deployment outcomes; after restart recovered unanswered decisions, obtained explicit default-adoption and read-only candidate-inspection selections, and dispatched independent follow-ups"
   - resource: /design/native-effects0.gpt61s.md
     title: "Implementation checkpoint, 249-test gate and exact deployed evidence limits"
+  - resource: /design/native-default-adoption0.gpt61s.md
+    title: "Implemented explicit defaults/selected-locator checkpoint at 0.15, 262-test gate and P1 description-only terminal partial"
+  - resource: /design/frontmatter0.gpt61s.md
+    title: "Existing description contract: missing/null and empty string represent the same clear intent"
   - resource: /design/keyed-build-path0.gpt6a.md
     title: "Accepted build sequence and two-draft verification authorization"
   - resource: /design/keyed-edit-flows0.gpt6a.md
@@ -149,6 +153,34 @@ The active default-adoption Sol session also owns the narrow supplied-locator
 recovery transition and create-free controlled proof on P1. Publication pending
 state can now advance from uncertain dispatch to known locator/binding through
 that explicit selection. Both authorized creation slots remain consumed.
+
+### Default-adoption return and description correction
+
+The [0.15.0 implementation](native-default-adoption0.gpt61s.md) returned through
+`62713512`, with 262 passing regular tests, narrow source default/publication
+preparation and explicit caller-selected locator recovery. The actual P1 source
+now has verified defaults; controlled title/text writes reached acknowledgment 2,
+with intended associations and protected scope confirmed. It remains terminal
+partial solely because source description absence differs from native empty
+string under the current projection. No receipt was fabricated.
+
+The existing [description contract](frontmatter0.gpt61s.md#3-author-fields-current-document-not-protocol-envelope-copies)
+already permits missing/null/empty string to express **clearing**. Parent selects
+that representation equivalence consistently for native/editor comparison and
+normalized human views. It is not native-default adoption: omission must still
+clear a nonempty remote description. Nonempty strings, including whitespace-only
+strings, retain their exact meaning. Conservative remote witnesses retain actual
+raw metadata; equivalent source spelling should not be rewritten merely to settle
+receipts.
+
+The same Sol session is implementing this bounded correction. P1's original
+authored description was absent, so its original pending input/desired hashes
+must remain unchanged before normal recovery can recognize the clear intent as
+achieved. No dispatched fingerprints may be rewritten to make it pass. The
+create-free proof should use observation and tracking settlement, with no repeated
+push or CRDT initialization. The old standalone theme partial remains separate
+read-only evidence; a general terminal accept/replan capability is not required
+just to normalize description clearing.
 
 ## Current commissions and next join
 
