@@ -9,6 +9,9 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+#[path = "defaults_tests.rs"]
+mod defaults;
+
 const TOKEN: &str = "01999000-0000-7aaa-8000-000000000001";
 const ROOT: &str = "11111111-1111-4111-8111-111111111111";
 const PAGE: &str = "22222222-2222-4222-8222-222222222222";
@@ -117,6 +120,15 @@ async fn both_mint_contexts_checkpoint_before_effect_keep_uuid_keys_and_seed_pen
             if publication { Some(URI) } else { None }
         );
         assert!(doc.state.sync.is_none() && doc.state.nodes.is_empty());
+        assert_eq!(doc.publication, if publication { Publication::At(URI.into()) } else { Publication::Standalone });
+        assert!(doc.theme.as_ref().is_some_and(|theme| theme.leaflet_watermark));
+        assert_eq!(
+            doc.extra.get("contributors").cloned(),
+            if publication { Some(json!(["did:plc:contributor-default"])) } else { None }
+        );
+        let attempt = doc.state.pending.as_ref().unwrap();
+        assert_eq!(attempt.input_hash, import::hash(&doc.authored_value()));
+        assert_eq!(attempt.desired_hash, import::hash(&doc.editor_value()));
         assert!(after.ends_with("Desired prose, untouched.\n"));
         assert!(reader.stage_binding(&context, &path, Selection::default()).await.is_err());
         assert_eq!(

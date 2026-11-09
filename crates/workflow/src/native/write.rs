@@ -167,10 +167,9 @@ impl RemoteReader {
                 if let Some(existing) = &source.document.state.binding {
                     ensure!(existing == &binding, "pending mint binding changed");
                 }
-                if settle && source.document.state.binding.is_none() {
-                    let mut state = source.document.state.clone();
-                    state.binding = Some(binding);
-                    source.checkpoint(state)?;
+                if settle {
+                    let verified = import::build(base_url, &confirmed, &snapshot)?;
+                    source.prepare_binding(&verified)?;
                 }
                 // Seed/binding achievement is not authored materialization.
                 Ok(report(RecoveryOutcome::PendingMaterialization))
@@ -250,6 +249,7 @@ impl RemoteReader {
         compile: impl FnOnce(&Document, &LeafletData, &PullSnapshot) -> Result<Compiled>,
     ) -> Result<RecoveryReport> {
         let mut source = Source::open(context, path, selection)?;
+        validate_binding_intent(&source.text)?;
         let mint = match source.document.state.pending.clone() {
             None => None,
             Some(attempt)
@@ -274,6 +274,11 @@ impl RemoteReader {
             .binding
             .clone()
             .context("binding/materialization compiler join required")?;
+        ensure!(
+            source.document.publication == binding.publication.clone().map(Publication::At).unwrap_or(Publication::Standalone)
+                || mint.is_some() && source.document.publication == Publication::Inherit,
+            "source publication differs from confirmed binding; retargeting is unsupported, no push sent"
+        );
         let mut writer = source.document.state.writer.clone().unwrap_or_else(WriterState::fresh);
         let before = self.native_observation(&binding, Some(&writer), &[]).await?;
         source.check()?;
@@ -287,7 +292,14 @@ impl RemoteReader {
                 verify_seed(self.client.base_url(), &before.data, &before.snapshot, publication)? == binding,
                 "mint seed changed before first materialization"
             );
+            let verified = import::build(self.client.base_url(), &before.data, &before.snapshot)?;
+            source.prepare_binding(&verified)?;
         }
+        let observed = import::build(self.client.base_url(), &before.data, &before.snapshot)?;
+        ensure!(
+            source.document.extra.get("contributors") == observed.extra.get("contributors"),
+            "explicit contributor changes are unsupported by the native save vocabulary; authored values preserved, no push sent"
+        );
         ensure!(
             mint.is_some()
                 || decision_witness == Some(hash.as_str())
@@ -520,8 +532,6 @@ fn verify_desired(existing: &Document, targets: &BTreeMap<String, Node>, observe
     // Retired rows are removed only after the whole current graph proves their
     // placements absent. The local UUID/mainPage/authored fields stay unchanged.
     expected.state.nodes = merged.state.nodes.clone();
-    let binding = expected.state.binding.as_ref().expect("binding");
-    expected.publication = binding.publication.clone().map(Publication::At).unwrap_or(Publication::Standalone);
     ensure!(
         expected.editor_value() == merged.editor_value(),
         "current native meaning/order/metadata does not equal complete desired source"

@@ -278,6 +278,62 @@ pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     Ok(result)
 }
 
+/// First-binding preparation ONLY: make the verified publication association
+/// explicit and copy native theme/bylines only where the source field is absent.
+/// This does not adopt seed prose, keys, tracking, title, description or tags.
+/// The caller must verify the native seed/rights and previous attempt hashes,
+/// then atomically persist this result AND updated mint hashes/binding. Never
+/// persist the intermediate string with the old hashes or use it after a push.
+pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<String> {
+    let existing = parse(source)?;
+    let binding = verified.state.binding.as_ref().context("verified native binding missing")?;
+    let attempt = existing.state.pending.as_ref().context("default preparation requires a located mint")?;
+    ensure!(
+        matches!(&attempt.effect, Effect::Mint { base_url, publication, stage: MintStage::Located { token } }
+            if base_url == &binding.base_url && publication.publication() == binding.publication.as_deref() && *token == binding.token)
+            && existing.state.writer.is_none()
+            && existing.state.sync.is_none(),
+        "defaults can only be prepared before native content writes"
+    );
+    ensure!(
+        existing.state.binding.as_ref().is_none_or(|before| before == binding),
+        "default preparation cannot rebind"
+    );
+    let publication = binding.publication.clone().map(Publication::At).unwrap_or(Publication::Standalone);
+    ensure!(
+        existing.publication == Publication::Inherit || existing.publication == publication,
+        "explicit publication differs from verified binding"
+    );
+    let header = super::header(source)?;
+    let mut expected = existing.clone();
+    let (mut lines, body) = split_managed(source)?;
+    if header.get("theme").is_none() {
+        if let Some(theme) = &verified.theme {
+            expected.theme = Some(theme.clone());
+            patch_key(&mut lines, "theme", &Patch::Set(json!(theme)))?;
+        }
+    } else {
+        ensure!(!header["theme"].is_null(), "explicit theme null has no supported native meaning");
+    }
+    if let Some(contributors) = header.get("contributors") {
+        let _: Vec<String> =
+            serde_json::from_value(contributors.clone()).context("explicit contributors must be a list; null has no supported native meaning")?;
+    } else if let Some(contributors) = verified.extra.get("contributors") {
+        let _: Vec<String> = serde_json::from_value(contributors.clone()).context("invalid verified contributors")?;
+        expected.extra.insert("contributors".into(), contributors.clone());
+        patch_key(&mut lines, "contributors", &Patch::Set(contributors.clone()))?;
+    }
+    if existing.publication != publication {
+        patch_key(&mut lines, "publication", &Patch::Set(json!(binding.publication)))?;
+        expected.publication = publication;
+    }
+    let result = reassemble(source, &lines, &body);
+    let parsed = parse(&result).context("binding-default preparation validation")?;
+    ensure!(parsed == expected, "binding-default preparation changed unrelated content/tracking");
+    ensure!(split_managed(&result)?.1 == body, "binding-default preparation changed the body");
+    Ok(result)
+}
+
 /// Adopt remote-owned content for guarded refresh. `document` is the reviewed
 /// next state of THIS bound document (same format, id and binding token).
 /// Owned author fields that changed are rewritten in normalized form;

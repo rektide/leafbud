@@ -126,6 +126,46 @@ impl<'a> Source<'a> {
         self.document = leafbud_mdx::parse(&self.text)?;
         Ok(())
     }
+
+    /// Explicit no-content-write preparation transition, not receipt settlement.
+    /// No persisted intermediate mixes adopted fields and the previous hashes.
+    fn prepare_binding(&mut self, verified: &Document) -> Result<()> {
+        let attempt = self.document.state.pending.as_ref().context("located mint required")?;
+        ensure!(
+            import::hash(&self.document.authored_value()) == attempt.input_hash && import::hash(&self.document.editor_value()) == attempt.desired_hash,
+            "source differs from prior mint intent; defaults not adopted"
+        );
+        self.check()?;
+        let text = leafbud_mdx::prepare_binding_defaults(&self.text, verified)?;
+        let mut prepared = leafbud_mdx::parse(&text)?;
+        prepared.state.binding = verified.state.binding.clone();
+        let input_hash = import::hash(&prepared.authored_value());
+        let desired_hash = import::hash(&prepared.editor_value());
+        let attempt = prepared.state.pending.as_mut().expect("preparation preserves mint");
+        attempt.input_hash = input_hash;
+        attempt.desired_hash = desired_hash;
+        let text = leafbud_mdx::patch_tracking(&text, &prepared.state)?;
+        self.check()?;
+        if text != self.text {
+            files::write(&self.path, Some(&self.bytes), text.as_bytes())?;
+        }
+        self.bytes = text.as_bytes().to_vec();
+        self.text = text;
+        self.document = leafbud_mdx::parse(&self.text)?;
+        Ok(())
+    }
+}
+
+fn validate_binding_intent(source: &str) -> Result<()> {
+    let header = leafbud_mdx::header(source)?;
+    ensure!(
+        !header.get("theme").is_some_and(serde_json::Value::is_null),
+        "explicit theme null has no supported native meaning; omit the field to adopt the verified default"
+    );
+    if let Some(value) = header.get("contributors") {
+        let _: Vec<String> = serde_json::from_value(value.clone()).context("explicit contributors must be a list; null has no supported native meaning")?;
+    }
+    Ok(())
 }
 
 fn resolved_context(document: &Document, context: &config::Context) -> MintContext {
@@ -151,6 +191,7 @@ impl RemoteReader {
             source.document.state.binding.is_none() && source.document.state.pending.is_none(),
             "already bound/pending; observe recovery instead of minting again"
         );
+        validate_binding_intent(&source.text)?;
         let publication = resolved_context(&source.document, context);
         if matches!(publication, MintContext::Standalone) {
             ensure!(
@@ -224,7 +265,7 @@ impl RemoteReader {
                 undecoded_mint: None,
             });
         }
-        let verification: Result<Binding> = async {
+        let verification: Result<Document> = async {
             let store = lock::Store::new(context)?;
             let _binding_guard = store
                 .binding(self.client.base_url(), token)?
@@ -244,34 +285,27 @@ impl RemoteReader {
                 "mint metadata changed during verification"
             );
             source.check()?;
-            Ok(binding)
+            let verified = import::build(self.client.base_url(), &confirmed, &snapshot)?;
+            // Keep the locator lock through the guarded first-binding checkpoint.
+            source.prepare_binding(&verified)?;
+            Ok(verified)
         }
         .await;
         match verification {
-            Ok(binding) => {
-                let mut state = source.document.state.clone();
-                state.binding = Some(binding.clone());
-                if let Err(error) = source.checkpoint(state) {
-                    return Ok(BindingReport {
-                        outcome: BindingOutcome::SourceChanged,
-                        token: Some(token),
-                        locator_persisted: true,
-                        binding: Some(binding),
-                        message: Some(format!("native binding verified but local source changed: {error:#}")),
-                        undecoded_mint: None,
-                    });
-                }
-                Ok(BindingReport {
-                    outcome: BindingOutcome::PendingMaterialization,
-                    token: Some(token),
-                    locator_persisted: true,
-                    binding: Some(binding),
-                    message: None,
-                    undecoded_mint: None,
-                })
-            }
+            Ok(verified) => Ok(BindingReport {
+                outcome: BindingOutcome::PendingMaterialization,
+                token: Some(token),
+                locator_persisted: true,
+                binding: verified.state.binding,
+                message: None,
+                undecoded_mint: None,
+            }),
             Err(error) => Ok(BindingReport {
-                outcome: BindingOutcome::LocatedUnverified,
+                outcome: if source.check().is_err() {
+                    BindingOutcome::SourceChanged
+                } else {
+                    BindingOutcome::LocatedUnverified
+                },
                 token: Some(token),
                 locator_persisted: true,
                 binding: None,

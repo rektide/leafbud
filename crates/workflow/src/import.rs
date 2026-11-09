@@ -113,9 +113,9 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
             "initialized" | "publication_title" | "publication_description" | "publication_tags" => {}
             "draft_contributors" => {
                 let contributors: Vec<String> = serde_json::from_value(value.clone()).context("invalid draft contributors")?;
-                if !contributors.is_empty() {
-                    extra.insert("contributors".into(), json!(contributors));
-                }
+                // An observed empty list is still an actual native field, not
+                // omission. First binding records it without inventing a byline.
+                extra.insert("contributors".into(), json!(contributors));
             }
             "post_preferences" => ensure!(
                 value.is_null() || value == &json!({}),

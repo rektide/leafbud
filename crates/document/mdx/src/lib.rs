@@ -32,7 +32,7 @@ use serde_json::Value;
 
 pub use keys::{KeyPreparation, KeySource, TidyEdit, apply_key_preparation, prepare_keys};
 pub use parse::{BlockSpan, PROVISIONAL_MAIN_PAGE, Parsed, header, parse, parse_with_spans};
-pub use patch::{adopt_remote, patch_tracking};
+pub use patch::{adopt_remote, patch_tracking, prepare_binding_defaults};
 pub use render::{apply_markdown_tidy, plan_markdown_tidy, render};
 pub use view::render_comparison;
 
