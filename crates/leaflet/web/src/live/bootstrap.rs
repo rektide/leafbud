@@ -14,8 +14,8 @@ const MAX_ASSET: usize = 8 * 1024 * 1024;
 const MAX_TOTAL: usize = 32 * 1024 * 1024;
 const MAX_CONFIG_VALUES: usize = 64;
 
-/// An explicit public project override. Private/service-role JWTs are rejected.
-/// Opaque `sb_publishable_` keys are allowed only here, not guessed by discovery.
+/// An explicit public project override using the verified anon-JWT join path.
+/// Private/service-role JWTs and opaque keys are rejected, not sent as JWTs.
 #[derive(Clone)]
 pub struct PublicProject {
     origin: Url,
@@ -33,12 +33,6 @@ impl PublicProject {
         let origin = origin(project_origin)?;
         if public_key.len() > 8192 || public_key.is_empty() || !public_key.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b)) {
             return Err(Error::PublicKey);
-        }
-        if public_key.starts_with("sb_publishable_") && public_key.len() > 20 {
-            return Ok(Self {
-                origin,
-                key: public_key.to_owned(),
-            });
         }
         let claims = anon_claims(public_key).ok_or(Error::PublicKey)?;
         if let Some(reference) = project_ref(&origin)

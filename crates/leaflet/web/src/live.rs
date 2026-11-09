@@ -42,7 +42,7 @@ pub enum Error {
     Origin,
     #[error("realtime bootstrap belongs to a different Leaflet origin")]
     OriginMismatch,
-    #[error("invalid realtime public key; require an anon JWT or explicit publishable key")]
+    #[error("invalid realtime public key; require a public anon JWT for this join protocol")]
     PublicKey,
     #[error("realtime public key and project do not match")]
     ProjectMismatch,
@@ -594,80 +594,85 @@ async fn topic(
     mut cancellation: oneshot::Receiver<()>,
     attempt: u32,
 ) -> Result<End, Error> {
-    let channel = Rc::new(channel);
-    let mut events = channel.events().map_err(|_| Error::Channel)?;
-    let joining = channel.clone();
-    let mut join = Box::pin(async move { joining.join().await });
-    let mut awaiting = true;
+    let mut channel = channel;
     let mut joined_ref = None;
     let mut presence = Presence::default();
     let mut terminal = None;
-    let end = loop {
-        tokio::select! {
-            biased;
-            _ = &mut cancellation => break End::Retired,
-            result = &mut join, if awaiting => {
-                awaiting = false;
-                match result {
-                    Ok(_) | Err(ClientError::AlreadyJoined(_)) => (), // readiness comes ONLY from Joined
-                    Err(ClientError::JoinRejected { response, .. }) => {
-                        if let Some(reason) = join_rejection(&response) { terminal = Some(reason); break End::Terminal; }
-                        break End::Retry;
-                    }
-                    Err(ClientError::DriverStopped) => return Err(Error::DriverStopped),
-                    Err(_) => break End::Retry,
-                }
-            },
-            event = events.next() => {
-                match event {
-                    Some(ChannelEvent::Protocol(ProtocolEvent::Joined { reference, .. })) => {
-                        if joined_ref.as_ref() == Some(&reference) { continue; }
-                        joined_ref = Some(reference);
-                        presence.gap();
-                        model.borrow_mut().update(key, generation, Update::Joined)?;
-                    }
-                    Some(ChannelEvent::Protocol(ProtocolEvent::Message(frame))) if joined_ref.is_some() => {
-                        if frame.join_ref.is_some() && frame.join_ref != joined_ref { continue; }
-                        if frame.event == "system" {
-                            let payload: Value = frame.payload.deserialize().unwrap_or(Value::Null);
-                            if payload["status"] == "error" {
-                                terminal = rejection(&frame.payload);
-                                break if terminal.is_some() { End::Terminal } else { End::Retry };
-                            }
-                        } else if key.1 == Kind::Durable && frame.event == "broadcast" {
-                            let payload: Value = match frame.payload.deserialize() { Ok(value) => value, Err(_) => break End::Retry };
-                            if payload["event"] == "poke" { model.borrow_mut().update(key, generation, Update::Poke)?; }
-                        } else if key.1 == Kind::Presence && matches!(frame.event.as_str(), "presence_state" | "presence_diff") {
-                            let count = frame.payload.deserialize::<Value>().map_err(|_| ()).and_then(|value| {
-                                if frame.event == "presence_state" { presence.snapshot(&value).map(Some) } else { presence.diff(&value) }
-                            });
-                            match count {
-                                Ok(Some(count)) => model.borrow_mut().update(key, generation, Update::Peers(count))?,
-                                Ok(None) => (),
-                                Err(_) => break End::Retry, // reset + fresh snapshot, no partially applied count
+    // The handle's original bounded stream already captures Joined/pokes while
+    // this first acknowledgement is pending. Use that stream directly instead
+    // of creating a second subscription and retaining an unused raw-payload
+    // queue for the whole connection. Other topics and the driver keep polling.
+    let initial = tokio::select! {
+        biased;
+        _ = &mut cancellation => Some(End::Retired),
+        result = channel.join() => match result {
+            Ok(_) | Err(ClientError::AlreadyJoined(_)) => None,
+            Err(ClientError::JoinRejected { response, .. }) => {
+                terminal = join_rejection(&response);
+                Some(if terminal.is_some() { End::Terminal } else { End::Retry })
+            }
+            Err(ClientError::DriverStopped) => return Err(Error::DriverStopped),
+            Err(_) => Some(End::Retry),
+        }
+    };
+    let end = if let Some(end) = initial {
+        end
+    } else {
+        loop {
+            tokio::select! {
+                biased;
+                _ = &mut cancellation => break End::Retired,
+                event = channel.next_event() => {
+                    match event {
+                        Some(ChannelEvent::Protocol(ProtocolEvent::Joined { reference, .. })) => {
+                            if joined_ref.as_ref() == Some(&reference) { continue; }
+                            joined_ref = Some(reference);
+                            presence.gap();
+                            model.borrow_mut().update(key, generation, Update::Joined)?;
+                        }
+                        Some(ChannelEvent::Protocol(ProtocolEvent::Message(frame))) if joined_ref.is_some() => {
+                            if frame.join_ref.is_some() && frame.join_ref != joined_ref { continue; }
+                            if frame.event == "system" {
+                                let payload: Value = frame.payload.deserialize().unwrap_or(Value::Null);
+                                if payload["status"] == "error" {
+                                    terminal = rejection(&frame.payload);
+                                    break if terminal.is_some() { End::Terminal } else { End::Retry };
+                                }
+                            } else if key.1 == Kind::Durable && frame.event == "broadcast" {
+                                let payload: Value = match frame.payload.deserialize() { Ok(value) => value, Err(_) => break End::Retry };
+                                if payload["event"] == "poke" { model.borrow_mut().update(key, generation, Update::Poke)?; }
+                            } else if key.1 == Kind::Presence && matches!(frame.event.as_str(), "presence_state" | "presence_diff") {
+                                let count = frame.payload.deserialize::<Value>().map_err(|_| ()).and_then(|value| {
+                                    if frame.event == "presence_state" { presence.snapshot(&value).map(Some) } else { presence.diff(&value) }
+                                });
+                                match count {
+                                    Ok(Some(count)) => model.borrow_mut().update(key, generation, Update::Peers(count))?,
+                                    Ok(None) => (),
+                                    Err(_) => break End::Retry, // reset + fresh snapshot, no partially applied count
+                                }
                             }
                         }
+                        Some(ChannelEvent::Protocol(ProtocolEvent::ChannelClosed { payload, .. })) => { terminal = rejection(&payload); break if terminal.is_some() { End::Terminal } else { End::Retry }; }
+                        Some(ChannelEvent::Protocol(ProtocolEvent::JoinError { response, .. })) => {
+                            if let Some(reason) = join_rejection(&response) { terminal = Some(reason); break End::Terminal; }
+                            presence.gap(); joined_ref = None;
+                            model.borrow_mut().update(key, generation, Update::Gap(SubscriptionState::Reconnecting))?;
+                        }
+                        Some(ChannelEvent::Protocol(ProtocolEvent::ChannelError { payload, .. })) => {
+                            if let Some(reason) = rejection(&payload) { terminal = Some(reason); break End::Terminal; }
+                            presence.gap(); joined_ref = None;
+                            model.borrow_mut().update(key, generation, Update::Gap(SubscriptionState::Reconnecting))?;
+                        }
+                        Some(ChannelEvent::Disconnected) => {
+                            presence.gap(); joined_ref = None;
+                            model.borrow_mut().update(key, generation, Update::Gap(SubscriptionState::Reconnecting))?;
+                        }
+                        Some(ChannelEvent::Lagged { .. }) => break End::Retry,
+                        Some(ChannelEvent::JoinPayloadError(_)) => { terminal = Some(Unavailable::AuthOrConfig); break End::Terminal; }
+                        None => { terminal = Some(Unavailable::Closed); break End::Terminal; }
+                        // StaleMessage and UnmatchedReply never change retained state.
+                        _ => (),
                     }
-                    Some(ChannelEvent::Protocol(ProtocolEvent::ChannelClosed { payload, .. })) => { terminal = rejection(&payload); break if terminal.is_some() { End::Terminal } else { End::Retry }; }
-                    Some(ChannelEvent::Protocol(ProtocolEvent::JoinError { response, .. })) => {
-                        if let Some(reason) = join_rejection(&response) { terminal = Some(reason); break End::Terminal; }
-                        presence.gap(); joined_ref = None;
-                        model.borrow_mut().update(key, generation, Update::Gap(SubscriptionState::Reconnecting))?;
-                    }
-                    Some(ChannelEvent::Protocol(ProtocolEvent::ChannelError { payload, .. })) => {
-                        if let Some(reason) = rejection(&payload) { terminal = Some(reason); break End::Terminal; }
-                        presence.gap(); joined_ref = None;
-                        model.borrow_mut().update(key, generation, Update::Gap(SubscriptionState::Reconnecting))?;
-                    }
-                    Some(ChannelEvent::Disconnected) => {
-                        presence.gap(); joined_ref = None;
-                        model.borrow_mut().update(key, generation, Update::Gap(SubscriptionState::Reconnecting))?;
-                    }
-                    Some(ChannelEvent::Lagged { .. }) => break End::Retry,
-                    Some(ChannelEvent::JoinPayloadError(_)) => { terminal = Some(Unavailable::AuthOrConfig); break End::Terminal; }
-                    None => { terminal = Some(Unavailable::Closed); break End::Terminal; }
-                    // StaleMessage and UnmatchedReply never change retained state.
-                    _ => (),
                 }
             }
         }
@@ -683,8 +688,6 @@ async fn topic(
     )?;
     let _ = tokio::time::timeout(options.leave_timeout, channel.leave()).await;
     // Dispose the registered topic before the central loop is allowed to recreate.
-    drop(events);
-    drop(join);
     drop(channel);
     if matches!(end, End::Retry) {
         tokio::select! { _ = &mut cancellation => return Ok(End::Retired), _ = tokio::time::sleep(options.delay(attempt)) => () }
