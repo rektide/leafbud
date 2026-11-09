@@ -421,6 +421,10 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
         }
     };
     let mut main_blocks = Vec::new();
+    // Source-position bookkeeping for the final document-order grouping:
+    // spans/keyed are recorded in traversal order, then regrouped below.
+    let mut main_span_indices: Vec<usize> = Vec::new();
+    let mut definition_span_ranges: Vec<(usize, usize)> = Vec::new();
     let mut pending = None;
     let mut definitions = Vec::new();
     for id in children.iter().skip(1) {
@@ -429,13 +433,17 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
                 pending.is_none(),
                 "orphan Key marker: top-level Keys bind main-page blocks, not Page definitions"
             );
+            let spans_before = reader.spans.len();
             definitions.push(named_page(&mut reader, *id)?);
+            definition_span_ranges.push((spans_before, reader.spans.len()));
         } else if reader.kind(*id) == MdastNodeType::MdxJsxFlowElement && reader.name(*id) == "Key" {
             ensure!(pending.is_none(), "duplicate Key marker");
             pending = Some(reader.key_marker(*id)?);
         } else {
             let key = pending.take();
+            let spans_before = reader.spans.len();
             main_blocks.extend(reader.push_block(*id, key)?);
+            main_span_indices.extend(spans_before..reader.spans.len());
         }
     }
     ensure!(pending.is_none(), "orphan Key marker");
@@ -445,6 +453,15 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     }];
     pages.extend(definitions);
     document.pages = pages;
+
+    // Spans and keyed flags follow the returned document order (main page
+    // blocks, then each named page's blocks), not the interleaved source
+    // traversal order, so per-block addressing stays attached to its object.
+    let mut order: Vec<usize> = main_span_indices;
+    for &(start, end) in &definition_span_ranges {
+        order.extend(start..end);
+    }
+    debug_assert_eq!(order.len(), reader.keyed.len());
 
     let page_names: BTreeSet<&str> = document.pages.iter().map(|p| p.key.as_str()).collect();
     ensure!(page_names.len() == document.pages.len(), "duplicate page key");
@@ -457,18 +474,21 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     }
     // Arena offsets are relative to the BOM-stripped source.
     let bom = if source.starts_with('\u{feff}') { '\u{feff}'.len_utf8() } else { 0 };
-    let spans = reader
-        .spans
+    let spans = order
         .iter()
-        .map(|&(start, end)| BlockSpan {
-            start: start as usize + bom,
-            end: end as usize + bom,
+        .map(|&index| {
+            let &(start, end) = &reader.spans[index];
+            BlockSpan {
+                start: start as usize + bom,
+                end: end as usize + bom,
+            }
         })
         .collect();
+    let keyed = order.iter().map(|&index| reader.keyed[index]).collect();
     Ok(Parsed {
         document,
         spans,
-        keyed: reader.keyed,
+        keyed,
     })
 }
 
@@ -549,6 +569,35 @@ mod tests {
         );
         assert_eq!(doc.pages[1].key, "p-about");
         assert_eq!(doc.pages[1].blocks.len(), 1);
+    }
+
+    #[test]
+    fn spans_follow_document_order_not_source_traversal_order() {
+        // A named Page definition between two main blocks: the document
+        // groups main blocks first, so spans/keyed must be regrouped to
+        // follow the returned object order, not the interleaved source walk.
+        let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\"}";
+        let source = format!(
+            "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-a\" />\nmain A\n\n<Page name=\"p-about\" kind=\"linear\">\n\n<Key id=\"b-about\" />\nabout body\n\nabout new\n\n</Page>\n\nmain B\n"
+        );
+        let parsed = parse_with_spans(&source).unwrap();
+        let flattened: Vec<&str> = parsed
+            .document
+            .pages
+            .iter()
+            .flat_map(|page| page.blocks.iter().map(|block| block.key.as_str()))
+            .collect();
+        assert_eq!(flattened, ["b-a", "b-auto-2", "b-about", "b-auto-1"], "main blocks first; provisional numbering follows the source walk");
+        assert_eq!(parsed.keyed, [true, false, true, false]);
+        // Each span must address its own block's source text.
+        for (text, index) in [("main A", 0usize), ("main B", 1), ("about body", 2), ("about new", 3)] {
+            let span = &parsed.spans[index];
+            assert!(
+                source[span.start..span.end].contains(text),
+                "span {text:?} addresses {:?} instead",
+                &source[span.start..span.end]
+            );
+        }
     }
 
     #[test]

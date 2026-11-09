@@ -1067,6 +1067,40 @@ fn preparation_preserves_crlf_and_bom() {
 }
 
 #[test]
+fn preparation_and_tidy_address_blocks_through_interleaved_definitions() {
+    // Unkeyed blocks on both sides of a mid-document Page definition:
+    // preparation and tidy must attach edits to each block's own span.
+    let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\"}";
+    let source = format!(
+        "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-a\" />\nmain A\n\n<Page name=\"p-about\" kind=\"linear\">\n\nabout new\n\n</Page>\n\nmain B\n"
+    );
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        &source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
+    assert_eq!(plan.assigned, 2, "one main block and one definition block");
+    let prepared = apply_key_preparation(&source, &plan).unwrap();
+    let parsed = parse_with_spans(&prepared).unwrap();
+    assert_eq!(parsed.document.pages[0].blocks[1].key, "b-1", "main B keeps document-order assignment");
+    assert_eq!(parsed.document.pages[1].blocks[0].key, "b-2", "the definition block is not confused with main B");
+    assert!(prepared.contains("<Key id=\"b-1\" />\nmain B"));
+    assert!(prepared.contains("<Key id=\"b-2\" />\nabout new"));
+    // Markdown tidy spans must follow the same correspondence: normalize a
+    // wrapped literal block in the definition and one after it in main.
+    let wrapped = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-a\" />\nmain A\n\n<Page name=\"p-about\" kind=\"linear\">\n\n<Key id=\"b-wrap\" />\n<Paragraph>\n<Run text={{\"about wrapped\"}} marks={{[]}} />\n</Paragraph>\n\n</Page>\n\n<Key id=\"b-main-wrap\" />\n<Paragraph>\n<Run text={{\"main wrapped\"}} marks={{[]}} />\n</Paragraph>\n");
+    let plan = plan_markdown_tidy(&wrapped).unwrap();
+    let tidied = apply_markdown_tidy(&wrapped, &plan).unwrap();
+    assert!(tidied.contains("about wrapped") && !tidied.contains("<Paragraph>\n<Run text={{\"about wrapped\"}}"));
+    assert!(tidied.contains("main wrapped") && !tidied.contains("<Paragraph>\n<Run text={{\"main wrapped\"}}"));
+    assert_eq!(parse(&tidied).unwrap(), parse(&wrapped).unwrap());
+}
+
+#[test]
 fn preparation_keeps_retired_rows_and_existing_keys() {
     // A retired row in the envelope plus one keyed block and one new block.
     let source = "---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}\n---\n\n<Key id=\"b-1\" />\nkept\n\nadded\n";
