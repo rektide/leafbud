@@ -88,6 +88,19 @@ impl RemoteReader {
             detached_facts += view.roots.values().map(Vec::len).sum::<usize>();
         }
         let confirmed = self.client.get(binding.token).await?;
+        let fresh_confirmed = import::build(self.client.base_url(), &confirmed, &snapshot)?;
+        crate::editor_state::same_identity(binding, &fresh_confirmed)?;
+        ensure!(
+            confirmed
+                .metadata
+                .permission_token_rights
+                .iter()
+                .any(|r| r.token.as_deref() == Some(binding.token.to_string().as_str())
+                    && r.entity_set.as_deref() == Some(&binding.entity_set)
+                    && r.read == Some(true)
+                    && r.write == Some(true)),
+            "write rights changed during native observation"
+        );
         ensure!(
             import::remote_hash(&confirmed, &snapshot) == import::remote_hash(&data, &snapshot),
             "metadata changed during native observation"
@@ -144,6 +157,12 @@ impl RemoteReader {
                 let data = self.client.get(*token).await?;
                 let snapshot = self.client.pull(*token).await?;
                 let binding = verify_seed(base_url, &data, &snapshot, publication)?;
+                let confirmed = self.client.get(*token).await?;
+                ensure!(
+                    verify_seed(base_url, &confirmed, &snapshot, publication)? == binding
+                        && import::remote_hash(&confirmed, &snapshot) == import::remote_hash(&data, &snapshot),
+                    "mint identity/rights/metadata changed during recovery observation"
+                );
                 source.check()?;
                 if let Some(existing) = &source.document.state.binding {
                     ensure!(existing == &binding, "pending mint binding changed");

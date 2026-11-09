@@ -236,6 +236,10 @@ impl RemoteReader {
             // not a remote CAS/atomic multi-request snapshot.
             let confirmed = self.client.get(token).await?;
             ensure!(
+                verify_seed(self.client.base_url(), &confirmed, &snapshot, &publication)? == binding,
+                "mint rights/binding changed during verification"
+            );
+            ensure!(
                 import::remote_hash(&confirmed, &snapshot) == import::remote_hash(&data, &snapshot),
                 "mint metadata changed during verification"
             );

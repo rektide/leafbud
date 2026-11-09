@@ -370,6 +370,45 @@ struct EffectServer {
     ack: Arc<Mutex<Option<(String, u64)>>>,
     pushes: Arc<AtomicUsize>,
 }
+
+#[tokio::test]
+async fn late_mint_rights_change_preserves_locator_without_confirming_binding() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("draft.mdx");
+    draft(&path, "publication: null");
+    let (data, view) = seed(false);
+    let calls = Arc::new(AtomicUsize::new(0));
+    let counter = calls.clone();
+    let server = TestServer::spawn_headers(Arc::new(move |r| match r.path.as_str() {
+        "/home" => (200, vec![], home()),
+        "/new" => (307, vec![("Location".into(), format!("/{TOKEN}"))], String::new()),
+        "/api/rpc/pull" => (200, vec![], view.to_string()),
+        "/api/rpc/get_leaflet_data" => {
+            let mut data = data.clone();
+            if counter.fetch_add(1, Ordering::SeqCst) > 0 {
+                data["permission_token_rights"][0]["write"] = false.into();
+            }
+            (200, vec![], json!({"result":{"error":null,"data":data}}).to_string())
+        }
+        _ => panic!("unexpected request"),
+    }))
+    .await;
+    let result = client(&server)
+        .stage_binding(&old::context(temp.path()), &path, Selection::default())
+        .await
+        .unwrap();
+    assert!(matches!(result.outcome, BindingOutcome::LocatedUnverified));
+    let doc = leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap();
+    assert!(doc.state.binding.is_none() && doc.state.sync.is_none());
+    assert!(matches!(
+        doc.state.pending.unwrap().effect,
+        Effect::Mint {
+            stage: MintStage::Located { .. },
+            ..
+        }
+    ));
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
 impl EffectServer {
     async fn new(mode: usize, race: Option<PathBuf>) -> Self {
         let fixture = Arc::new(Mutex::new(old::fixture()));
