@@ -14,7 +14,7 @@ sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Operator set session cadence and complexity budget, then rejected generated-body default in favor of complete drafting on the keyed native-object foundation"
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Operator permits rebuilding local data and revising formats; requests persistent live watch/sync and exploratory peer-presence detection"
+    title: "Operator permits rebuilding local data and revising formats; requests persistent live watch/sync and exploratory presence; selects explicit adoption of omitted native defaults at first binding"
 ---
 
 # Leafbud work-session cadence
@@ -52,6 +52,10 @@ sources:
   can backstop missed events and reconnects. Detecting other attached clients
   is exploratory, not a settled requirement or proof that an editor is idle.
   Code-grounded proposal: [build path and live sync](design/keyed-build-path0.gpt6a.md).
+- At first binding, adopt verified native theme/contributor defaults for omitted
+  fields and record them explicitly in local source. Preserve explicit authored
+  choices; do not hide missing-field differences by weakening verification.
+  [Default-adoption decision and recovery boundary](design/native-effects-review0.gpt6a.md).
 
 ## Commission and agent selection
 

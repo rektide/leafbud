@@ -53,6 +53,8 @@ sources:
     title: "Production web transport checkpoint accepted after parent source review; workflow/CLI adoption remains the next join"
   - resource: /design/connected-watch0.gpt61s.md
     title: "Completed version-0.13 connected inbound workflow, final external-selection correction and 223-test verification"
+  - resource: /design/native-effects-review0.gpt6a.md
+    title: "Parent review of native-effect checkpoint and operator-selected defaults/candidate-recovery follow-up"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/index.tsx
     title: "Source-inspected rootEntity poke subscription, reconnect pull, poll backstop and browser push batching"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/serverPullData.ts
@@ -755,3 +757,13 @@ when configuration is absent. Retain known locators privately; a lost mint respo
 remains uncertain and cannot justify automatically creating another draft.
 Synthetic protocol/state fixtures precede the bounded deployed proof; report
 exactly which layers were exercised and keep private data out of committed evidence.
+
+The 0.14.0 [native-effect checkpoint](native-effects0.gpt61s.md) returned with
+249 passing regular tests and actual standalone text/title/ack/explicit-read
+evidence, but the standalone result is terminal partial on omitted theme and the
+publication action remains mint-uncertain without a locator. Both test-creation
+slots are consumed. [Parent review](native-effects-review0.gpt6a.md) records the
+operator's subsequent choices: explicitly adopt verified omitted native defaults
+into first-bound source, and inspect publication candidates read-only for human
+selection. Separate Sol sessions own those follow-ups; complete compiler/save
+acceptance remains open.
