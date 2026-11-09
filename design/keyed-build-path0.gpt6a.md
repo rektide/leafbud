@@ -810,3 +810,13 @@ both contexts can be exercised end-to-end against real loopback protocol fixture
 Keep the known standalone partial preserved for its later deliberate recovery
 join. New major features thereafter use fresh Sol high sessions after parent
 integration review, under the operator's continuing-work instruction.
+
+The [complete keyed save delivery](keyed-save0.gpt61s.md) has returned at 0.16.0:
+282 regular tests, 7 independent Yjs groups, full both-context first-save CLI
+fixtures and actual existing-P1 baseline/revision/pull/repeat proof. Parent
+[integration review](keyed-save-review0.gpt6a.md) accepts the compiler/native
+boundaries and commissions a bounded semantic no-op follow-up with the next
+major recovery/conflict feature. Fresh Sol
+`opencode://ses_e3d6d728effe6RFnyZcrUtifT9` owns deliberate terminal resolution,
+conflict handling and final binding acceptance, including create-free resolution
+of the known standalone test partial with preserved prior-attempt provenance.
