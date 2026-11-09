@@ -397,6 +397,10 @@ impl RemoteReader {
                 }
             }
             if work.is_none() && inventory_error.is_none() {
+                // Preserve the whole current selection, including external
+                // operands and resolved rename targets, for the transaction's
+                // post-await duplicate check (not just periodic inventory).
+                let operands = entries.keys().cloned().collect::<Vec<_>>();
                 for _ in 0..queue.len() {
                     let path = queue.pop_front().expect("queue length");
                     queue.push_back(path.clone());
@@ -444,6 +448,7 @@ impl RemoteReader {
                     let policy = refresh::Policy {
                         follow: true,
                         expected: active.identity.clone(),
+                        operands,
                         ..Default::default()
                     };
                     let timeout = options.refresh_timeout;

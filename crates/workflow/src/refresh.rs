@@ -238,7 +238,9 @@ impl RemoteReader {
         );
         // Rescan after all network awaits. A rename, duplicate or changed
         // selection must not recreate an old path or advance its receipt.
-        validate_selection(context, path, &expected, policy)?;
+        if let Err(error) = validate_selection(context, path, &expected, policy) {
+            return decision(Outcome::Ambiguous, &format!("{error:#}"));
+        }
         let next = leafbud_mdx::adopt_remote(&source, &observed.merged).context("composing guarded refresh")?;
         if next.as_bytes() != original.as_slice() {
             crate::files::write(path, Some(&original), next.as_bytes()).context("local file changed during pull; not overwritten")?;

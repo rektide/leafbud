@@ -1182,3 +1182,83 @@ async fn witness_only_poke_settles_without_body_rewrite_and_unsupported_remote_i
     let (report, _) = tokio::join!(run, actions);
     assert_eq!(report.unwrap().writes, 1);
 }
+
+// The periodic inventory knows these two external operands initially, but must
+// not be the mechanism detecting the later duplicate: its next rescan is long
+// after this transaction finishes. Final shared-refresh validation must include
+// the other selected path even though neither lives under the workspace root.
+async fn external_selected_duplicate_during_read(duplicate_uuid: bool) {
+    let http = Http::new().await;
+    let socket = Socket::new().await;
+    let workspace = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    let path = http.seed(external.path(), TOKEN, "a-active.mdx");
+    let other = http.seed(external.path(), TOKEN2, "z-other.mdx");
+    let before = std::fs::read(&path).unwrap();
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let active = leafbud_mdx::parse(std::str::from_utf8(&before).unwrap()).unwrap();
+    let mut replacement = leafbud_mdx::parse(&std::fs::read_to_string(&other).unwrap()).unwrap();
+    assert_ne!(replacement.state.id, active.state.id);
+    assert_ne!(replacement.state.binding, active.state.binding);
+    if duplicate_uuid {
+        replacement.state.id = active.state.id;
+    } else {
+        replacement.state.binding = active.state.binding.clone();
+    }
+    http.change(TOKEN, "Remote update blocked by a newly duplicated external selection");
+    http.hold.store(true, Ordering::SeqCst);
+    let reader = http.reader();
+    let context = fixtures::context(workspace.path());
+    let mut options = socket.options();
+    options.rescan = Duration::from_secs(60);
+    options.backstop = Duration::from_secs(120);
+    let (cancel, cancelled) = watch::channel(false);
+    let (tx, mut events) = mpsc::unbounded_channel();
+    let run = reader.watch(
+        &context,
+        Request {
+            files: vec![path.clone(), other.clone()],
+            ..Default::default()
+        },
+        options,
+        cancelled,
+        |e| {
+            tx.send(copy_event(e)).unwrap();
+            Ok(())
+        },
+    );
+    let actions = async {
+        until(|| http.reads.load(Ordering::SeqCst) == 1).await;
+        std::fs::write(&other, leafbud_mdx::render(&replacement).unwrap()).unwrap();
+        http.hold.store(false, Ordering::SeqCst);
+        http.release.notify_waiters();
+        let report = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Detail::Document { report, .. } = events.recv().await.unwrap().detail
+                    && report.path == path
+                {
+                    break report;
+                }
+            }
+        })
+        .await
+        .expect("active transaction must finish before the 60-second rescan");
+        cancel.send_replace(true);
+        assert_eq!(report.outcome, refresh::Outcome::Ambiguous, "{report:?}");
+        assert!(report.message.as_deref().unwrap().contains("duplicate"));
+        assert_eq!(std::fs::read(&path).unwrap(), before, "active source and receipt bytes preserved");
+        assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    };
+    let (report, _) = tokio::join!(run, actions);
+    assert_eq!(report.unwrap().writes, 0);
+}
+
+#[tokio::test]
+async fn external_selected_uuid_duplicate_during_read_is_rechecked_before_adoption() {
+    external_selected_duplicate_during_read(true).await;
+}
+
+#[tokio::test]
+async fn external_selected_binding_duplicate_during_read_is_rechecked_before_adoption() {
+    external_selected_duplicate_during_read(false).await;
+}

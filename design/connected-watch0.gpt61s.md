@@ -9,7 +9,7 @@ generated:
   by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e416ba4e7ffeZ1ThfycXYgNh5S"
-    title: "Commissioned connected-watch implementation through CLI delivery, guarded writer integration, actual HTTP/WebSocket verification and passive deployed scratch smoke"
+    title: "Commissioned connected-watch delivery, guarded writers, HTTP/WebSocket and deployed passive verification, then parent-review correction of in-flight external operand duplicate revalidation"
   - resource: /design/keyed-build-path0.gpt6a.md
     title: "Accepted persistent-live section 5 and batch B commission"
   - resource: /design/live-transport0.gpt61s.md
@@ -244,3 +244,30 @@ owns the capability; [transport receipt](/design/live-transport0.gpt61s.md) owns
 socket/bootstrap proof; [foundation corrections](/design/authoring-corrections0.glm53m.md)
 own parser/projection/settlement prerequisites; [guarded pull predecessor](/design/guarded-pull0.glm53m.md)
 retains original one-shot evidence. This receipt records their integrated use.
+
+## Parent-review correction: external operands during acquisition
+
+Parent review identified a receiving-policy omission after the initial delivery:
+the controller left `refresh::Policy.operands` empty even though selection's
+inventory knew all explicit operands. The transaction's final workspace scan
+could therefore miss another **selected external file** acquiring the active
+UUID or native binding during an HTTP await, before the next periodic rescan.
+
+Two deterministic production watch/HTTP regressions reproduced it: initially
+distinct external operands, held active fact response, another selected file
+changed to duplicate **only the UUID** or **only the native binding**, then release
+before the 60-second rescan. Both failed on the predecessor with `updated`.
+The controller now forwards all current resolved selection paths into the refresh
+policy, including resolved rename targets; post-await selection rejection reports
+`ambiguous`, matching the same validation at transaction start. Both regressions
+now assert ambiguity and exact active source/receipt bytes and mtime preservation,
+with zero writes. No new discovery scope, identity anchors or selection subsystem
+was introduced; arbitrary unselected external files remain outside this check.
+
+Correction verification: targeted external-selection tests **2/2**, then final
+workspace nextest **223/223** across 13 binaries; formatting, strict all-target
+Clippy and this report's Markdown/OKF check pass. This supersedes the initial
+221-test gate above. No new deployed smoke was needed for this local receiving
+policy fix; the original passive deployment proof and its limits are unchanged.
+The follow ticket was briefly reopened for this correction and reclosed with the
+regression evidence. Session provenance remains the same native source above.
