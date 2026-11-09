@@ -95,7 +95,9 @@ impl<'a> Source<'a> {
     fn checkpoint(&mut self, state: State) -> Result<()> {
         self.check()?;
         let text = leafbud_mdx::patch_tracking(&self.text, &state)?;
-        files::write(&self.path, Some(&self.bytes), text.as_bytes())?;
+        if text != self.text {
+            files::write(&self.path, Some(&self.bytes), text.as_bytes())?;
+        }
         self.bytes = text.as_bytes().to_vec();
         self.text = text;
         self.document = leafbud_mdx::parse(&self.text)?;

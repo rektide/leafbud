@@ -225,10 +225,23 @@ impl RemoteReader {
         compile: impl FnOnce(&Document, &LeafletData, &PullSnapshot) -> Result<Compiled>,
     ) -> Result<RecoveryReport> {
         let mut source = Source::open(context, path, selection)?;
-        ensure!(
-            source.document.state.pending.is_none(),
-            "unresolved attempt; recover before compiling another effect"
-        );
+        let mint = match source.document.state.pending.clone() {
+            None => None,
+            Some(attempt)
+                if matches!(
+                    &attempt.effect,
+                    Effect::Mint {
+                        stage: MintStage::Located { .. },
+                        ..
+                    }
+                ) && source.document.state.binding.is_some()
+                    && import::hash(&source.document.authored_value()) == attempt.input_hash
+                    && import::hash(&source.document.editor_value()) == attempt.desired_hash =>
+            {
+                Some(attempt)
+            }
+            _ => anyhow::bail!("unresolved attempt; recover before compiling another effect"),
+        };
         source.prepare_keys()?;
         let binding = source
             .document
@@ -240,8 +253,19 @@ impl RemoteReader {
         let before = self.native_observation(&binding, Some(&writer), &[]).await?;
         source.check()?;
         let hash = import::remote_hash(&before.data, &before.snapshot);
+        if let Some(Attempt {
+            effect: Effect::Mint { publication, .. },
+            ..
+        }) = &mint
+        {
+            ensure!(
+                verify_seed(self.client.base_url(), &before.data, &before.snapshot, publication)? == binding,
+                "mint seed changed before first materialization"
+            );
+        }
         ensure!(
-            decision_witness == Some(hash.as_str())
+            mint.is_some()
+                || decision_witness == Some(hash.as_str())
                 || source
                     .document
                     .state
@@ -281,7 +305,7 @@ impl RemoteReader {
         let mut state = source.document.state.clone();
         state.writer = Some(writer);
         state.pending = Some(Attempt {
-            id: Uuid::new_v4(),
+            id: mint.map(|a| a.id).unwrap_or_else(Uuid::new_v4),
             input_hash: import::hash(&source.document.authored_value()),
             desired_hash: import::hash(&source.document.editor_value()),
             effect: Effect::Push {
@@ -485,3 +509,7 @@ fn verify_desired(existing: &Document, targets: &BTreeMap<String, Node>, observe
     });
     Ok(state)
 }
+
+#[cfg(test)]
+#[path = "probe.rs"]
+mod probe;
