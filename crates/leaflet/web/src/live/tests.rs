@@ -479,6 +479,13 @@ async fn cancellation_during_handshake_needs_no_localset_and_is_bounded() {
 
 #[test]
 fn counters_stale_selection_presence_transaction_and_diagnostics_are_bounded() {
+    let before = rustls::crypto::CryptoProvider::get_default().map(Arc::as_ptr);
+    tls_config().unwrap();
+    assert_eq!(
+        before,
+        rustls::crypto::CryptoProvider::get_default().map(Arc::as_ptr),
+        "TLS must not install a global provider"
+    );
     let (sender, _) = watch::channel(State::default());
     let mut model = Model {
         state: State::default(),

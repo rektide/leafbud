@@ -15,6 +15,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
     rc::Rc,
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 
@@ -22,6 +23,7 @@ use futures_util::{StreamExt, future::LocalBoxFuture, stream::FuturesUnordered};
 use phoenix_channel_client::{Channel, ChannelEvent, ClientError, DisconnectReason, ReconnectAction, Socket, SocketEvent, static_join_payload};
 use phoenix_channel_runtime::{Payload, ProtocolEvent};
 use phoenix_channel_runtime_native::{NativeConnector, NativeTimer, NativeTransportOptions};
+use rustls_platform_verifier::BuilderVerifierExt;
 use serde::Serialize;
 use serde_json::{Value, json};
 use tokio::sync::{mpsc, oneshot, watch};
@@ -68,6 +70,8 @@ pub enum Error {
     DriverStopped,
     #[error("realtime channel could not be created")]
     Channel,
+    #[error("realtime TLS configuration could not be initialized")]
+    Tls,
 }
 
 #[derive(Clone, Debug)]
@@ -373,6 +377,7 @@ pub async fn run(bootstrap: Bootstrap, options: Options, commands: mpsc::Receive
         .rejoin_delay(move |attempt| rejoin.delay(attempt));
     let connector = NativeConnector::new(bootstrap.endpoint()).options(
         NativeTransportOptions::default()
+            .tls_config(tls_config()?)
             .max_message_size(Some(2 * 1024 * 1024))
             .max_frame_size(Some(2 * 1024 * 1024)),
     );
@@ -411,6 +416,20 @@ pub async fn run(bootstrap: Bootstrap, options: Options, commands: mpsc::Receive
     }
     model.sender.send_replace(model.state.clone());
     result
+}
+
+fn tls_config() -> Result<Arc<rustls::ClientConfig>, Error> {
+    // reqwest and the native Phoenix adapter can enable different Rustls
+    // providers in the same binary. Never rely on automatic feature inference
+    // (which panics with both), or mutate the embedding process's global choice.
+    // Match the HTTP client's platform trust verification, with a local provider.
+    let config = rustls::ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+        .with_safe_default_protocol_versions()
+        .map_err(|_| Error::Tls)?
+        .with_platform_verifier()
+        .map_err(|_| Error::Tls)?
+        .with_no_client_auth();
+    Ok(Arc::new(config))
 }
 
 async fn session(socket: &Socket, bootstrap: Bootstrap, options: Options, mut commands: mpsc::Receiver<Command>, model: Shared) -> Result<(), Error> {

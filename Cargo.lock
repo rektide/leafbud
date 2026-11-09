@@ -2015,6 +2015,8 @@ dependencies = [
  "phoenix-channel-runtime-native",
  "regex",
  "reqwest 0.13.5",
+ "rustls",
+ "rustls-platform-verifier",
  "serde",
  "serde_json",
  "thiserror",
