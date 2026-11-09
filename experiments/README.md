@@ -5,11 +5,13 @@ description: "Reading map for protocol evidence, parser alternatives, and the so
 resource: /experiments/README.md
 status: maintained
 updated:
-  at: 2026-11-08
-  by: model:openai/gpt-6.1-sol#high
+  at: 2026-11-09
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4900b8d7ffeDT9QuFwmKRAB7t"
     title: "Commissioned and reviewed the experiments; assembled this reading map and the current recommendation with alternatives"
+  - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
+    title: "Reviewed and connected the passive live-connection/presence proof to the accepted keyed build direction"
   - resource: /experiments/01-draft-list/REPORT.md
     title: "Read-only draft discovery evidence"
   - resource: /experiments/02-draft-internals/REPORT.md
@@ -26,6 +28,8 @@ sources:
     title: "Complete offline authoring slice, beyond parser-only evidence"
   - resource: /experiments/14-satteri-authoring-attributes/REPORT.md
     title: "Optional brace-key syntax composed with the same compiler"
+  - resource: /experiments/15-live-connection/live-connection0.gpt61s.md
+    title: "Deployed passive realtime connection and presence proof, transport dependency comparison and watch handoff"
 ---
 
 # Leafbud experiments
@@ -36,6 +40,11 @@ what remains unproved. They are not all implemented product capabilities.
 
 ## Start here
 
+- **Current build direction:** [keyed authoring and connected watch](../design/keyed-build-path0.gpt6a.md)
+  grounds the edit flows in code boundaries and implementation batches. For its
+  live transport, [15 — passive connection and presence](15-live-connection/live-connection0.gpt61s.md)
+  verifies deployment joins, untracked presence snapshots and reconnect; actual
+  poke-to-file adoption remains integration work.
 - **Implementation handoff:** [preliminary local-MDX design](../design/authoring-handoff0.gpt61s.md)
   connects the recommended workflow to module boundaries, reusable experimental
   code, remaining decisions and production/remote verification gates. Its
@@ -73,6 +82,7 @@ what remains unproved. They are not all implemented product capabilities.
 | [03 — post construction](03-post-builder/REPORT.md) | Canonical record building, validation, identity/publication reads and URL derivation | The included live publication script was not executed |
 | [04 — Jacquard](04-jacquard/REPORT.md) | Rust library/code-generation evaluation against pinned source | Not a production rewrite onto the entire library stack |
 | [05 — Yrs conversion](05-yrs-conversion/REPORT.md) | Real-Yjs interoperability for decoding, rich text, incremental edits, repeats and one synthetic fact merge | Not full structure/media coverage or multiplayer guarantees; recreation needs only part of this machinery |
+| [15 — live connection](15-live-connection/live-connection0.gpt61s.md) | Passive deployed public bootstrap, root/Yjs joins, presence snapshots, heartbeats and reconnect; tested Rust Phoenix client | No observed deployed peers/pokes or file adoption; presence is advisory, not proof an editor is idle |
 
 ## Markdown/MDX substrate experiments
 

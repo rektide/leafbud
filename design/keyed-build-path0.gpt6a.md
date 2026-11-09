@@ -45,6 +45,8 @@ sources:
     title: "Import-specific identity/title construction and shared witness helpers"
   - resource: /experiments/05-yrs-conversion/REPORT.md
     title: "Executed Yrs/Yjs interop and unsafe independent replacement/delta/retry evidence; its LCS is not the proposed production algorithm"
+  - resource: /experiments/15-live-connection/live-connection0.gpt61s.md
+    title: "Reviewed commissioned Sol probe: deployed passive joins/presence, maintained Phoenix client lifecycle evidence and production watch API handoff"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/index.tsx
     title: "Source-inspected rootEntity poke subscription, reconnect pull, poll backstop and browser push batching"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/serverPullData.ts
@@ -416,6 +418,16 @@ implementation files. This is source evidence, not a verified deployment contrac
 
 ### First implementation: a connected session
 
+**Probe completed after commissioning:** [experiment 15](../experiments/15-live-connection/live-connection0.gpt61s.md)
+verified public bootstrap discovery, acknowledged root/Yjs topic joins, passive
+presence snapshots without tracking, heartbeat and reconnect/rejoin. It did not
+observe nonempty deployed presence or a durable poke/file-adoption loop. Parent
+review accepts its recommended `phoenix-channel-client` and native runtime
+0.1.1 as the integration starting point. Keep its local/`!Send` driver isolated,
+use the specified heartbeat interval and explicit unexpected-close recovery, and
+follow the report's latest-state/monotonic-sequence handoff. The scope below is
+the production work now equipped by that evidence, not a claim it has landed.
+
 1. Resolve the deployment's realtime URL/public project key and actual channel
    access requirements. The browser uses `NEXT_PUBLIC_SUPABASE_API_URL` and
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; Leafbud's existing cookie HTTP client does not
@@ -476,14 +488,15 @@ Expose **`observed-peers(n)` / `no-peers-observed` / `unknown`**, with freshness
 as advisory session information. Presence must not grant write authority, clear
 a conflict, disable change subscriptions or prove it is safe to overwrite.
 
-Probe a receive-only presence subscription first: can it obtain the state/diffs
-without tracking a Leafbud peer or publishing cursor awareness? This is not yet
-verified. Tracking our watcher would make the existing browser count it as a
+The receive-only probe has now established initial passive presence snapshots
+without tracking a Leafbud peer or publishing cursor awareness. Experiment 15
+also checks reference-aware synthetic diffs; nonempty deployed diffs remain
+unverified. Tracking our watcher would make the existing browser count it as a
 peer and could enable broadcasts it otherwise suppresses; that is a real change
 in traffic, not passive observation. Do not fabricate an awareness client or send
 `hello` just to obtain a connected-user count.
 
-If the probe works, start with a small scheduling rule: retain lightweight
+When adopting advisory presence, start with a small scheduling rule: retain lightweight
 `rootEntity` subscriptions for all selected documents; prioritize catch-up and
 optionally keep richer in-memory state for documents with peers or recent
 activity. Quiet documents still receive pokes and periodic catch-up. Presence
@@ -676,3 +689,9 @@ behavior. Document the deployed proof separately when performed.
 model/adoption interfaces to Sol high for connected watch. Later native-write
 batches retain their described sequence and receive concrete commissions at their
 integration checkpoints; this acceptance does not claim them implemented.
+
+The independent connection/presence probe ran alongside A in Sol session
+`opencode://ses_e41f53633ffeI4wwnXfMRs1LeT` and returned at `44447c73`.
+Parent reviewed its source, lifecycle tests and handoff, accepting the transport
+recommendation while retaining the explicit nonempty-presence and deployed
+poke-to-file proof limits. Watch integration follows the model/adoption join.
