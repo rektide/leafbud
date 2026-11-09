@@ -6,7 +6,7 @@ use crate::{
     inventory,
 };
 use anyhow::{Context, Result};
-use leafbud_document::{EDITOR_PROFILE, PROFILE};
+use leafbud_document::EDITOR_PROFILE;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -40,6 +40,9 @@ pub struct Item {
     pub baseline: &'static str,
     pub endpoints_equal: Option<bool>,
     pub document_id: Option<uuid::Uuid>,
+    /// Blocks/main page still needing durable source keys (never assigned by
+    /// status; tidy --keys or executed push assign them).
+    pub needs_preparation: usize,
     /// Local publication/delivery/custom intent is not this editor edge.
     pub local_only_metadata: &'static str,
 }
@@ -108,6 +111,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         baseline: "unknown",
         endpoints_equal: None,
         document_id: None,
+        needs_preparation: 0,
         local_only_metadata: "not-compared-to-editor",
     };
     let original = match std::fs::read(path) {
@@ -151,38 +155,55 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         item.detail = "not a managed document; import establishes a native binding";
         return item;
     };
-    if state.get("binding").is_none_or(serde_json::Value::is_null) {
-        item.outcome = "untracked";
-        item.detail = "no native binding; remote identity is not inferred from filenames or defaults";
-        return item;
-    }
-    item.receipt_profile = state["sync"]["profile"].as_str().map(str::to_owned);
-    if !matches!(item.receipt_profile.as_deref(), Some(PROFILE | EDITOR_PROFILE)) || state["state"] != "draft" {
-        item.outcome = "unsupported";
-        item.detail = "unsupported receipt profile or lifecycle; no historical editor agreement inferred";
-        return item;
-    }
-    let existing = match leafbud_mdx::parse(source) {
-        Ok(existing) => existing,
+    let existing = match leafbud_mdx::parse_with_spans(source) {
+        Ok(parsed) => parsed,
         Err(_) => {
             item.outcome = "invalid";
             item.detail = "invalid or unsupported local content/owned state; use check; nothing was omitted or rewritten";
             return item;
         }
     };
+    let existing = &existing.document;
     item.document_id = Some(existing.state.id);
-    item.baseline = editor_state::baseline(&existing);
-    item.local = editor_state::local_change(&existing);
+    let parsed = leafbud_mdx::parse_with_spans(source).expect("parsed above");
+    item.needs_preparation = parsed.unkeyed().len() + usize::from(parsed.main_page_provisional());
+    item.local = editor_state::local_change(existing);
+    if item.needs_preparation > 0 && item.local == Change::Unchanged {
+        // New content is a real local edit even while its keys are not
+        // persisted yet; report it without claiming durable identity.
+        item.local = Change::Changed;
+    }
+    if state.get("binding").is_none_or(serde_json::Value::is_null) {
+        item.outcome = "unbound";
+        item.baseline = "none";
+        item.detail = if item.needs_preparation > 0 {
+            "local draft; no native binding yet, and some content still needs source keys (tidy --keys)"
+        } else {
+            "local draft; no native binding yet (push establishes one), so remote editor state does not exist"
+        };
+        return item;
+    }
+    item.receipt_profile = state["sync"]["profile"].as_str().map(str::to_owned);
+    if item.receipt_profile.as_deref() != Some(EDITOR_PROFILE) || state["state"] != "draft" {
+        item.outcome = "unsupported";
+        item.detail = "unsupported receipt profile or lifecycle; no historical editor agreement inferred";
+        return item;
+    }
+    if state.get("sync").is_none() {
+        item.outcome = "bound-no-receipt";
+        item.detail = "bound but no verified agreement yet; receipts settle only after a verified save/pull";
+        return item;
+    }
+    item.baseline = editor_state::baseline(existing);
     if inventory.duplicates.contains(path) {
         item.outcome = "ambiguous";
         item.detail = "duplicate local document ID or native binding; resolve the copies before managed operations";
         return item;
     }
-    let binding = &existing.state.binding;
-    let expected_id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, format!("{}/{}", binding.base_url, binding.token).as_bytes());
-    if existing.state.id != expected_id || binding.root.is_empty() || binding.entity_set.is_empty() || binding.entry_fact.is_empty() {
+    let binding = existing.state.binding.as_ref().expect("binding present");
+    if binding.root.is_empty() || binding.entity_set.is_empty() || binding.entry_fact.is_empty() {
         item.outcome = "unsupported";
-        item.detail = "incoherent imported binding; identity must be resolved explicitly";
+        item.detail = "incoherent binding; identity must be resolved explicitly";
         return item;
     }
     let Some(remote) = remote else {
@@ -196,7 +217,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         item.detail = "bound to another origin; select its --base-url explicitly (defaults never retarget a binding)";
         return item;
     }
-    match remote.observe_editor(&existing).await {
+    match remote.observe_editor(existing).await {
         Ok(observed) => {
             item.outcome = observed.agreement.state;
             item.detail = match item.outcome {
@@ -211,7 +232,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
             item.endpoints_equal = Some(observed.agreement.endpoints_equal);
             item.remote.freshness = "current";
             item.remote.change = observed.agreement.remote;
-            item.remote.observed_hash = Some(observed.merged.state.sync.remote_hash);
+            item.remote.observed_hash = observed.merged.state.sync.as_ref().map(|sync| sync.remote_hash.clone());
             item.remote.observed_profile = Some(EDITOR_PROFILE);
         }
         Err(error) => {
@@ -231,10 +252,8 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
                 "unsupported" => "remote lifecycle/content cannot be represented by this draft profile; conservative evidence retained when available",
                 _ => "remote read failed; freshness and change direction are unknown; no credentials or remote bodies included",
             };
-            if let Some(hash) = &error.remote_hash
-                && existing.state.sync.profile == EDITOR_PROFILE
-            {
-                item.remote.change = editor_state::remote_change(&existing, hash);
+            if let Some(hash) = &error.remote_hash {
+                item.remote.change = editor_state::remote_change(existing, hash);
             }
             item.remote.observed_hash = error.remote_hash;
             if item.remote.observed_hash.is_some() {

@@ -7,6 +7,7 @@ edition.workspace = true
 [dependencies]
 clap.workspace = true
 serde_json.workspace = true
+leafbud-document.workspace = true
 leafbud-workflow.workspace = true
 tokio.workspace = true
 

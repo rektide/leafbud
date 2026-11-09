@@ -2,7 +2,7 @@
 //! No change tree, historical base, mutation plan or automatic receipt writes.
 use crate::{RemoteReader, import};
 use anyhow::{Result, ensure};
-use leafbud_document::{Block, BlockKind, Document, EDITOR_OWNED_EXTRA, EDITOR_PROFILE, Node, Page, State, Sync};
+use leafbud_document::{Block, BlockKind, Document, EDITOR_OWNED_EXTRA, EDITOR_PROFILE, Occurrence, Page, State, Sync};
 use leafbud_web::{LeafletData, LeafletState};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -35,23 +35,16 @@ pub struct Agreement {
 }
 
 pub(crate) fn local_change(document: &Document) -> Change {
-    if !valid_hash(&document.state.sync.local_hash) {
+    let Some(sync) = &document.state.sync else {
+        return Change::Unknown;
+    };
+    if !valid_hash(&sync.local_hash) {
         return Change::Unknown;
     }
-    if document.state.sync.profile == EDITOR_PROFILE {
-        if import::hash(&document.editor_value()) == document.state.sync.local_hash {
-            Change::Unchanged
-        } else {
-            Change::Changed
-        }
+    if import::hash(&document.editor_value()) == sync.local_hash {
+        Change::Unchanged
     } else {
-        // A matching legacy whole-document hash proves no local editor change.
-        // A mismatch cannot distinguish local-only intent from an editor edit.
-        if import::hash(&document.semantic_value()) == document.state.sync.local_hash {
-            Change::Unchanged
-        } else {
-            Change::Unknown
-        }
+        Change::Changed
     }
 }
 
@@ -61,12 +54,10 @@ fn valid_hash(hash: &str) -> bool {
 }
 
 pub(crate) fn baseline(document: &Document) -> &'static str {
-    if !valid_hash(&document.state.sync.local_hash) || !valid_hash(&document.state.sync.remote_hash) {
-        "invalid-receipts"
-    } else if document.state.sync.profile == EDITOR_PROFILE {
-        "scoped"
-    } else {
-        "legacy-unscoped"
+    match &document.state.sync {
+        Some(sync) if sync.profile == EDITOR_PROFILE && valid_hash(&sync.local_hash) && valid_hash(&sync.remote_hash) => "scoped",
+        Some(_) => "invalid-receipts",
+        None => "none",
     }
 }
 
@@ -74,15 +65,12 @@ pub(crate) fn classify(existing: &Document, merged: &Document, observed_remote_h
     let endpoints_equal = existing.editor_value() == merged.editor_value();
     let local = local_change(existing);
     let remote = remote_change(existing, observed_remote_hash);
-    let scoped = existing.state.sync.profile == EDITOR_PROFILE;
     let state = if endpoints_equal {
-        if scoped && local == Change::Unchanged && remote != Change::Unknown {
+        if local == Change::Unchanged && remote != Change::Unknown {
             if remote == Change::Unchanged { "clean" } else { "remote-changed" }
         } else {
             "converged"
         }
-    } else if !scoped {
-        "unverified"
     } else {
         match (local, remote) {
             (Change::Unchanged, Change::Changed) => "remote-changed",
@@ -103,9 +91,12 @@ pub(crate) fn classify(existing: &Document, merged: &Document, observed_remote_h
 }
 
 pub(crate) fn remote_change(existing: &Document, observed_hash: &str) -> Change {
-    if !valid_hash(&existing.state.sync.remote_hash) {
+    let Some(sync) = &existing.state.sync else {
+        return Change::Unknown;
+    };
+    if !valid_hash(&sync.remote_hash) {
         Change::Unknown
-    } else if existing.state.sync.remote_hash == observed_hash {
+    } else if sync.remote_hash == observed_hash {
         Change::Unchanged
     } else {
         Change::Changed
@@ -131,8 +122,10 @@ impl RemoteReader {
             message,
             remote_hash: None,
         };
-        let token = existing.state.binding.token;
-        let data = self.client.get(token).await.map_err(|e| {
+        let Some(binding) = existing.state.binding.clone() else {
+            return Err(error("unbound", "document has no native binding; push establishes one".into()));
+        };
+        let data = self.client.get(binding.token).await.map_err(|e| {
             error(
                 if matches!(e, leafbud_web::Error::NotFound) { "missing" } else { "failed" },
                 if matches!(e, leafbud_web::Error::NotFound) {
@@ -150,25 +143,18 @@ impl RemoteReader {
         }
         let snapshot = self
             .client
-            .pull(token)
+            .pull(binding.token)
             .await
             .map_err(|e| error("failed", format!("fetching remote editor content: {e}")))?;
         // Acquire the conservative witness before mapping. Unsupported content
         // must not disappear simply because it cannot become a Document.
-        let hash = import::remote_hash(&data, &snapshot, &existing.state.sync.profile);
-        let conservative_hash = import::remote_hash(&data, &snapshot, EDITOR_PROFILE);
-        let with_hash = |kind, message| ObservationError {
-            kind,
-            message,
-            remote_hash: Some(conservative_hash.clone()),
-        };
-        let fresh = import::build(self.client.base_url(), &data, &snapshot).map_err(|e| {
-            with_hash(
-                "unsupported",
-                format!("remote content is unsupported for the refresh profile; local file preserved: {e:#}"),
-            )
+        let hash = import::remote_hash(&data, &snapshot);
+        let fresh = import::build(self.client.base_url(), &data, &snapshot).map_err(|e| ObservationError {
+            kind: "unsupported",
+            message: format!("remote content is unsupported for the refresh profile; local file preserved: {e:#}"),
+            remote_hash: Some(hash.clone()),
         })?;
-        same_identity(existing, &fresh).map_err(|e| with_hash("identity-changed", format!("{e:#}")))?;
+        same_identity(&binding, &fresh).map_err(|e| error("identity-changed", format!("{e:#}")))?;
         let mut merged = adopt(existing, &fresh);
         let agreement = classify(existing, &merged, &hash);
         if agreement.endpoints_equal {
@@ -176,43 +162,48 @@ impl RemoteReader {
             // content. Settling witnesses must keep its original body bytes.
             merged.pages = existing.pages.clone();
             if merged.editor_value() != existing.editor_value() {
-                return Err(with_hash(
-                    "unsupported",
-                    "source association correspondence could not be retained safely".into(),
-                ));
+                return Err(ObservationError {
+                    kind: "unsupported",
+                    message: "source association correspondence could not be retained safely".into(),
+                    remote_hash: Some(hash),
+                });
             }
         }
         Ok(Observed { data, merged, agreement })
     }
 }
 
-fn same_identity(existing: &Document, fresh: &Document) -> Result<()> {
-    let a = &existing.state.binding;
-    let b = &fresh.state.binding;
+fn same_identity(binding: &leafbud_document::Binding, fresh: &Document) -> Result<()> {
+    let b = fresh.state.binding.as_ref().expect("built documents are bound");
     for (equal, name) in [
-        (existing.state.id == fresh.state.id, "document identity"),
-        (a.base_url == b.base_url && a.token == b.token, "origin/token"),
-        (a.root == b.root, "root entity"),
-        (a.entity_set == b.entity_set, "entity set (rights)"),
-        (a.entry_fact == b.entry_fact, "entry placement"),
-        (a.publication == b.publication, "publication association"),
+        (binding.base_url == b.base_url && binding.token == b.token, "origin/token"),
+        (binding.root == b.root, "root entity"),
+        (binding.entity_set == b.entity_set, "entity set (rights)"),
+        (binding.entry_fact == b.entry_fact, "entry placement"),
+        (binding.publication == b.publication, "publication association"),
     ] {
         ensure!(equal, "remote {name} changed; identity/binding decision required (file preserved)");
     }
     Ok(())
 }
 
+/// Match each freshly observed occurrence to an existing source key: same
+/// entity and same occurrence locator (block placement / page reference set).
 fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, String> {
+    let occurrence_of = |node: &leafbud_document::Node| match &node.occurrence {
+        Occurrence::Block { placement, .. } => node.entity.clone() + ":" + placement,
+        Occurrence::Page { references } => {
+            let mut refs = references.clone();
+            refs.sort();
+            format!("{}:page:{}", node.entity, refs.join(","))
+        }
+    };
     let mut rename = BTreeMap::new();
     let mut claimed = BTreeSet::new();
     for (key, node) in &fresh.state.nodes {
-        let same_entity: Vec<(&String, &Node)> = existing.state.nodes.iter().filter(|(_, n)| n.entity == node.entity).collect();
-        let memberships: BTreeSet<_> = node.memberships.keys().collect();
-        let exact: Vec<&String> = same_entity
-            .iter()
-            .filter(|(_, n)| n.memberships.keys().collect::<BTreeSet<_>>() == memberships)
-            .map(|(k, _)| *k)
-            .collect();
+        let locator = occurrence_of(node);
+        let same_entity: Vec<(&String, &leafbud_document::Node)> = existing.state.nodes.iter().filter(|(_, n)| n.entity == node.entity).collect();
+        let exact: Vec<&String> = same_entity.iter().filter(|(_, n)| occurrence_of(n) == locator).map(|(k, _)| *k).collect();
         let chosen = if exact.len() == 1 {
             Some(exact[0].clone())
         } else if same_entity.len() == 1 {
@@ -243,6 +234,9 @@ fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, Str
 
 /// Remote-owned content in existing source spelling. Local-only intent is
 /// retained, not merged into the editor fingerprint.
+///
+/// Explicit-null standalone versus inherited intent must survive adoption:
+/// a bound document always carries the confirmed association explicitly.
 fn adopt(existing: &Document, fresh: &Document) -> Document {
     let rename = reconcile_keys(existing, fresh);
     let key = |k: &str| rename.get(k).cloned().unwrap_or_else(|| k.to_owned());
@@ -280,16 +274,17 @@ fn adopt(existing: &Document, fresh: &Document) -> Document {
         state: State {
             id: existing.state.id,
             state: existing.state.state.clone(),
+            main_page: fresh.state.main_page.as_ref().map(|main| key(main)),
             binding: existing.state.binding.clone(),
             nodes,
-            sync: Sync {
+            sync: Some(Sync {
                 profile: EDITOR_PROFILE.into(),
                 local_hash: String::new(),
-                remote_hash: fresh.state.sync.remote_hash.clone(),
-            },
+                remote_hash: fresh.state.sync.as_ref().expect("built receipts").remote_hash.clone(),
+            }),
         },
     };
-    document.state.sync.local_hash = import::hash(&document.editor_value());
+    document.state.sync.as_mut().expect("just set").local_hash = import::hash(&document.editor_value());
     document
 }
 

@@ -1,7 +1,6 @@
 use super::*;
 use crate::import::tests::testserver;
 use crate::{import, pull::tests::*};
-use leafbud_web::parse_pull;
 use serde_json::json;
 use std::{
     collections::BTreeMap,
@@ -98,35 +97,25 @@ async fn isolated_remote_body_mark_and_move_changes_and_local_only_intent_have_c
 }
 
 #[tokio::test]
-async fn legacy_current_correspondence_and_unknown_profiles_are_not_silently_accepted() {
-    let (server, current) = server_current().await;
+async fn unknown_receipt_profiles_are_not_silently_accepted() {
+    let (server, _current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let source = std::fs::read_to_string(&path).unwrap();
-    let mut legacy = leafbud_mdx::parse(&source).unwrap();
-    legacy.state.sync.profile = PROFILE.into();
-    legacy.state.sync.local_hash = import::hash(&legacy.semantic_value());
-    legacy.state.sync.remote_hash = import::remote_hash(&data(&fixture()), &parse_pull(fixture()["response"].clone()).unwrap(), PROFILE);
-    let source = leafbud_mdx::update(&source, &legacy).unwrap();
-    std::fs::write(&path, &source).unwrap();
-    let baseline = snapshot(&path);
     let reader = reader(&server);
-    let item = one(temp.path(), &path, Some(&reader)).await;
-    assert_eq!(
-        (item.outcome, item.baseline, item.endpoints_equal),
-        ("converged", "legacy-unscoped", Some(true))
-    );
-    assert_eq!(snapshot(&path), baseline);
-    set_paragraph_text(current.write().unwrap().get_mut(TOKEN).unwrap(), &yrs_payload("Remote changed", None));
-    assert_eq!(one(temp.path(), &path, Some(&reader)).await.outcome, "unverified");
-    assert_eq!(snapshot(&path), baseline);
-    let source = source.replacen("\n\"@leafbud\":", "\ncustom: true\n\"@leafbud\":", 1);
-    std::fs::write(&path, &source).unwrap();
-    assert_eq!(one(temp.path(), &path, None).await.local, Change::Unknown);
-    std::fs::write(&path, source.replace(PROFILE, "future/99")).unwrap();
+    let unknown = source.replace(leafbud_document::EDITOR_PROFILE, "future/99");
+    std::fs::write(&path, &unknown).unwrap();
     let calls = server.request_count("/api/rpc/get_leaflet_data");
-    assert_eq!(one(temp.path(), &path, Some(&reader)).await.outcome, "unsupported");
+    let report = inspect(&context(temp.path()), Request { files: vec![path.clone()] }, Some(&reader))
+        .await
+        .unwrap();
+    assert_eq!(report.failed, 1);
+    assert_eq!(report.items[0].outcome, "invalid", "unknown profiles fail the typed parse before any fetch");
     assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), calls);
+    assert_eq!(snapshot(&path).0, unknown.into_bytes(), "status never rewrites files");
+    // Restoring the current profile makes the ordinary outcomes available again.
+    std::fs::write(&path, source).unwrap();
+    assert_eq!(one(temp.path(), &path, Some(&reader)).await.outcome, "clean");
 }
 
 #[tokio::test]
@@ -139,10 +128,14 @@ async fn workspace_selection_keeps_malformed_unbound_and_duplicate_identities_ac
     std::fs::write(temp.path().join("broken.mdx"), "---\n\"@leafbud\": [unclosed\n---\nprivate prose\n").unwrap();
     std::fs::write(
         temp.path().join("bad-token.mdx"),
-        "---\n\"@leafbud\": {binding: {baseUrl: 'https://leaflet.pub', token: invalid}, sync: {profile: leaflet-editor/2}, state: draft}\n---\n",
+        "---\n\"@leafbud\": {binding: {baseUrl: 'https://leaflet.pub', token: invalid, publication: null}, sync: {profile: leaflet-editor/3}, state: draft}\n---\n",
     )
     .unwrap();
-    std::fs::write(temp.path().join("unbound.mdx"), "---\n\"@leafbud\": {id: local}\n---\n").unwrap();
+    std::fs::write(
+        temp.path().join("unbound.mdx"),
+        "---\nformat: leafbud-mdx/2\ntitle: U\n\"@leafbud\": {id: \"00000000-0000-0000-0000-000000000000\", state: draft}\n---\n\nlocal prose\n",
+    )
+    .unwrap();
     std::fs::write(temp.path().join("ignored.mdx"), "just prose").unwrap();
     let report = inspect(&context(temp.path()), Request::default(), Some(&reader(&server))).await.unwrap();
     assert_eq!((report.selected, report.failed, report.ignored_unmanaged), (5, 4, 1));
@@ -278,7 +271,7 @@ async fn legacy_project_namespace_is_reported_not_ignored_migrated_or_duplicated
     let source = std::fs::read_to_string(&path)
         .unwrap()
         .replace("@leafbud", "@springleaf")
-        .replace("leafbud-mdx/1", "springleaf-mdx/1");
+        .replace("leafbud-mdx/2", "springleaf-mdx/1");
     std::fs::write(&path, &source).unwrap();
     let before = snapshot(&path);
     let calls = server.request_count("/api/rpc/get_leaflet_data");

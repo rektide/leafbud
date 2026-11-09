@@ -67,8 +67,8 @@ async fn unsupported_missing_and_ambiguous_inputs_do_not_fabricate_views_or_leak
     std::fs::remove_file(duplicate).unwrap();
     for (from, to, expected) in [
         ("@leafbud", "@springleaf", "conversion"),
-        ("leaflet-editor/2", "future/99", "unsupported local"),
-        ("leafbud-mdx/1", "unknown-mdx/1", "unsupported local"),
+        (leafbud_document::EDITOR_PROFILE, "future/99", "unsupported local"),
+        ("leafbud-mdx/2", "unknown-mdx/1", "unsupported local"),
     ] {
         let changed = String::from_utf8(original.0.clone()).unwrap().replace(from, to);
         std::fs::write(&path, &changed).unwrap();

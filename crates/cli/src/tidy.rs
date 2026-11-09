@@ -1,4 +1,4 @@
-//! Thin rendering for the local Markdown tidy pass (no network).
+//! Thin rendering for the local tidy passes (no network).
 use leafbud_workflow::{
     config::{self, Config},
     tidy::Request,
@@ -17,16 +17,27 @@ pub fn run(root: Option<&Path>, flags: &Config, request: Request, json: bool) ->
             if let Some(error) = &item.error {
                 eprintln!("{}: {} ({})", item.path.display(), item.outcome, error);
             }
+            let keys = if item.keys_assigned > 0 {
+                format!("{} keys assigned; ", item.keys_assigned)
+            } else {
+                String::new()
+            };
             let skipped = if item.blocks_skipped > 0 {
                 format!("; {} blocks kept exact ({})", item.blocks_skipped, item.skip_reasons.join(", "))
             } else {
                 String::new()
             };
-            println!("{} {} ({} blocks normalized{skipped})", item.outcome, item.path.display(), item.blocks_changed);
+            println!(
+                "{} {} ({}{} blocks normalized{skipped})",
+                item.outcome,
+                item.path.display(),
+                keys,
+                item.blocks_changed
+            );
         }
         println!(
-            "{} selected; {} normalized; {} unchanged; {} failed",
-            report.selected, report.normalized, report.unchanged, report.failed
+            "{} selected; {} normalized; {} unchanged; {} failed (pass: {})",
+            report.selected, report.normalized, report.unchanged, report.failed, report.pass
         );
         if report.dry_run {
             println!("dry run: no files were written");

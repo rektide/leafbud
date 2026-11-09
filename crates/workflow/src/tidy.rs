@@ -1,18 +1,23 @@
-//! Deliberate local normalization passes. Only Markdown body normalization
-//! is implemented today: parser-derived span edits proven by the production
-//! reader/writer, applied atomically under the original-byte guard. Key
-//! assignment and naming reconciliation are separately scoped future passes
-//! the CLI rejects honestly instead of half-running.
-use crate::config;
+//! Deliberate local normalization passes: one-time source-key assignment and
+//! Markdown body normalization, applied under the original-byte guard. By
+//! default every applicable pass runs; selectors narrow to their union.
+//! Formatting and preparation never settle agreement: receipts are preserved
+//! byte-for-byte and never advanced here.
+use crate::{config, files};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 #[derive(Default)]
 pub struct Request {
     pub all: bool,
     pub files: Vec<PathBuf>,
     pub dry_run: bool,
+    /// `--keys`: assign missing durable source identities only.
+    pub keys: bool,
+    /// `--markdown`: Markdown body normalization only.
+    pub markdown: bool,
 }
 
 #[derive(Serialize)]
@@ -32,6 +37,7 @@ pub struct Report {
 pub struct Item {
     pub path: PathBuf,
     pub outcome: &'static str,
+    pub keys_assigned: usize,
     pub blocks_changed: usize,
     pub blocks_skipped: usize,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -62,11 +68,26 @@ fn managed_files(root: &Path) -> Result<Vec<PathBuf>> {
     Ok(out)
 }
 
-/// Run the Markdown tidy pass over the selected local files. No network,
-/// no remote writes, no hash or receipt changes: formatting never accepts
-/// local edits, so witnesses are only ever preserved byte-for-byte.
+/// One durable proposed key: `b-<random>` for blocks, `p-<random>` for the
+/// main page. Assignment is one-time; proposals are not durable until applied.
+fn fresh_key(prefix: &'static str) -> impl FnMut() -> String {
+    move || format!("{prefix}-{}", Uuid::new_v4())
+}
+
+/// Run the selected local passes over the selected files. No network, no
+/// remote writes, no receipt changes.
 pub fn run(context: &config::Context, request: Request) -> Result<Report> {
     ensure!(request.all ^ !request.files.is_empty(), "select file operands or --all");
+    let run_keys = request.keys || !request.markdown;
+    let run_markdown = request.markdown || !request.keys;
+    if !run_keys && !run_markdown {
+        ensure!(false, "select at least one pass");
+    }
+    let pass = match (run_keys, run_markdown) {
+        (true, true) => "all",
+        (true, false) => "keys",
+        _ => "markdown",
+    };
     let root = std::fs::canonicalize(&context.workspace_root).context("resolving document workspace")?;
     let candidates: Vec<PathBuf> = if request.all {
         managed_files(&root)?
@@ -84,7 +105,7 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
     let mut report = Report {
         version: 1,
         workspace: root,
-        pass: "markdown",
+        pass,
         dry_run: request.dry_run,
         selected: candidates.len(),
         normalized: 0,
@@ -93,7 +114,7 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
         items: vec![],
     };
     for path in candidates {
-        let item = tidy_file(&path, request.dry_run);
+        let item = tidy_file(&path, request.dry_run, run_keys, run_markdown);
         match item.outcome {
             "normalized" => report.normalized += 1,
             "unchanged" => report.unchanged += 1,
@@ -104,12 +125,13 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
     Ok(report)
 }
 
-fn tidy_file(path: &Path, dry_run: bool) -> Item {
-    match try_tidy(path, dry_run) {
+fn tidy_file(path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Item {
+    match try_tidy(path, dry_run, run_keys, run_markdown) {
         Ok(item) => item,
         Err(error) => Item {
             path: path.to_path_buf(),
             outcome: "failed",
+            keys_assigned: 0,
             blocks_changed: 0,
             blocks_skipped: 0,
             skip_reasons: vec![],
@@ -118,31 +140,52 @@ fn tidy_file(path: &Path, dry_run: bool) -> Item {
     }
 }
 
-fn try_tidy(path: &Path, dry_run: bool) -> Result<Item> {
+fn try_tidy(path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Result<Item> {
     let original = std::fs::read(path).context("reading managed file")?;
     let source = String::from_utf8(original.clone()).context("managed file is not UTF-8")?;
-    let plan = leafbud_mdx::plan_markdown_tidy(&source).context("unsupported managed source; nothing was written")?;
-    let skip_reasons = plan.skip_reasons.iter().map(|(key, reason)| format!("{key}: {reason}")).collect::<Vec<_>>();
-    let item = Item {
-        path: path.to_path_buf(),
-        outcome: "unchanged",
-        blocks_changed: 0,
-        blocks_skipped: plan.blocks_skipped,
-        skip_reasons,
-        error: None,
-    };
-    if plan.edits.is_empty() {
-        return Ok(item);
+    let mut keys_assigned = 0;
+    let mut working = source.clone();
+    if run_keys {
+        let (mut block_source, mut page_source) = (fresh_key("b"), fresh_key("p"));
+        let plan = leafbud_mdx::prepare_keys(
+            &working,
+            leafbud_mdx::KeySource {
+                block: &mut block_source,
+                page: &mut page_source,
+            },
+        )
+        .context("unsupported managed source; nothing was written")?;
+        if !plan.is_noop() {
+            keys_assigned = plan.assigned + usize::from(plan.main_page.is_some());
+            working = leafbud_mdx::apply_key_preparation(&working, &plan).context("composing key preparation")?;
+        }
     }
-    // Compose and validate even in dry run, so previews report real outcomes.
-    let next = leafbud_mdx::apply_markdown_tidy(&source, &plan).context("composing Markdown tidy")?;
-    if !dry_run && let Err(error) = crate::files::write(path, Some(&original), next.as_bytes()).context("local file changed during tidy; not overwritten") {
-        return Err(error);
+    let mut blocks_changed = 0;
+    let mut blocks_skipped = 0;
+    let mut skip_reasons = Vec::new();
+    if run_markdown {
+        let plan = leafbud_mdx::plan_markdown_tidy(&working).context("unsupported managed source; nothing was written")?;
+        skip_reasons = plan.skip_reasons.iter().map(|(key, reason)| format!("{key}: {reason}")).collect();
+        blocks_skipped = plan.blocks_skipped;
+        if !plan.edits.is_empty() {
+            blocks_changed = plan.blocks_changed;
+            // Compose and validate even in dry run, so previews report real outcomes.
+            working = leafbud_mdx::apply_markdown_tidy(&working, &plan).context("composing Markdown tidy")?;
+        }
+    }
+    let changed = working != source;
+    let outcome = if changed { "normalized" } else { "unchanged" };
+    if changed && !dry_run {
+        files::write(path, Some(&original), working.as_bytes()).context("local file changed during tidy; not overwritten")?;
     }
     Ok(Item {
-        outcome: "normalized",
-        blocks_changed: plan.blocks_changed,
-        ..item
+        path: path.to_path_buf(),
+        outcome,
+        keys_assigned,
+        blocks_changed,
+        blocks_skipped,
+        skip_reasons,
+        error: None,
     })
 }
 

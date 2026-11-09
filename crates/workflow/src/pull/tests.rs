@@ -188,42 +188,13 @@ async fn local_only_intent_and_key_spelling_never_conflict_with_remote_editor_ed
 }
 
 #[tokio::test]
-async fn legacy_receipts_require_current_agreement_to_settle_and_unknown_profiles_never_mutate() {
-    use leafbud_document::{EDITOR_PROFILE, PROFILE};
+async fn unknown_receipt_profiles_never_mutate() {
     let (server, current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    let _ = current;
     let source = std::fs::read_to_string(&path).unwrap();
-    let mut legacy = leafbud_mdx::parse(&source).unwrap();
-    legacy.state.sync.profile = PROFILE.into();
-    legacy.state.sync.local_hash = import::hash(&legacy.semantic_value());
-    let fixture = fixture();
-    legacy.state.sync.remote_hash = import::remote_hash(&data(&fixture), &parse_pull(fixture["response"].clone()).unwrap(), PROFILE);
-    let source = leafbud_mdx::update(&source, &legacy).unwrap();
-    std::fs::write(&path, &source).unwrap();
-    set_paragraph_text(
-        current.write().unwrap().get_mut(TOKEN).unwrap(),
-        &yrs_payload("Different current endpoint", None),
-    );
-    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
-    assert_eq!(report.needs_decision, 1);
-    assert!(report.items[0].error.as_ref().unwrap().contains("baseline unverified"));
-    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
-    *current.write().unwrap().get_mut(TOKEN).unwrap() = fixture.clone();
-    let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
-    assert_eq!(report.converged, 1);
-    let after = std::fs::read_to_string(&path).unwrap();
-    assert_eq!(after.split_once("---\n\n").unwrap().1, source.split_once("---\n\n").unwrap().1);
-    assert_eq!(leafbud_mdx::parse(&after).unwrap().state.sync.profile, EDITOR_PROFILE);
-    assert_eq!(
-        reader(&server)
-            .pull(&context(temp.path()), request(vec![path.clone()]))
-            .await
-            .unwrap()
-            .unchanged,
-        1
-    );
-    let unknown = after.replace(EDITOR_PROFILE, "future-editor/99");
+    let unknown = source.replace(leafbud_document::EDITOR_PROFILE, "future-editor/99");
     std::fs::write(&path, &unknown).unwrap();
     let report = reader(&server)
         .pull(
@@ -268,7 +239,7 @@ async fn swapped_author_labels_follow_native_associations_not_deterministic_key_
         after.pages[0].blocks.iter().map(|b| &b.key).collect::<Vec<_>>(),
         existing.pages[0].blocks.iter().map(|b| &b.key).collect::<Vec<_>>()
     );
-    assert_eq!(after.state.sync.local_hash, import::hash(&after.editor_value()));
+    assert_eq!(after.state.sync.as_ref().unwrap().local_hash, import::hash(&after.editor_value()));
 }
 
 #[tokio::test]
@@ -354,8 +325,11 @@ async fn pull_adopts_remote_text_mark_move_and_metadata_preserving_identities() 
     // Receipts correspond to the current remote observation.
     let now = current.read().unwrap().get(TOKEN).unwrap().clone();
     let fresh = import::build(&server.base_url, &data(&now), &parse_pull(now["response"].clone()).unwrap()).unwrap();
-    assert_eq!(document.state.sync.remote_hash, fresh.state.sync.remote_hash);
-    assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
+    assert_eq!(
+        document.state.sync.as_ref().unwrap().remote_hash,
+        fresh.state.sync.as_ref().unwrap().remote_hash
+    );
+    assert_eq!(document.state.sync.as_ref().unwrap().local_hash, import::hash(&document.editor_value()));
 }
 
 #[tokio::test]
@@ -398,7 +372,7 @@ async fn pull_witness_only_change_settles_receipts_without_content_rewrite() {
     assert!(changed[0].1.contains("remoteHash"));
     assert!(after.contains("visible current code"));
     let document = leafbud_mdx::parse(&after).unwrap();
-    assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
+    assert_eq!(document.state.sync.as_ref().unwrap().local_hash, import::hash(&document.editor_value()));
 }
 
 #[tokio::test]
@@ -501,7 +475,7 @@ async fn pull_converged_settles_receipts_without_body_rewrite() {
     assert_eq!(before_body, after_body, "converged endpoints never rewrite the body");
     assert_ne!(before_fm, after_fm, "receipts settle");
     let document = leafbud_mdx::parse(&after).unwrap();
-    assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
+    assert_eq!(document.state.sync.as_ref().unwrap().local_hash, import::hash(&document.editor_value()));
     // A repeat is now an exact no-op.
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
     assert_eq!(report.unchanged, 1);

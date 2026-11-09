@@ -1,5 +1,6 @@
 //! Local selection and identity ambiguity, not the user-facing list command.
 use anyhow::Result;
+use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
@@ -44,7 +45,8 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                     }
                 };
                 let state = &header["@leafbud"];
-                let origin = state["binding"]["baseUrl"].as_str();
+                let binding = &state["binding"];
+                let origin = binding.get("baseUrl").and_then(Value::as_str);
                 if let Some(id) = state["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
                     inventory.ids.entry(id).or_default().push(path.clone());
                 }
@@ -55,7 +57,9 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                 if let Some(local_state) = state["state"].as_str() {
                     inventory.states.insert(path.clone(), local_state.into());
                 }
-                if let (Some(origin), Some(token)) = (origin, state["binding"]["token"].as_str().and_then(|s| Uuid::parse_str(s).ok())) {
+                // Only bound documents participate in binding identity;
+                // unbound local drafts have no (origin, token) pair yet.
+                if let (Some(origin), Some(token)) = (origin, binding.get("token").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok())) {
                     inventory.index.entry((origin.to_owned(), token)).or_default().push(path.clone());
                 }
             }
@@ -79,9 +83,10 @@ impl Inventory {
                 continue;
             };
             let state = &header["@leafbud"];
+            let binding = &state["binding"];
             if let (Some(base), Some(token)) = (
-                state["binding"]["baseUrl"].as_str(),
-                state["binding"]["token"].as_str().and_then(|s| Uuid::parse_str(s).ok()),
+                binding.get("baseUrl").and_then(Value::as_str),
+                binding.get("token").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()),
             ) {
                 self.index.entry((base.into(), token)).or_default().push(path.clone());
             }

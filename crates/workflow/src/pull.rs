@@ -173,7 +173,9 @@ impl RemoteReader {
             Ok(existing) => existing,
             Err(error) => return fail(error),
         };
-        let token = existing.state.binding.token;
+        let Some(token) = existing.state.binding.as_ref().map(|binding| binding.token) else {
+            return Outcome::Failure("not a bound document; import creates bindings and push establishes them".into());
+        };
         let Some(bound_here) = bound.index.get(&(self.client.base_url().to_owned(), token)) else {
             return fail(anyhow::anyhow!("file is not bound to this origin; import creates bindings"));
         };
@@ -187,7 +189,7 @@ impl RemoteReader {
             }
             Err(error) => return Outcome::Failure(error.message),
         };
-        let binding = &existing.state.binding;
+        let binding = existing.state.binding.as_ref().expect("bound document");
         let data = observed.data;
         let merged = observed.merged;
         let agreement = observed.agreement;
@@ -233,7 +235,7 @@ impl RemoteReader {
         if verified.metadata.root_entity != data.metadata.root_entity || verified.observed_state() != LeafletState::Draft || !association_ok {
             return fail(anyhow::anyhow!("remote identity/lifecycle/association changed during pull; file preserved"));
         }
-        let next = match leafbud_mdx::update(&source, &merged).context("composing guarded refresh") {
+        let next = match leafbud_mdx::adopt_remote(&source, &merged).context("composing guarded refresh") {
             Ok(next) => next,
             Err(error) => return fail(error),
         };

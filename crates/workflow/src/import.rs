@@ -3,7 +3,7 @@
 //! equal observations are no-ops, differing files are preserved for explicit pull.
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, bail, ensure};
-use leafbud_document::{Binding, Document, EDITOR_PROFILE, PROFILE, State, Sync};
+use leafbud_document::{Binding, Document, EDITOR_PROFILE, FORMAT, Node, Publication, State, Sync};
 use leafbud_web::{LeafletData, LeafletState, PullSnapshot};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -73,22 +73,7 @@ pub(crate) fn association(data: &LeafletData) -> Result<Option<String>> {
     Ok(associations.into_iter().next())
 }
 
-fn legacy_witness(data: &LeafletData, pull: &PullSnapshot) -> Value {
-    // Include every fact's meaningful payload (including opaque unknown data),
-    // but exclude server indexes, transport CVR cookies and row timestamps.
-    let mut facts: Vec<_> = pull
-        .facts
-        .iter()
-        .map(|f| json!({"id":f["id"],"entity":f["entity"],"attribute":f["attribute"],"data":f["data"],"authorDid":f["author_did"]}))
-        .collect();
-    facts.sort_by_key(|f| f["id"].as_str().map(str::to_owned));
-    json!({"profile":PROFILE,"facts":facts,"extras":pull.extras,"root":data.metadata.root_entity,"title":data.metadata.title,"description":data.metadata.description,"associations":data.association_rows().iter().map(|r|json!({"publication":r["leaflets_in_publications"],"standalone":r["leaflets_to_documents"]})).collect::<Vec<_>>()})
-}
-
-pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot, profile: &str) -> String {
-    if profile == PROFILE {
-        return hash(&legacy_witness(data, pull));
-    }
+pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot) -> String {
     hash(&leafbud_editor::witness(
         &pull.facts,
         &pull.extras,
@@ -146,8 +131,15 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         .or_else(|| data.metadata.title.clone().filter(|s| !s.trim().is_empty() && s != "Untitled"))
         .or(content.derived_title)
         .unwrap_or_else(|| "Untitled".into());
+    let publication_uri = publication.clone();
+    let publication = match publication {
+        None => Publication::Standalone,
+        Some(uri) => Publication::At(uri),
+    };
+    let nodes: BTreeMap<String, Node> = content.nodes;
+    let main_page = content.pages.first().map(|page| page.key.clone()).context("entry page missing")?;
     let mut document = Document {
-        format: "leafbud-mdx/1".into(),
+        format: FORMAT.into(),
         title,
         description: string("publication_description")?.or_else(|| data.metadata.description.clone()),
         tags,
@@ -158,23 +150,24 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         state: State {
             id,
             state: "draft".into(),
-            binding: Binding {
+            main_page: Some(main_page),
+            binding: Some(Binding {
                 base_url: base.into(),
                 token: data.metadata.id,
                 root: root.into(),
                 entity_set: (*entity_sets.first().expect("validated entity set")).clone(),
                 entry_fact: content.entry_fact,
-                publication,
-            },
-            nodes: content.nodes,
-            sync: Sync {
+                publication: publication_uri,
+            }),
+            nodes,
+            sync: Some(Sync {
                 profile: EDITOR_PROFILE.into(),
                 local_hash: String::new(),
-                remote_hash: remote_hash(data, pull, EDITOR_PROFILE),
-            },
+                remote_hash: remote_hash(data, pull),
+            }),
         },
     };
-    document.state.sync.local_hash = hash(&document.editor_value());
+    document.state.sync.as_mut().expect("just built").local_hash = hash(&document.editor_value());
     Ok(document)
 }
 
@@ -197,8 +190,9 @@ fn local_index(root: &Path, base: &str) -> Result<BTreeMap<Uuid, Vec<PathBuf>>> 
                     header.get("@springleaf").is_none(),
                     "legacy springleaf managed source requires explicit namespace conversion before import (duplicate checkout refused)"
                 );
-                if header["@leafbud"]["binding"]["baseUrl"] == base {
-                    let token = header["@leafbud"]["binding"]["token"].as_str().context("managed file token missing")?;
+                let binding = &header["@leafbud"]["binding"];
+                if binding.is_object() && binding["baseUrl"] == base {
+                    let token = binding["token"].as_str().context("managed file token missing")?;
                     index
                         .entry(Uuid::parse_str(token).context("managed file token invalid")?)
                         .or_default()
@@ -216,16 +210,30 @@ fn local_index(root: &Path, base: &str) -> Result<BTreeMap<Uuid, Vec<PathBuf>>> 
 #[cfg(test)]
 pub(crate) mod tests;
 
-pub fn check(path: &Path) -> Result<(usize, bool)> {
+/// Offline validation outcome for one managed file.
+pub struct Check {
+    pub blocks: usize,
+    /// Blocks without a durable source key; tidy --keys (or executed push)
+    /// assigns them. Check itself never writes.
+    pub needs_preparation: usize,
+    /// None when no receipt exists (unbound/never-settled documents).
+    pub local_change: Option<bool>,
+}
+
+pub fn check(path: &Path) -> Result<Check> {
     let source = std::fs::read_to_string(path).context("reading MDX source")?;
-    let document = leafbud_mdx::parse(&source)?;
-    let blocks = document.pages.iter().map(|p| p.blocks.len()).sum();
-    let value = if document.state.sync.profile == EDITOR_PROFILE {
-        document.editor_value()
-    } else {
-        document.semantic_value()
+    let parsed = leafbud_mdx::parse_with_spans(&source)?;
+    let blocks = parsed.document.pages.iter().map(|p| p.blocks.len()).sum();
+    let needs_preparation = parsed.unkeyed().len() + usize::from(parsed.main_page_provisional());
+    let local_change = match &parsed.document.state.sync {
+        Some(sync) => Some(hash(&parsed.document.editor_value()) != sync.local_hash.as_str()),
+        None => None,
     };
-    Ok((blocks, hash(&value) != document.state.sync.local_hash))
+    Ok(Check {
+        blocks,
+        needs_preparation,
+        local_change,
+    })
 }
 
 fn destination(root: &Path, title: &str, id: Uuid, to: Option<&Path>) -> Result<PathBuf> {
@@ -312,15 +320,11 @@ impl RemoteReader {
                     let source = std::fs::read_to_string(path)?;
                     let existing = leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
                     ensure!(
-                        existing.state.sync.remote_hash == remote_hash(&data, &pull, &existing.state.sync.profile),
+                        existing.state.sync.as_ref().is_some_and(|sync| sync.remote_hash == remote_hash(&data, &pull)),
                         "remote changed since import; explicit pull/refresh support required (existing file preserved)"
                     );
-                    let value = if existing.state.sync.profile == EDITOR_PROFILE {
-                        existing.editor_value()
-                    } else {
-                        existing.semantic_value()
-                    };
-                    let outcome = if hash(&value) == existing.state.sync.local_hash {
+                    let value = existing.editor_value();
+                    let outcome = if hash(&value) == existing.state.sync.as_ref().expect("checked above").local_hash {
                         "unchanged"
                     } else {
                         "kept-local-changes"
@@ -332,10 +336,13 @@ impl RemoteReader {
                 // Recheck native identity/association after content acquisition; no
                 // promise of a remote transaction/CAS, and no files overwritten.
                 let verified = self.client.get(id).await?;
+                let confirmed = match &document.publication {
+                    Publication::Standalone => None,
+                    Publication::At(uri) => Some(uri.clone()),
+                    Publication::Inherit => unreachable!("imports always carry the confirmed association"),
+                };
                 ensure!(
-                    verified.metadata.root_entity == data.metadata.root_entity
-                        && verified.observed_state() == state
-                        && association(&verified)? == document.publication,
+                    verified.metadata.root_entity == data.metadata.root_entity && verified.observed_state() == state && association(&verified)? == confirmed,
                     "remote identity/lifecycle changed during import"
                 );
                 crate::files::write(&path, None, source.as_bytes())?;

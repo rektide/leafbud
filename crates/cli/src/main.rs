@@ -9,14 +9,16 @@
 //!   `push`, `pull`, `publish`, `import`, `edit`, `tidy`, `export`;
 //! - **push saves the editor; publish releases; pull reads the working
 //!   editor** — same meanings for draft and published files;
+//! - `create FILE --title` writes one unbound local draft (offline, stable
+//!   random document UUID, no clobbering) with tri-state publication intent;
 //! - missing source keys are assigned on executed `push`/`publish`;
 //!   manual local assignment is `tidy FILE --keys` (there is no
 //!   `keys assign`), and `keys rename` is the explicit binding-preserving
-//!   rename — key assignment is not implemented yet and requesting the
-//!   selector fails honestly;
-//! - `tidy FILE` runs all applicable implemented passes by default (today:
-//!   Markdown body normalization); `--markdown` selects it alone, and
-//!   `--keys`/`--from`/`--accept` are rejected until implemented;
+//!   rename;
+//! - `tidy FILE` runs all applicable implemented passes by default (key
+//!   preparation plus Markdown body normalization); `--keys` and
+//!   `--markdown` select passes alone; `--from`/`--accept` (naming) are
+//!   rejected until implemented;
 //! - `list` inventories local managed files; `remote list`/`pubs list`
 //!   discover remote objects.
 //!
@@ -34,6 +36,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use leafbud_workflow::{LeafletState, RemoteOptions};
 
 mod config;
+mod create;
 mod diff;
 mod import;
 mod pull;
@@ -122,6 +125,9 @@ enum Command {
         /// Document title (author frontmatter)
         #[arg(short, long)]
         title: String,
+        /// Explicit standalone publication intent (overrides --publication)
+        #[arg(long, conflicts_with = "publication")]
+        standalone: bool,
     },
     /// Offline syntax, component, reference and identity validation (import profile)
     Check {
@@ -380,7 +386,7 @@ async fn main() -> ExitCode {
     let mut flags = leafbud_workflow::config::Config {
         handle: cli.handle,
         pds: cli.pds,
-        publication: cli.publication,
+        publication: cli.publication.clone(),
         ..Default::default()
     };
     if let Command::Diff {
@@ -483,10 +489,32 @@ async fn main() -> ExitCode {
             }
         };
     }
+    if let Command::Create { file, title, standalone } = &cli.command {
+        let publication = match (&cli.publication, standalone) {
+            (Some(uri), _) => leafbud_document::Publication::At(uri.clone()),
+            (None, true) => leafbud_document::Publication::Standalone,
+            (None, false) => leafbud_document::Publication::Inherit,
+        };
+        return match create::run(
+            cli.root.as_deref(),
+            &flags,
+            leafbud_workflow::create::Request {
+                file: file.clone(),
+                title: title.clone(),
+                publication,
+            },
+        ) {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("leafbud: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Tidy {
         files,
         all,
-        markdown: _,
+        markdown,
         keys,
         from,
         accept,
@@ -495,19 +523,12 @@ async fn main() -> ExitCode {
     } = &cli.command
     {
         // Honest rejection of the accepted-but-unimplemented selectors: this
-        // build only normalizes Markdown bodies and never mints keys or
-        // settles naming silently.
-        if *keys {
-            eprintln!(
-                "leafbud: tidy --keys (missing source identity assignment) is not implemented yet; \
-                 this build only normalizes Markdown bodies"
-            );
-            return ExitCode::FAILURE;
-        }
+        // build assigns keys and normalizes Markdown bodies; naming
+        // reconciliation is still refused rather than half-run.
         if from.is_some() || *accept {
             eprintln!(
                 "leafbud: tidy --from/--accept (naming reconciliation) is not implemented yet; \
-                 this build only normalizes Markdown bodies"
+                 this build assigns missing keys and normalizes Markdown bodies"
             );
             return ExitCode::FAILURE;
         }
@@ -518,6 +539,8 @@ async fn main() -> ExitCode {
                 all: *all,
                 files: files.clone(),
                 dry_run: *dry_run,
+                keys: *keys,
+                markdown: *markdown,
             },
             *json,
         ) {
@@ -544,7 +567,19 @@ async fn main() -> ExitCode {
                 context.workspace_root.join(file)
             };
             match leafbud_workflow::import::check(&path) {
-                Ok((blocks, changed)) => println!("valid {} ({blocks} blocks; local changes: {changed})", path.display()),
+                Ok(outcome) => {
+                    let preparation = if outcome.needs_preparation > 0 {
+                        format!("; {} objects need key preparation (tidy --keys)", outcome.needs_preparation)
+                    } else {
+                        String::new()
+                    };
+                    let changes: String = match outcome.local_change {
+                        Some(true) => "local changes: true".into(),
+                        Some(false) => "local changes: false".into(),
+                        None => "no receipts yet".into(),
+                    };
+                    println!("valid {} ({} blocks; {changes}{preparation})", path.display(), outcome.blocks);
+                }
                 Err(error) => {
                     failed += 1;
                     eprintln!("{}: {error:#}", path.display());

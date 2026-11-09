@@ -1,6 +1,6 @@
 use super::*;
 use crate::import;
-use leafbud_document::{Inline, Mark, PROFILE};
+use leafbud_document::{Inline, Mark, Node, Occurrence};
 use leafbud_web::{parse_pull, parse_rpc};
 use serde_json::{Value, json};
 
@@ -27,21 +27,19 @@ fn scoped_inputs_ignore_local_only_intent_and_spelling_not_editor_meaning() {
         |d: &mut Document| d.title.push('!'),
         |d: &mut Document| d.extra.insert("contributors".into(), json!(["did:plc:other"])).map(|_| ()).unwrap_or(()),
         |d: &mut Document| d.pages[0].blocks.reverse(),
-        |d: &mut Document| d.state.nodes.values_mut().next().unwrap().entity.push('!'),
         |d: &mut Document| {
             let key = d.pages[0].blocks[0].key.clone();
-            d.state.nodes.get_mut(&key).unwrap().text_fact = Some("different-fact".into());
+            match &mut d.state.nodes.get_mut(&key).unwrap().occurrence {
+                Occurrence::Block { placement, .. } => placement.push('!'),
+                Occurrence::Page { .. } => panic!("block occurrence"),
+            }
         },
         |d: &mut Document| {
-            d.state
-                .nodes
-                .values_mut()
-                .next()
-                .unwrap()
-                .memberships
-                .insert("new-occurrence".into(), "new-occurrence".into())
-                .map(|_| ())
-                .unwrap_or(())
+            let key = d.pages[0].blocks[0].key.clone();
+            match &mut d.state.nodes.get_mut(&key).unwrap().occurrence {
+                Occurrence::Block { text_fact, .. } => *text_fact = Some("different-fact".into()),
+                Occurrence::Page { .. } => panic!("block occurrence"),
+            }
         },
     ] {
         let mut changed = base.clone();
@@ -67,7 +65,7 @@ fn scoped_inputs_ignore_local_only_intent_and_spelling_not_editor_meaning() {
 }
 
 #[test]
-fn classification_keeps_legacy_uncertainty_and_true_both_sided_changes() {
+fn classification_keeps_true_both_sided_changes_and_receipt_uncertainty() {
     let base = document();
     let mut local = base.clone();
     local.extra.insert("custom".into(), json!(true));
@@ -79,13 +77,17 @@ fn classification_keeps_legacy_uncertainty_and_true_both_sided_changes() {
     assert_eq!(classify(&local, &remote, "remote-changed").state, "both-changed");
     local.title = remote.title.clone();
     assert_eq!(classify(&local, &remote, "remote-changed").state, "converged");
-    local.state.sync.profile = PROFILE.into();
-    local.state.sync.local_hash = import::hash(&local.semantic_value());
-    assert_eq!(classify(&local, &remote, "remote-changed").baseline, "legacy-unscoped");
-    remote.title.push('!');
-    assert_eq!(classify(&local, &remote, "remote-changed").state, "unverified");
-    local.extra.insert("localOnly".into(), json!(true));
-    assert_eq!(local_change(&local), Change::Unknown);
+    assert_eq!(classify(&local, &remote, "remote-changed").baseline, "scoped");
+    // A locally retired association (row without content) is a local change.
+    let mut retired = base.clone();
+    retired.pages[0].blocks.clear();
+    assert_eq!(local_change(&retired), Change::Changed);
+    let value = retired.editor_value();
+    assert_eq!(value["retired"].as_array().map(Vec::len), Some(2), "both block rows retire");
+    assert!(
+        value["retired"][0]["entity"].is_string(),
+        "retirements carry their locator, not a null identity"
+    );
 }
 
 #[test]
@@ -113,9 +115,9 @@ fn page_definition_layout_and_page_key_spelling_are_not_remote_content_edits() {
             key.clone(),
             Node {
                 entity: suffix.into(),
-                memberships: BTreeMap::from([(suffix.into(), suffix.into())]),
-                text_fact: None,
-                inactive_text_fact: None,
+                occurrence: Occurrence::Page {
+                    references: vec![format!("ref-{suffix}")],
+                },
             },
         );
         base.pages.push(Page { key, blocks: vec![] });
@@ -125,9 +127,11 @@ fn page_definition_layout_and_page_key_spelling_are_not_remote_content_edits() {
         key.clone(),
         Node {
             entity: "link".into(),
-            memberships: BTreeMap::from([("placement".into(), "placement".into())]),
-            text_fact: None,
-            inactive_text_fact: None,
+            occurrence: Occurrence::Block {
+                placement: "placement".into(),
+                text_fact: None,
+                inactive_text_fact: None,
+            },
         },
     );
     base.pages[0].blocks.push(Block {
@@ -152,8 +156,8 @@ fn page_definition_layout_and_page_key_spelling_are_not_remote_content_edits() {
 #[test]
 fn malformed_receipts_never_claim_change_direction() {
     let mut local = document();
-    local.state.sync.local_hash = "not-a-receipt".into();
-    local.state.sync.remote_hash.clear();
+    local.state.sync.as_mut().unwrap().local_hash = "not-a-receipt".into();
+    local.state.sync.as_mut().unwrap().remote_hash.clear();
     let mut remote = local.clone();
     remote.title.push('!');
     let agreement = classify(&local, &remote, "new-current-hash");
@@ -169,6 +173,20 @@ fn malformed_receipts_never_claim_change_direction() {
 }
 
 #[test]
+fn unbound_and_receipt_free_documents_have_no_change_direction() {
+    let mut unbound = document();
+    unbound.state.binding = None;
+    unbound.state.sync = None;
+    assert_eq!(local_change(&unbound), Change::Unknown);
+    assert_eq!(baseline(&unbound), "none");
+    // Bound without receipts: coherent, still no direction from nothing.
+    let mut document = document();
+    document.state.sync = None;
+    assert_eq!(local_change(&document), Change::Unknown);
+    assert_eq!(baseline(&document), "none");
+}
+
+#[test]
 fn new_native_nodes_cannot_steal_matched_author_labels_or_drop_association_rows() {
     let base = document();
     let mut local = base.clone();
@@ -181,9 +199,11 @@ fn new_native_nodes_cannot_steal_matched_author_labels_or_drop_association_rows(
         "new-native-node".into(),
         Node {
             entity: "new-entity".into(),
-            memberships: BTreeMap::from([("new-occurrence".into(), "new-occurrence".into())]),
-            text_fact: None,
-            inactive_text_fact: None,
+            occurrence: Occurrence::Block {
+                placement: "new-occurrence".into(),
+                text_fact: None,
+                inactive_text_fact: None,
+            },
         },
     );
     fresh.pages[0].blocks.push(Block {
@@ -195,4 +215,21 @@ fn new_native_nodes_cannot_steal_matched_author_labels_or_drop_association_rows(
     assert_eq!(merged.state.nodes["new-native-node"], local.state.nodes["new-native-node"]);
     assert_eq!(merged.pages[0].blocks.last().unwrap().key, "new-native-node-imported-2");
     assert_eq!(merged.editor_value(), fresh.editor_value());
+}
+
+#[test]
+fn locally_created_uuids_survive_observation_without_import_derivation() {
+    let base = document();
+    let mut local = base.clone();
+    // A locally created document keeps its random UUID after binding.
+    local.state.id = uuid::Uuid::new_v4();
+    let merged = adopt(&local, &base);
+    assert_eq!(merged.state.id, local.state.id, "adoption preserves the local document UUID");
+    // Identity checks compare the native locator group, not state.id.
+    let binding = base.state.binding.clone().expect("bound");
+    assert!(super::same_identity(&binding, &base).is_ok());
+    let mut moved = base.clone();
+    moved.state.binding.as_mut().unwrap().root = "other-root".into();
+    let moved_binding = moved.state.binding.clone().unwrap();
+    assert!(super::same_identity(&moved_binding, &base).is_err());
 }

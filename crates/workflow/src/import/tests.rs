@@ -1,4 +1,5 @@
 use super::*;
+use leafbud_document::Occurrence;
 use leafbud_web::{LeafletClient, parse_pull, parse_rpc};
 use std::sync::Arc;
 
@@ -20,27 +21,23 @@ fn fixture_content_to_real_mdx_and_back_without_loss() {
     let pull = parse_pull(fixture["response"].clone()).unwrap();
     let document = build("https://leaflet.pub", &data, &pull).unwrap();
     assert_eq!(document.title, "Synthetic title");
-    assert_eq!(document.publication, None);
+    assert_eq!(document.publication, leafbud_document::Publication::Standalone);
     assert!(document.extra.is_empty());
     let source = leafbud_mdx::render(&document).unwrap();
     assert!(source.contains("Synthetic body copy"));
     assert!(!source.contains("AQPY"));
     let parsed = leafbud_mdx::parse(&source).unwrap();
     assert_eq!(parsed.semantic_value(), document.semantic_value());
-    assert_eq!(parsed.state.sync.local_hash, hash(&parsed.editor_value()));
-    assert_eq!(parsed.state.binding.token, data.metadata.id);
+    assert_eq!(parsed.state.sync.as_ref().unwrap().local_hash, hash(&parsed.editor_value()));
+    assert_eq!(parsed.state.binding.as_ref().unwrap().token, data.metadata.id);
     let mut altered = parsed.clone();
-    altered
-        .state
-        .nodes
-        .values_mut()
-        .next()
-        .unwrap()
-        .memberships
-        .insert("changed".into(), "changed".into());
+    match &mut altered.state.nodes.values_mut().next().unwrap().occurrence {
+        Occurrence::Block { placement, .. } => *placement = "changed".into(),
+        Occurrence::Page { references } => references.push("changed".into()),
+    }
     assert_ne!(
         hash(&altered.editor_value()),
-        parsed.state.sync.local_hash,
+        parsed.state.sync.as_ref().unwrap().local_hash,
         "source associations are fingerprinted, not only prose"
     );
 }
@@ -94,10 +91,27 @@ fn visible_code_ignores_but_witnesses_native_inactive_richtext() {
     let source = leafbud_mdx::render(&document).unwrap();
     assert!(source.contains("visible current code"));
     assert!(!source.contains("Synthetic body copy"));
-    assert_eq!(document.state.nodes.values().filter(|n| n.inactive_text_fact.is_some()).count(), 1);
-    let previous = document.state.sync.remote_hash;
+    assert_eq!(
+        document
+            .state
+            .nodes
+            .values()
+            .filter(|n| matches!(
+                &n.occurrence,
+                Occurrence::Block {
+                    inactive_text_fact: Some(_),
+                    ..
+                }
+            ))
+            .count(),
+        1
+    );
+    let previous = document.state.sync.as_ref().unwrap().remote_hash.clone();
     pull.facts.iter_mut().find(|f| f["entity"] == block && f["attribute"] == "block/text").unwrap()["data"]["value"] = json!("opaque-inactive-change");
-    assert_ne!(build("https://leaflet.pub", &data, &pull).unwrap().state.sync.remote_hash, previous);
+    assert_ne!(
+        build("https://leaflet.pub", &data, &pull).unwrap().state.sync.as_ref().unwrap().remote_hash,
+        previous
+    );
 }
 
 #[test]
@@ -153,9 +167,7 @@ fn rich_runs_empty_blocks_images_and_pages_roundtrip() {
         page_key,
         Node {
             entity: "main".into(),
-            memberships: BTreeMap::new(),
-            text_fact: None,
-            inactive_text_fact: None,
+            occurrence: Occurrence::Page { references: vec![] },
         },
     );
     for (i, kind) in kinds.into_iter().enumerate() {
@@ -164,9 +176,11 @@ fn rich_runs_empty_blocks_images_and_pages_roundtrip() {
             key.clone(),
             Node {
                 entity: format!("e-{i}"),
-                memberships: BTreeMap::new(),
-                text_fact: None,
-                inactive_text_fact: None,
+                occurrence: Occurrence::Block {
+                    placement: format!("m-{i}"),
+                    text_fact: None,
+                    inactive_text_fact: None,
+                },
             },
         );
         document.pages[0].blocks.push(Block { key, kind });
@@ -175,9 +189,7 @@ fn rich_runs_empty_blocks_images_and_pages_roundtrip() {
         "p-other".into(),
         Node {
             entity: "other".into(),
-            memberships: BTreeMap::new(),
-            text_fact: None,
-            inactive_text_fact: None,
+            occurrence: Occurrence::Page { references: vec![] },
         },
     );
     document.pages.push(Page {

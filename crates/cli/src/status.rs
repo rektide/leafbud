@@ -26,8 +26,13 @@ pub async fn run(
                 .chars()
                 .flat_map(|c| if c.is_control() { c.escape_default().collect::<Vec<_>>() } else { vec![c] })
                 .collect();
+            let preparation = if item.needs_preparation > 0 {
+                format!("; {} objects need keys (tidy --keys)", item.needs_preparation)
+            } else {
+                String::new()
+            };
             println!(
-                "{} {} (local: {}; remote: {}, {}; baseline: {})\n  {}",
+                "{} {} (local: {}; remote: {}, {}; baseline: {}{preparation})\n  {}",
                 item.outcome,
                 path,
                 item.local.as_str(),

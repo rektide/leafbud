@@ -1,51 +1,54 @@
 use super::*;
-use leafbud_document::{Binding, Block, BlockKind, Document, Inline, Mark, Node, Page, State, Sync, Uuid};
+use leafbud_document::{Binding, Block, BlockKind, Document, EDITOR_PROFILE, FORMAT, Inline, Mark, Node, Occurrence, Page, Publication, State, Sync, Uuid};
 use std::collections::BTreeMap;
 
 fn document() -> Document {
     let state = State {
         id: Uuid::nil(),
         state: "draft".into(),
-        binding: Binding {
+        main_page: Some("p-main".into()),
+        binding: Some(Binding {
             base_url: "https://leaflet.pub".into(),
             token: Uuid::nil(),
             root: "e-root".into(),
             entity_set: "es".into(),
             entry_fact: "f-entry".into(),
             publication: None,
-        },
+        }),
         nodes: BTreeMap::from([
             (
                 "p-main".into(),
                 Node {
                     entity: "e-main".into(),
-                    memberships: BTreeMap::new(),
-                    text_fact: None,
-                    inactive_text_fact: None,
+                    occurrence: Occurrence::Page {
+                        references: vec!["f-entry".into()],
+                    },
                 },
             ),
             (
                 "b-1".into(),
                 Node {
                     entity: "e-b1".into(),
-                    memberships: BTreeMap::new(),
-                    text_fact: None,
-                    inactive_text_fact: None,
+                    occurrence: Occurrence::Block {
+                        placement: "f-b1".into(),
+                        text_fact: None,
+                        inactive_text_fact: None,
+                    },
                 },
             ),
         ]),
-        sync: Sync {
-            profile: leafbud_document::PROFILE.into(),
+        sync: Some(Sync {
+            profile: EDITOR_PROFILE.into(),
             local_hash: "sha256:old-local".into(),
             remote_hash: "sha256:old-remote".into(),
-        },
+        }),
     };
     Document {
-        format: "leafbud-mdx/1".into(),
+        format: FORMAT.into(),
         title: "T".into(),
         description: None,
         tags: vec![],
-        publication: None,
+        publication: Publication::Standalone,
         theme: None,
         extra: BTreeMap::new(),
         pages: vec![Page {
@@ -178,7 +181,7 @@ fn tidy_all_selects_managed_files_only() {
 fn tidy_fails_loud_on_unsupported_bodies_without_writing() {
     let root = tempfile::tempdir().unwrap();
     let path = authored_wrapped(root.path());
-    let mut broken = read(&path).replacen("</Page>", "{/* body comment */}\n</Page>", 1);
+    let mut broken = read(&path).replacen("customField", "{/* body comment */}\ncustomField", 1);
     broken = broken.replace("<Paragraph>\n", "<Unknown />\n<Paragraph>\n");
     let path2 = root.path().join("drafts").join("broken.mdx");
     std::fs::write(&path2, broken).unwrap();

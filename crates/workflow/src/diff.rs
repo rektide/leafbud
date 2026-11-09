@@ -89,11 +89,14 @@ impl RemoteReader {
             !inventory.duplicates.contains(&path),
             "duplicate local document ID or native binding; resolve the copies before comparison"
         );
-        let binding = &existing.state.binding;
-        let expected_id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, format!("{}/{}", binding.base_url, binding.token).as_bytes());
+        let binding = existing
+            .state
+            .binding
+            .as_ref()
+            .context("unbound local draft; push establishes the native binding diff compares against")?;
         ensure!(
-            existing.state.id == expected_id && !binding.root.is_empty() && !binding.entity_set.is_empty() && !binding.entry_fact.is_empty(),
-            "incoherent imported binding; resolve its identity explicitly"
+            !binding.root.is_empty() && !binding.entity_set.is_empty() && !binding.entry_fact.is_empty(),
+            "incoherent binding; resolve its identity explicitly"
         );
         ensure!(
             binding.base_url == self.client.base_url(),
