@@ -351,7 +351,14 @@ async fn legacy_project_namespace_is_reported_not_ignored_migrated_or_duplicated
             .await
             .is_err()
     );
-    assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 1);
+    assert_eq!(
+        std::fs::read_dir(temp.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|e| e == "mdx"))
+            .count(),
+        1
+    );
     assert_eq!(snapshot(&path), before);
 }
 

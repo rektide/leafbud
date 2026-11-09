@@ -114,7 +114,7 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
         items: vec![],
     };
     for path in candidates {
-        let item = tidy_file(&path, request.dry_run, run_keys, run_markdown);
+        let item = tidy_file(context, &path, request.dry_run, run_keys, run_markdown);
         match item.outcome {
             "normalized" => report.normalized += 1,
             "unchanged" => report.unchanged += 1,
@@ -125,8 +125,8 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
     Ok(report)
 }
 
-fn tidy_file(path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Item {
-    match try_tidy(path, dry_run, run_keys, run_markdown) {
+fn tidy_file(context: &config::Context, path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Item {
+    match try_tidy(context, path, dry_run, run_keys, run_markdown) {
         Ok(item) => item,
         Err(error) => Item {
             path: path.to_path_buf(),
@@ -140,9 +140,12 @@ fn tidy_file(path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> 
     }
 }
 
-fn try_tidy(path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Result<Item> {
-    let original = std::fs::read(path).context("reading managed file")?;
-    let source = String::from_utf8(original.clone()).context("managed file is not UTF-8")?;
+fn try_tidy(context: &config::Context, path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Result<Item> {
+    let store = crate::lock::Store::new(context)?;
+    let (_guard, original, source) = crate::lock::read(path, &store)?;
+    let mut inventory = crate::inventory::scan(&context.workspace_root, None)?;
+    inventory.include_operands(&[path.into()]);
+    ensure!(!inventory.duplicates.contains(path), "duplicate local identity/binding; preserved");
     let mut keys_assigned = 0;
     let mut working = source.clone();
     if run_keys {

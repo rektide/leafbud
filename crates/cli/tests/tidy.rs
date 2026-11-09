@@ -32,7 +32,7 @@ fn cli(root: &std::path::Path, args: &[&str]) -> TokioCommand {
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env_remove("LEAFLET_BASE_URL")
         .env_remove("HOME")
-        .env("XDG_CONFIG_HOME", concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/absent"))
+        .env("XDG_CONFIG_HOME", root.join(".config"))
         .arg("--root")
         .arg(root)
         .args(args);

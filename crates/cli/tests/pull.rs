@@ -158,7 +158,7 @@ fn cli(base: &str, root: &str, args: &[&str]) -> TokioCommand {
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env_remove("LEAFLET_BASE_URL")
         .env_remove("HOME")
-        .env("XDG_CONFIG_HOME", concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/absent"))
+        .env("XDG_CONFIG_HOME", std::path::Path::new(root).join(".config"))
         .args(["--base-url", base, "--root", root])
         .args(args);
     command

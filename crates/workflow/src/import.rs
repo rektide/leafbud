@@ -275,7 +275,7 @@ impl RemoteReader {
         ensure!(!request.all || request.to.is_none(), "--to is only valid for one locator");
         let root = std::fs::canonicalize(&context.workspace_root).context("resolving document workspace")?;
         let base = self.client.base_url();
-        let index = local_index(&root, base)?;
+        local_index(&root, base)?;
         let ids = if request.all {
             self.client.list().await?.leaflets.into_iter().map(|l| l.metadata.id).collect::<Vec<_>>()
         } else {
@@ -299,6 +299,11 @@ impl RemoteReader {
         };
         for id in ids {
             let result: Result<Option<(PathBuf, &'static str)>> = async {
+                let store = crate::lock::Store::new(context)?;
+                let _binding_guard = store.binding(base, id)?.context("binding busy in another Leafbud import; retry later")?;
+                // A concurrent import may have established the binding while
+                // this request was being selected. Index only after locking.
+                let index = local_index(&root, base)?;
                 let data = self.client.get(id).await?;
                 let state = data.observed_state();
                 if request.state.is_some_and(|s| s != state) {
@@ -317,7 +322,7 @@ impl RemoteReader {
                             "binding already exists at another local path"
                         );
                     }
-                    let source = std::fs::read_to_string(path)?;
+                    let (_guard, _, source) = crate::lock::read(path, &store)?;
                     let existing = leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
                     ensure!(
                         existing.state.sync.as_ref().is_some_and(|sync| sync.remote_hash == remote_hash(&data, &pull)),
@@ -332,6 +337,9 @@ impl RemoteReader {
                     return Ok(Some((path.clone(), outcome)));
                 }
                 let path = destination(&root, &document.title, id, request.to.as_deref())?;
+                let _document_guard = store
+                    .document(document.state.id)?
+                    .context("document busy in another Leafbud operation; retry later")?;
                 let source = leafbud_mdx::render(&document)?;
                 // Recheck native identity/association after content acquisition; no
                 // promise of a remote transaction/CAS, and no files overwritten.
@@ -344,6 +352,10 @@ impl RemoteReader {
                 ensure!(
                     verified.metadata.root_entity == data.metadata.root_entity && verified.observed_state() == state && association(&verified)? == confirmed,
                     "remote identity/lifecycle changed during import"
+                );
+                ensure!(
+                    !local_index(&root, base)?.contains_key(&id),
+                    "binding appeared during import; existing file preserved"
                 );
                 crate::files::write(&path, None, source.as_bytes())?;
                 Ok(Some((path, "imported")))

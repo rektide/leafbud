@@ -4,6 +4,7 @@ use leafbud_document::BlockKind;
 use leafbud_web::{LeafletClient, LeafletData, parse_pull, parse_rpc};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 // The loopback responder is already a module of this crate's test build

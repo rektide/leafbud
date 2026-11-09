@@ -9,9 +9,12 @@ pub mod editor_state;
 mod files;
 pub mod import;
 mod inventory;
+mod lock;
 pub mod pull;
+pub mod refresh;
 pub mod status;
 pub mod tidy;
+pub mod watch;
 
 use std::path::PathBuf;
 

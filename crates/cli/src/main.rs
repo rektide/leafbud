@@ -43,6 +43,7 @@ mod pull;
 mod remote;
 mod status;
 mod tidy;
+mod watch;
 
 #[derive(Parser)]
 #[command(
@@ -205,6 +206,31 @@ enum Command {
         dry_run: bool,
         #[arg(long)]
         json: bool,
+    },
+    /// Follow durable remote edits into existing bound files (never auto-push)
+    Watch {
+        #[arg(required_unless_present = "all", conflicts_with = "all")]
+        files: Vec<PathBuf>,
+        #[arg(long)]
+        all: bool,
+        /// Versioned JSON Lines transitions and final summary
+        #[arg(long)]
+        json: bool,
+        /// Slow HTTP reconciliation backstop, seconds
+        #[arg(long, default_value = "300", value_parser = clap::value_parser!(u64).range(1..))]
+        backstop: u64,
+        /// Local selection/source inventory rescan, seconds
+        #[arg(long, default_value = "5", value_parser = clap::value_parser!(u64).range(1..))]
+        rescan: u64,
+        /// Observe advisory passive presence; never infer permission or idleness
+        #[arg(long)]
+        presence: bool,
+        /// Explicit public Supabase origin (else bounded same-origin discovery)
+        #[arg(long)]
+        project_url: Option<String>,
+        /// Public anon JWT; alternatively LEAFBUD_REALTIME_ANON_KEY
+        #[arg(long)]
+        anon_key: Option<String>,
     },
     /// Plan/execute editor synchronization and native release
     /// (saves as needed, then releases)
@@ -389,6 +415,43 @@ async fn main() -> ExitCode {
         publication: cli.publication.clone(),
         ..Default::default()
     };
+    if let Command::Watch {
+        files,
+        all,
+        json,
+        backstop,
+        rescan,
+        presence,
+        project_url,
+        anon_key,
+    } = &cli.command
+    {
+        return match watch::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            leafbud_workflow::watch::Request {
+                files: files.clone(),
+                all: *all,
+            },
+            watch::Settings {
+                json: *json,
+                backstop: *backstop,
+                rescan: *rescan,
+                presence: *presence,
+                project_url: project_url.clone(),
+                anon_key: anon_key.clone(),
+            },
+        )
+        .await
+        {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("leafbud: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Diff {
         file,
         edge,
@@ -645,6 +708,7 @@ fn command_name(command: &Command) -> String {
         Command::Diff { .. } => "diff".into(),
         Command::Push { .. } => "push".into(),
         Command::Pull { .. } => "pull".into(),
+        Command::Watch { .. } => "watch".into(),
         Command::Publish { .. } => "publish".into(),
         Command::Import { .. } => "import".into(),
         Command::Edit { .. } => "edit".into(),

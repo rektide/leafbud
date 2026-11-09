@@ -14,7 +14,7 @@ pub(crate) struct Inventory {
     pub states: BTreeMap<PathBuf, String>,
     pub duplicates: BTreeSet<PathBuf>,
     pub unmanaged: usize,
-    ids: BTreeMap<Uuid, Vec<PathBuf>>,
+    pub ids: BTreeMap<Uuid, Vec<PathBuf>>,
 }
 
 pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {

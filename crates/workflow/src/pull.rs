@@ -8,12 +8,11 @@
 //! diverged files are preserved for an explicit decision unless `--take
 //! remote` deliberately replaces local editor-owned content. Receipts settle
 //! without content rewrites only after verified semantic correspondence.
-use crate::inventory::Inventory as Bound;
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, ensure};
 use leafbud_web::LeafletState;
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use uuid::Uuid;
 
 #[derive(Default)]
@@ -52,14 +51,6 @@ pub struct Item {
     pub error: Option<String>,
 }
 
-/// What one guarded refresh decided for a file.
-enum Outcome {
-    Success(&'static str),
-    /// Preserved; a human choice is required (reported, never a silent skip).
-    Decision(String),
-    Failure(String),
-}
-
 impl RemoteReader {
     pub async fn pull(&self, context: &config::Context, request: Request) -> Result<Report> {
         ensure!(
@@ -68,7 +59,7 @@ impl RemoteReader {
         );
         let root = std::fs::canonicalize(&context.workspace_root).context("resolving document workspace")?;
         let base = self.client.base_url();
-        let bound = crate::inventory::scan(&root, Some(base))?;
+        let mut bound = crate::inventory::scan(&root, Some(base))?;
         let mut report = Report {
             version: 1,
             workspace: root.clone(),
@@ -99,6 +90,7 @@ impl RemoteReader {
             }
             resolved
         };
+        bound.include_operands(&candidates);
         report.selected = candidates
             .iter()
             .filter(|path| match request.state {
@@ -107,14 +99,38 @@ impl RemoteReader {
                 Some(state) => bound.states.get(*path).is_none_or(|local| local == state.as_str()),
             })
             .count();
-        for path in candidates {
+        for path in &candidates {
             if let Some(state) = request.state
-                && bound.states.get(&path).is_some_and(|local| local != state.as_str())
+                && bound.states.get(path).is_some_and(|local| local != state.as_str())
             {
                 report.skipped += 1;
                 continue;
             }
-            let item = self.refresh(&bound, &path, request.take_remote, request.dry_run).await;
+            let result = self
+                .refresh_document(
+                    context,
+                    path,
+                    crate::refresh::Policy {
+                        take_remote: request.take_remote,
+                        dry_run: request.dry_run,
+                        state: request.state,
+                        operands: candidates.clone(),
+                        ..Default::default()
+                    },
+                )
+                .await;
+            use crate::refresh::Outcome;
+            let outcome = match result.outcome {
+                Outcome::LocalDirty | Outcome::NeedsDecision => "needs-decision",
+                Outcome::Unchanged | Outcome::Updated | Outcome::ReceiptsOnly | Outcome::Converged | Outcome::TakeRemote => result.outcome.as_str(),
+                _ => "failed",
+            };
+            let item = Item {
+                path: path.clone(),
+                token: bound.token(path),
+                outcome,
+                error: result.message,
+            };
             match item.outcome {
                 "unchanged" => report.unchanged += 1,
                 "updated" | "take-remote" => report.updated += 1,
@@ -126,125 +142,6 @@ impl RemoteReader {
             report.items.push(item);
         }
         Ok(report)
-    }
-
-    async fn refresh(&self, bound: &Bound, path: &Path, take_remote: bool, dry_run: bool) -> Item {
-        match self.try_refresh(bound, path, take_remote, dry_run).await {
-            Outcome::Success(outcome) => Item {
-                path: path.to_path_buf(),
-                token: bound.token(path),
-                outcome,
-                error: None,
-            },
-            Outcome::Decision(error) => Item {
-                path: path.to_path_buf(),
-                token: bound.token(path),
-                outcome: "needs-decision",
-                error: Some(error),
-            },
-            Outcome::Failure(error) => Item {
-                path: path.to_path_buf(),
-                token: bound.token(path),
-                outcome: "failed",
-                error: Some(error),
-            },
-        }
-    }
-
-    async fn try_refresh(&self, bound: &Bound, path: &Path, take_remote: bool, dry_run: bool) -> Outcome {
-        let fail = |error: anyhow::Error| Outcome::Failure(format!("{error:#}"));
-        // Original bytes are retained across every await; the atomic writer
-        // rechecks them before replacement.
-        let original = match std::fs::read(path).context("reading managed file") {
-            Ok(original) => original,
-            Err(error) => return fail(error),
-        };
-        let source = match String::from_utf8(original.clone()).context("managed file is not UTF-8") {
-            Ok(source) => source,
-            Err(error) => return fail(error),
-        };
-        if !source.contains("@leafbud") {
-            if source.contains("@springleaf") {
-                return Outcome::Failure("legacy springleaf namespace requires explicit conversion; do not reimport a duplicate binding".into());
-            }
-            return Outcome::Failure("not a managed document; import creates bindings".into());
-        }
-        let existing = match leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved") {
-            Ok(existing) => existing,
-            Err(error) => return fail(error),
-        };
-        let Some(token) = existing.state.binding.as_ref().map(|binding| binding.token) else {
-            return Outcome::Failure("not a bound document; import creates bindings and push establishes them".into());
-        };
-        let Some(bound_here) = bound.index.get(&(self.client.base_url().to_owned(), token)) else {
-            return fail(anyhow::anyhow!("file is not bound to this origin; import creates bindings"));
-        };
-        if bound_here.len() != 1 || bound.duplicates.contains(path) {
-            return fail(anyhow::anyhow!("duplicate local bindings for this remote require resolution; file preserved"));
-        }
-        let observed = match self.observe_editor(&existing).await {
-            Ok(observed) => observed,
-            Err(error) if error.kind == "identity-changed" || (error.kind == "unsupported" && error.remote_hash.is_none()) => {
-                return Outcome::Decision(error.message);
-            }
-            Err(error) => return Outcome::Failure(error.message),
-        };
-        let binding = existing.state.binding.as_ref().expect("bound document");
-        let data = observed.data;
-        let merged = observed.merged;
-        let agreement = observed.agreement;
-        let outcome = if agreement.state == "clean" {
-            "unchanged"
-        } else if agreement.endpoints_equal {
-            if agreement.baseline == "scoped" && agreement.local == crate::editor_state::Change::Unchanged {
-                "receipts-only"
-            } else {
-                "converged"
-            }
-        } else if agreement.state == "remote-changed" {
-            "updated"
-        } else if take_remote {
-            "take-remote"
-        } else if agreement.state == "local-changed" {
-            return Outcome::Decision(
-                "local edits preserved (remote unchanged); nothing to adopt — keep editing locally or rerun with --take remote to replace local editor-owned content"
-                    .into(),
-            );
-        } else if agreement.state == "both-changed" {
-            return Outcome::Decision(
-                "local and remote edits diverge; file preserved — rerun with --take remote to adopt current remote content (local-only metadata fields survive)"
-                    .into(),
-            );
-        } else {
-            return Outcome::Decision("editor baseline unverified for this receipt profile; differing current endpoints preserved. Equal current endpoints can be settled by an explicit pull; otherwise make an explicit content decision".into());
-        };
-        if outcome == "unchanged" || dry_run {
-            return Outcome::Success(outcome);
-        }
-        // Recheck remote identity/lifecycle/association after content
-        // acquisition; this is not server CAS, and the local original-byte
-        // guard still applies through the atomic replacement.
-        let verified = match self.client.get(token).await.context("re-verifying remote identity") {
-            Ok(verified) => verified,
-            Err(error) => return fail(error),
-        };
-        let association_ok = match crate::import::association(&verified) {
-            Ok(association) => association == binding.publication,
-            Err(_) => false,
-        };
-        if verified.metadata.root_entity != data.metadata.root_entity || verified.observed_state() != LeafletState::Draft || !association_ok {
-            return fail(anyhow::anyhow!("remote identity/lifecycle/association changed during pull; file preserved"));
-        }
-        let next = match leafbud_mdx::adopt_remote(&source, &merged).context("composing guarded refresh") {
-            Ok(next) => next,
-            Err(error) => return fail(error),
-        };
-        if next.as_bytes() != original.as_slice()
-            && let Err(error) = crate::files::write(path, Some(&original), next.as_bytes()).context("local file changed during pull; not overwritten")
-        {
-            return fail(error);
-        }
-        Outcome::Success(outcome)
     }
 }
 
