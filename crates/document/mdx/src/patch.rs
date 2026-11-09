@@ -152,18 +152,32 @@ pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
     }
     let newline = if source.contains("\r\n") { "\r\n" } else { "\n" };
     match line_value_range(&lines[envelope]) {
-        // Flow style: edit the literal JSON mapping in place.
+        // Flow style: edit the literal JSON mapping in place, inserting the
+        // new member before the closing brace with the mapping's own
+        // separator style, so the author's line keeps its bytes otherwise.
         Some((start, end)) => {
-            let raw = &lines[envelope][start..end];
-            let mut flow: Value = serde_json::from_str(raw)
-                .with_context(|| "reserved envelope is flow-style but its value is not literal JSON")?;
+            let line = lines[envelope].clone();
+            let segment = &line[start..end];
+            let raw = segment.trim();
+            let mut flow: Value =
+                serde_json::from_str(raw).with_context(|| "reserved envelope is flow-style but its value is not literal JSON")?;
             let Some(map) = flow.as_object_mut() else {
                 bail!("reserved envelope is flow-style but its value is not a mapping");
             };
             let name: String = serde_json::from_str(key).context("state line key")?;
+            let member_value = json(&parsed_value);
             ensure!(map.insert(name, parsed_value).is_none(), "state key {key:?} already exists in the envelope");
-            let mut updated = lines[envelope].clone();
-            updated.replace_range(start..end, &json(&flow));
+            ensure!(raw.ends_with('}'), "the flow envelope mapping does not end on its own line");
+            let (separator, colon) = if segment.contains("\": ") { (", ", ": ") } else { (",", ":") };
+            let inner = &raw[..raw.len() - 1];
+            let member = format!(
+                "{}{key}{colon}{member_value}",
+                if inner.trim_end().ends_with('{') { "" } else { separator },
+            );
+            let brace_at = start + segment.trim_end().len() - 1;
+            let mut updated = line[..brace_at].to_owned();
+            updated.push_str(&member);
+            updated.push_str(&line[brace_at..]);
             let mut lines = lines;
             lines[envelope] = updated;
             Ok(reassemble(source, &lines, &body))

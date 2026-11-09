@@ -976,7 +976,7 @@ fn preparation_assigns_stable_keys_and_persists_main_page() {
     assert!(prepared.contains("<Key id=\"b-2\" />\nfirst paragraph"));
     // The multi-item list is split by per-item markers with bytes preserved.
     assert!(prepared.contains("<Key id=\"b-3\" />\n- item one\n<Key id=\"b-4\" />\n- item two"));
-    assert!(prepared.contains("\"mainPage\":\"p-1\""), "main-page identity persisted in the flow envelope");
+    assert!(prepared.contains("\"mainPage\": \"p-1\""), "main-page identity persisted in the flow envelope");
     let parsed = parse_with_spans(&prepared).unwrap();
     assert!(parsed.unkeyed().is_empty());
     assert_eq!(parsed.document.state.main_page.as_deref(), Some("p-1"));
@@ -1264,7 +1264,7 @@ fn preparation_retargets_links_to_the_provisional_main_page() {
         let prepared = apply_key_preparation(&source, &plan).unwrap();
         assert!(prepared.contains("prose mentioning p-auto spelling"), "unrelated prose is untouched");
         assert!(prepared.contains(expect_link), "the link follows the persisted identity: {prepared}");
-        assert!(prepared.contains("\"mainPage\":\"p-1\""), "the flow envelope keeps its flow spelling");
+        assert!(prepared.contains("\"mainPage\": \"p-1\""), "the flow envelope keeps its flow spelling");
         let parsed = parse_with_spans(&prepared).unwrap();
         assert!(parsed.unkeyed().is_empty());
         assert_eq!(
@@ -1283,7 +1283,7 @@ fn preparation_handles_flow_blank_line_and_four_space_block_envelopes() {
     let flow_blank = format!("---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {{{id}, \"state\": \"draft\"}}\n\n---\n\nfirst\n");
     let wide_block = format!("---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\":\n    {id}\n    \"state\": \"draft\"\n---\n\nfirst\n");
     for (source, expect) in [
-        (flow_blank, "\"mainPage\":\"p-1\""),
+        (flow_blank, "\"mainPage\": \"p-1\""),
         (wide_block, "    \"mainPage\": \"p-1\"\n"),
     ] {
         let (mut block, mut page) = (counter("b"), counter("p"));
