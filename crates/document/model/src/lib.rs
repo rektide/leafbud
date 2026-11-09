@@ -222,6 +222,9 @@ pub struct State {
     /// Unresolved effect evidence, never a body, request journal or receipt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending: Option<Attempt>,
+    /// Last deliberate terminal resolution; provenance, never a receipt or journal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_resolution: Option<Resolution>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

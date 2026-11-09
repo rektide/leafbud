@@ -8,6 +8,10 @@ updated:
   at: 2026-11-09
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3d6d728effe6RFnyZcrUtifT9"
+    title: "Retained native-default no-op correction and explicit terminal recovery/replanning with bounded old-attempt provenance, current-witness conflicts and recovery/follower verification"
+  - resource: /design/terminal-recovery0.gpt61s.md
+    title: "Version-0.17 terminal recovery API, atomic state policy, no-op correction and acceptance evidence"
   - resource: "opencode://ses_e3d96851dffeS2cPD2vPHjGklF"
     title: "Complete keyed native compiler, guarded public push, independent Yjs and HTTP/Phoenix verification, and create-free deployed P1 baseline/revision/pull/repeat proof"
   - resource: /design/keyed-save0.gpt61s.md
@@ -38,7 +42,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, and complete keyed native editor saves through public `push`, version 0.16.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, and explicit terminal `recover`, version 0.17.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -50,10 +54,10 @@ destination shape. Implemented versus pending:
 | implemented | not implemented |
 | --- | --- |
 | `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | public release/publishing workflow |
-| `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, explicit selected-locator recovery | general terminal-partial accept/replan; original lost publication-mint attribution |
+| `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, selected-locator recovery and deliberate terminal accept-current/replan | original lost publication-mint attribution; general repair of incomplete/unsupported partial graphs |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning and complete keyed create/update/place/detach compiler, loaded Yrs text/marks/break editing and selected supported-block recreation | canvas, nested/task lists, interactive/other unsupported editor content; whole-body recreation |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, `recover FILE [--take remote\|local] [--yes] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -84,7 +88,7 @@ crates/
   workflow/    leafbud-workflow: local files, config, inventory,
                  guarded import/pull, shared refresh, cooperative locks, live follow
   cli/         leafbud (binary): thin Clap/rendering layer;
-                   reads/import/create/check/status/diff/push/pull/watch/tidy/config
+                    reads/import/create/check/status/diff/push/recover/pull/watch/tidy/config
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
@@ -126,6 +130,11 @@ entity fields, or explicitly fork one with `--recreate KEY`; recreation retains
 the selected placement and leaves old entities/other occurrences intact. Repeated
 same-entity placements within one parent are diagnosed, not guessed.
 
+Unchanged retained blocks also preserve native default spellings: absent blank
+text, implicit bullet style, explicit non-list false, empty code-field absence,
+optional image-field absence and inactive text are not normalized just by saving.
+Persisted title metadata is still checked separately from the `Untitled` display fallback.
+
 Preview never persists keys/pending, mints or pushes. Effect counts come from
 actual selected native arguments; an unbound preview instead reports source
 preflight because no verified native seed yet exists. `--yes` alone never resolves
@@ -140,7 +149,9 @@ tracking-only settlement advance receipts. Repeating an unchanged save sends
 remote success can remain locally unsettled. Exact encoded requests may retry
 in-process; after restart, `push` only observes/settles already-achieved terminal
 work or reports pending/partial uncertainty, never independently re-encodes it.
-General terminal accept/replan remains a separate recovery capability.
+Terminal partial work uses the explicit recovery command below, not a push force flag.
+When only a prior attempt settles, push reports **`settled-prior`**: no separately
+requested recreation or new save ran. Repeat push to request that separate action.
 
 Reports are version-1 JSON with per-file outcome and native effect counters.
 Exit codes: **0** successful preview/save/no-op, **1** operational/preflight failure,
@@ -153,6 +164,47 @@ Both first-mint contexts pass complete CLI/HTTP fixtures. Actual deployed
 → unchanged pull/repeat. This made zero draft-creation calls; original lost-mint
 attribution is still unestablished, and the old standalone partial is untouched.
 Implementation/evidence: [complete keyed save receipt](design/keyed-save0.gpt61s.md).
+
+## Explicit save recovery
+
+```sh
+leafbud recover drafts/essay.mdx --json                  # read-only finality inspection
+leafbud recover drafts/essay.mdx --yes                   # settle original achieved intent only
+leafbud recover drafts/essay.mdx --take remote           # preview accepting current native state
+leafbud recover drafts/essay.mdx --take remote --yes     # adopt current supported native state
+leafbud recover drafts/essay.mdx --take local --yes      # new save of CURRENT source against CURRENT native state
+```
+
+`--yes` executes; `--take` chooses a new direction. Neither overrides unknown or
+lower writer acknowledgment. Changed source does not prevent read-only finality
+inspection, but cannot masquerade as the original attempt's success. Original
+achieved intent still settles automatically from observation without a new save.
+
+For an acknowledged terminal partial, remote adoption preserves local UUID,
+binding, source labels via existing **and pending** associations, local-only fields
+and unchanged source bytes. Local replanning reuses observed partial allocations
+(including supported known detached blocks), compiles current authored intent and
+reserves a **new attempt/range** under the same writer. Old IDs are never reused;
+no old encoded update is replayed independently. Missing/ambiguous allocations,
+unsupported partial graphs and detached named-page repair block precisely instead
+of creating replacements or resurrecting unknown objects.
+
+One compact `@leafbud.lastResolution` retains the old attempt ID/hashes,
+writer/range/sent-through/acknowledgment, new direction, observed fingerprint and
+optional successor attempt. Its disposition is **`originalNotVerified`**, not
+original success. The old pending state survives until guarded atomic adoption,
+verified no-effect correspondence, or replacement pending plus provenance. No
+second body, executable journal, unbounded history or automatic cleanup is stored.
+
+Recovery rechecks source bytes, all selected operands, native identity/rights and
+the current native witness across waits. Preview changes no source/keys/attempts or
+native state. JSON version 1 reports source/attempt IDs, whether a binding is known,
+observed finality/source match, direction and outcome without capability URLs or
+bodies. Exit **4** means pending/partial/blocked/source-changed; other codes match
+push. Pull/watch keep pending state intact, then resume after resolution. Mint
+uncertainty still requires the explicit supplied-locator library API; recover
+never guesses a draft or creates another one. Evidence and limits:
+[terminal recovery receipt](design/terminal-recovery0.gpt61s.md).
 
 ## Native-effect foundation (internal checkpoint)
 

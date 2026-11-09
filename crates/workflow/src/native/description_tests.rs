@@ -247,7 +247,13 @@ async fn legacy_explicit_empty_pending_hash_is_preserved_not_automatically_reint
         .recover_native(&old::context(temp.path()), &path, Selection::default(), true)
         .await
         .unwrap();
-    assert_eq!(result.outcome, write::RecoveryOutcome::SourceChanged);
+    assert_eq!(result.outcome, write::RecoveryOutcome::Uncertain);
+    assert_eq!(result.source_matches_original, Some(false));
+    assert!(!result.terminal);
     assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
-    assert!(server.server.requests().is_empty());
+    assert_eq!(
+        server.pushes.load(Ordering::SeqCst),
+        0,
+        "finality inspection is read-only even for legacy hashes"
+    );
 }

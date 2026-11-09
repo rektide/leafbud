@@ -49,6 +49,39 @@ pub struct MutationRange {
     pub last: u64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ResolutionDirection {
+    Remote,
+    Local,
+}
+
+/// One bounded receipt of a NEW decision, not retroactive original achievement.
+/// Original hashes/range survive even if source intent changed before recovery.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Resolution {
+    pub attempt_id: Uuid,
+    pub input_hash: String,
+    pub desired_hash: String,
+    pub writer: WriterState,
+    pub range: MutationRange,
+    pub through: u64,
+    pub acknowledged: u64,
+    pub direction: ResolutionDirection,
+    /// Explicitly resolved without claiming the original intent was achieved.
+    pub disposition: ResolutionDisposition,
+    pub observed_hash: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_attempt: Option<Uuid>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ResolutionDisposition {
+    OriginalNotVerified,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Attempt {
@@ -149,6 +182,27 @@ impl State {
     /// Lifecycle validation shared by parser and effect entrypoints. Pending
     /// locator without a complete binding and bound-without-receipt are valid.
     pub fn validate_attempt(&self) -> Result<(), &'static str> {
+        if let Some(resolution) = &self.last_resolution {
+            let writer = self.writer.as_ref().ok_or("resolution requires retained writer")?;
+            if self.binding.is_none()
+                || !valid_fingerprint(&resolution.input_hash)
+                || !valid_fingerprint(&resolution.desired_hash)
+                || !valid_fingerprint(&resolution.observed_hash)
+                || resolution.writer.client_id != writer.client_id
+                || resolution.writer.client_group_id != writer.client_group_id
+                || resolution.range.first == 0
+                || resolution.range.last < resolution.range.first
+                || resolution.range.last >= resolution.writer.next_mutation_id
+                || resolution.writer.next_mutation_id > writer.next_mutation_id
+                || resolution.through < resolution.range.first
+                || resolution.through > resolution.range.last
+                || resolution.acknowledged < resolution.through
+                || resolution.acknowledged >= resolution.writer.next_mutation_id
+                || resolution.next_attempt == Some(resolution.attempt_id)
+            {
+                return Err("invalid terminal resolution provenance");
+            }
+        }
         if let Some(writer) = &self.writer
             && (writer.next_mutation_id == 0 || writer.next_mutation_id > MAX_ID || self.binding.is_none())
         {

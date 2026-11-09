@@ -27,7 +27,7 @@ pub async fn run(options: RemoteOptions, root: Option<&Path>, flags: &Config, re
     let mut partial = 0;
     for item in &report.items {
         match item.result.outcome {
-            "saved" | "unchanged" | "would-save" | "would-bind-and-save" | "would-settle" => success += 1,
+            "saved" | "settled-prior" | "unchanged" | "would-save" | "would-bind-and-save" | "would-settle" => success += 1,
             "needs-decision" => decisions += 1,
             "pending" | "partial" | "source-changed" => partial += 1,
             _ => failed += 1,

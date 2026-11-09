@@ -31,7 +31,7 @@ pub(super) fn prepared(text: &str) -> Result<Document> {
     Ok(document)
 }
 
-fn effects(mutations: &[NativeMutation]) -> BTreeMap<String, usize> {
+pub(super) fn effects(mutations: &[NativeMutation]) -> BTreeMap<String, usize> {
     let mut result = BTreeMap::new();
     for mutation in mutations {
         let name = match mutation {
@@ -48,13 +48,23 @@ fn effects(mutations: &[NativeMutation]) -> BTreeMap<String, usize> {
 }
 
 fn compile(desired: &Document, data: &LeafletData, snapshot: &PullSnapshot, recreate: &BTreeSet<String>) -> Result<leafbud_editor::write::Compiled> {
+    compile_reusing(desired, data, snapshot, recreate, &[])
+}
+
+pub(super) fn compile_reusing(
+    desired: &Document,
+    data: &LeafletData,
+    snapshot: &PullSnapshot,
+    recreate: &BTreeSet<String>,
+    detached: &[serde_json::Value],
+) -> Result<leafbud_editor::write::Compiled> {
     let current = import::build(&desired.state.binding.as_ref().context("binding")?.base_url, data, snapshot)?;
     let persisted_title = if desired.state.binding.as_ref().expect("above").publication.is_some() {
         snapshot.extras.get("publication_title").and_then(serde_json::Value::as_str)
     } else {
         data.metadata.title.as_deref()
     };
-    leafbud_editor::write::compile(desired, &current, &snapshot.facts, persisted_title, recreate)
+    leafbud_editor::write::compile_reusing(desired, &current, &snapshot.facts, persisted_title, recreate, detached)
 }
 
 impl RemoteReader {
@@ -83,9 +93,9 @@ impl RemoteReader {
             match recovered.outcome {
                 RecoveryOutcome::DesiredVerified => {
                     return Ok(SaveReport {
-                        outcome: if options.yes { "saved" } else { "would-settle" },
+                        outcome: if options.yes { "settled-prior" } else { "would-settle" },
                         effects: summary,
-                        message: recovered.message,
+                        message: Some("prior attempt verified; only its settlement was requested/executed, no new save or --recreate action ran; repeat push for a separate action".into()),
                     });
                 }
                 RecoveryOutcome::PreparedNotSent if options.yes => {}
@@ -143,7 +153,14 @@ impl RemoteReader {
             .sync
             .as_ref()
             .is_some_and(|s| s.profile == leafbud_document::EDITOR_PROFILE && s.remote_hash == witness);
-        if !mint && !baseline && !options.take_local {
+        // Converged current endpoints may settle without choosing a replacement
+        // direction, but only the real compiler/verifier can prove an empty save
+        // (display-fallback metadata equality alone is insufficient).
+        let converged = !mint
+            && !baseline
+            && options.recreate.is_empty()
+            && compile(&desired, &before.data, &before.snapshot, &options.recreate).is_ok_and(|c| c.mutations.is_empty());
+        if !mint && !baseline && !options.take_local && !converged {
             return Ok(SaveReport { outcome: "needs-decision", effects: summary, message: Some("remote drift/no verified baseline; inspect diff, then use --take local against the current observation (--yes alone does not resolve drift)".into()) });
         }
         if !options.yes {
@@ -157,11 +174,15 @@ impl RemoteReader {
             });
         }
         let result = self
-            .execute_locked(&mut source, options.take_local.then_some(witness.as_str()), |desired, data, snapshot| {
-                let compiled = compile(desired, data, snapshot, &options.recreate)?;
-                summary.extend(effects(&compiled.mutations));
-                Ok(compiled)
-            })
+            .execute_locked(
+                &mut source,
+                (options.take_local || converged).then_some(witness.as_str()),
+                |desired, data, snapshot| {
+                    let compiled = compile(desired, data, snapshot, &options.recreate)?;
+                    summary.extend(effects(&compiled.mutations));
+                    Ok(compiled)
+                },
+            )
             .await;
         let result = match result {
             Ok(result) => result,

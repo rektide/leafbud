@@ -192,6 +192,236 @@ async fn cli_decision_partial_recreation_and_usage_contracts() {
     );
 }
 
+#[tokio::test]
+async fn cli_terminal_recovery_previews_reuses_then_accepts_remote_without_retroactive_success() {
+    let (server, store) = server(true).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("doc.mdx");
+    assert!(
+        cli(
+            &server.base_url,
+            root.path(),
+            &["--publication", store::URI, "create", "doc.mdx", "--title", "Recovery"]
+        )
+        .output()
+        .await
+        .unwrap()
+        .status
+        .success()
+    );
+    std::fs::write(
+        &path,
+        format!("{}\nFirst paragraph.\n\nSecond paragraph.\n", std::fs::read_to_string(&path).unwrap()),
+    )
+    .unwrap();
+    store.lock().unwrap().skip_attachments = true;
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 4).await["items"][0]["outcome"],
+        "partial"
+    );
+    let old = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.pending.unwrap();
+    let original = std::fs::read(&path).unwrap();
+    let entities = store.lock().unwrap().entities.clone();
+    let pushes = store.lock().unwrap().pushes;
+    let preview = invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--take", "local", "--json"], 0).await;
+    assert_eq!(preview["outcome"], "would-replan-local");
+    assert_eq!(preview["observation"]["terminal"], true);
+    assert_eq!(std::fs::read(&path).unwrap(), original);
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+    store.lock().unwrap().skip_attachments = false;
+    let result = invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--take", "local", "--yes", "--json"], 0).await;
+    assert_eq!(result["outcome"], "replanned-local");
+    assert_eq!(store.lock().unwrap().entities, entities);
+    let settled = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(settled.state.pending.is_none());
+    assert_eq!(settled.state.last_resolution.as_ref().unwrap().attempt_id, old.id);
+    let source = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("Second paragraph.", "Unapplied original intent.");
+    std::fs::write(&path, source).unwrap();
+    store.lock().unwrap().skip_all = true;
+    invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 4).await;
+    store.lock().unwrap().skip_all = false;
+    let source = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("Unapplied original intent.", "New local intent.");
+    std::fs::write(&path, &source).unwrap();
+    let inspected = invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--json"], 4).await;
+    assert_eq!(inspected["observation"]["source_matches_original"], false);
+    assert_eq!(inspected["observation"]["terminal"], true);
+    let pushes = store.lock().unwrap().pushes;
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--take", "remote", "--json"], 0).await["outcome"],
+        "would-accept-remote"
+    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--take", "remote", "--yes", "--json"], 0).await["outcome"],
+        "accepted-remote"
+    );
+    let accepted = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(accepted.pages, settled.pages);
+    let bytes = std::fs::read(&path).unwrap();
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--yes", "--json"], 0).await["outcome"],
+        "no-attempt"
+    );
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await["items"][0]["effects"],
+        json!({})
+    );
+    assert_eq!(invoke(&server.base_url, root.path(), &["pull", "doc.mdx", "--json"], 0).await["unchanged"], 1);
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+}
+
+#[tokio::test]
+async fn cli_uncertain_recovery_choice_never_sends_a_new_request_or_claims_success() {
+    let (server, store) = server(false).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("doc.mdx");
+    assert!(
+        cli(&server.base_url, root.path(), &["create", "doc.mdx", "--title", "Uncertain", "--standalone"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    std::fs::write(&path, format!("{}\nUnknown finality.\n", std::fs::read_to_string(&path).unwrap())).unwrap();
+    store.lock().unwrap().no_ack = true;
+    invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 4).await;
+    let bytes = std::fs::read(&path).unwrap();
+    let pushes = store.lock().unwrap().pushes;
+    for side in ["local", "remote"] {
+        let report = invoke(&server.base_url, root.path(), &["recover", "doc.mdx", "--take", side, "--yes", "--json"], 4).await;
+        assert_eq!(report["outcome"], "pending");
+        assert_eq!(report["observation"]["terminal"], false);
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert_eq!(store.lock().unwrap().pushes, pushes);
+    }
+    assert_eq!(server.request_count("/new"), 1);
+}
+
+/// Existing standalone only: this cannot mint or replay the old request. The
+/// operator commissioned deliberate accept-current in ses_e3d6d728effe6RFnyZcrUtifT9.
+#[tokio::test]
+#[ignore = "requires existing standalone terminal accept-current authorization; CREATE-FREE"]
+async fn authorized_existing_standalone_terminal_accept_current_cli() {
+    use leafbud_document::{Effect, PushStage, ResolutionDirection, ResolutionDisposition};
+    assert_eq!(std::env::var("LEAFBUD_TERMINAL_PROBE").as_deref(), Ok("authorized-existing-standalone"));
+    let dir = std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.test-agent/native-effects/deployed")).unwrap();
+    let path = dir.join("standalone.mdx");
+    let source = std::fs::read_to_string(&path).unwrap();
+    let original = leafbud_mdx::parse(&source).unwrap();
+    let pending = original
+        .state
+        .pending
+        .clone()
+        .expect("existing old partial required; never reconstruct old intent");
+    let binding = original.state.binding.clone().expect("bound existing draft required; NO MINT");
+    let locator: Value = serde_json::from_slice(&std::fs::read(dir.join("standalone.locator.json")).unwrap()).unwrap();
+    assert!(
+        locator["token"].as_str() == Some(binding.token.to_string().as_str()),
+        "selected target differs from private original locator"
+    );
+    assert!(
+        matches!(
+            pending.effect,
+            Effect::Push {
+                stage: PushStage::Partial { through: 2 },
+                ..
+            }
+        ),
+        "expected original terminal partial only"
+    );
+    assert!(original.state.sync.is_none() && original.state.last_resolution.is_none());
+    let publication = dir.join("publication.mdx");
+    let p1 = std::fs::read(&publication).unwrap();
+    let p1_mtime = std::fs::metadata(&publication).unwrap().modified().unwrap();
+    let budget_paths = [dir.join("standalone.started"), dir.join("publication.started")];
+    let budgets = [std::fs::read(&budget_paths[0]).unwrap(), std::fs::read(&budget_paths[1]).unwrap()];
+    let before_path = dir.join("standalone.terminal-before.private.json");
+    assert!(
+        !before_path.exists(),
+        "proof already started: inspect private current state, do not reconstruct old intent"
+    );
+    std::fs::write(
+        &before_path,
+        serde_json::to_vec_pretty(&json!({"session":"opencode://ses_e3d6d728effe6RFnyZcrUtifT9","source":source,"attempt":pending,"binding":binding})).unwrap(),
+    )
+    .unwrap();
+    async fn actual(dir: &Path, label: &str, args: &[&str], code: i32) -> Value {
+        let output = Command::new(env!("CARGO_BIN_EXE_leafbud"))
+            .arg("--root")
+            .arg(dir)
+            .args(args)
+            .output()
+            .await
+            .unwrap();
+        std::fs::write(dir.join(format!("standalone.terminal-{label}.stdout.private.json")), &output.stdout).unwrap();
+        std::fs::write(dir.join(format!("standalone.terminal-{label}.stderr.private.txt")), &output.stderr).unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(code),
+            "CLI result unexpected; inspect ignored private outputs, no remint/replay"
+        );
+        serde_json::from_slice(&output.stdout).unwrap()
+    }
+    let inspect = actual(&dir, "inspect", &["recover", "standalone.mdx", "--json"], 4).await;
+    assert_eq!(inspect["observation"]["terminal"], true);
+    assert_eq!(inspect["observation"]["acknowledged"], 2);
+    assert_eq!(inspect["observation"]["outcome"], "resolved-partial");
+    let preview = actual(&dir, "preview", &["recover", "standalone.mdx", "--take", "remote", "--json"], 0).await;
+    assert_eq!(preview["outcome"], "would-accept-remote");
+    assert!(std::fs::read_to_string(&path).unwrap() == source, "preview changed source");
+    let result = actual(&dir, "accept", &["recover", "standalone.mdx", "--take", "remote", "--yes", "--json"], 0).await;
+    assert_eq!(result["outcome"], "accepted-remote");
+    assert_eq!(result["effects"], json!({}));
+    let accepted = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(
+        accepted.state.id == original.state.id && accepted.state.binding == original.state.binding && accepted.state.writer == original.state.writer,
+        "source/binding/writer changed"
+    );
+    assert!(accepted.state.pending.is_none() && accepted.state.sync.is_some());
+    let resolution = accepted.state.last_resolution.as_ref().expect("old provenance preserved");
+    assert!(
+        resolution.attempt_id == pending.id && resolution.input_hash == pending.input_hash && resolution.desired_hash == pending.desired_hash,
+        "old provenance changed"
+    );
+    assert_eq!(resolution.direction, ResolutionDirection::Remote);
+    assert_eq!(resolution.disposition, ResolutionDisposition::OriginalNotVerified);
+    assert_eq!(resolution.acknowledged, 2);
+    assert!(resolution.next_attempt.is_none());
+    assert!(accepted.theme.as_ref().is_some_and(|theme| theme.leaflet_watermark));
+    let bytes = std::fs::read(&path).unwrap();
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let status = actual(&dir, "status", &["status", "standalone.mdx", "--json"], 0).await;
+    assert_eq!(status["items"][0]["outcome"], "clean");
+    assert_eq!(actual(&dir, "pull", &["pull", "standalone.mdx", "--json"], 0).await["unchanged"], 1);
+    let repeat = actual(&dir, "repeat", &["push", "standalone.mdx", "--yes", "--json"], 0).await;
+    assert_eq!(repeat["items"][0]["outcome"], "unchanged");
+    assert_eq!(repeat["items"][0]["effects"], json!({}));
+    assert_eq!(
+        actual(&dir, "again", &["recover", "standalone.mdx", "--yes", "--json"], 0).await["outcome"],
+        "no-attempt"
+    );
+    assert!(
+        std::fs::read(&path).unwrap() == bytes && std::fs::metadata(&path).unwrap().modified().unwrap() == mtime,
+        "repeat changed accepted source"
+    );
+    assert!(
+        std::fs::read(&publication).unwrap() == p1 && std::fs::metadata(&publication).unwrap().modified().unwrap() == p1_mtime,
+        "P1 changed"
+    );
+    for (path, before) in budget_paths.iter().zip(budgets) {
+        assert!(std::fs::read(path).unwrap() == before, "consumed creation budget changed");
+    }
+    std::fs::write(dir.join("standalone.terminal-proof.private.json"), serde_json::to_vec_pretty(&json!({"session":"opencode://ses_e3d6d728effe6RFnyZcrUtifT9","policy":"accept-current; original not verified","resolution":resolution,"newStatus":"clean","pull":"unchanged","repeat":"empty-effects byte/mtime exact","creationCalls":0,"nativeContentEffects":0,"p1":"untouched","budgets":"unchanged"})).unwrap()).unwrap();
+}
+
 /// No creation route is called: the source MUST already be the settled,
 /// human-selected P1. Both old creation slots stay consumed and standalone stays
 /// byte/mtime untouched. All locators/content evidence is private ignored data.

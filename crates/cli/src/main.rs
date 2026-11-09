@@ -41,6 +41,7 @@ mod diff;
 mod import;
 mod pull;
 mod push;
+mod recover;
 mod remote;
 mod status;
 mod tidy;
@@ -119,8 +120,26 @@ enum TakeFrom {
     Remote,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum RecoverTake {
+    Remote,
+    Local,
+}
+
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Inspect/settle a prior save; explicitly accept remote or replan local only after terminal acknowledgment
+    Recover {
+        file: PathBuf,
+        /// Execute settlement/resolution (read-only preview by default)
+        #[arg(long)]
+        yes: bool,
+        /// New decision for terminal partial work; never overrides uncertainty
+        #[arg(long)]
+        take: Option<RecoverTake>,
+        #[arg(long)]
+        json: bool,
+    },
     /// Create one local MDX source; no remote creation
     Create {
         file: PathBuf,
@@ -419,6 +438,30 @@ async fn main() -> ExitCode {
         publication: cli.publication.clone(),
         ..Default::default()
     };
+    if let Command::Recover { file, yes, take, json } = &cli.command {
+        return match recover::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            file,
+            leafbud_workflow::native::RecoverOptions {
+                yes: *yes,
+                take: take.map(|t| match t {
+                    RecoverTake::Remote => leafbud_workflow::native::ResolutionDirection::Remote,
+                    RecoverTake::Local => leafbud_workflow::native::ResolutionDirection::Local,
+                }),
+            },
+            *json,
+        )
+        .await
+        {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("leafbud: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Push {
         files,
         all,
@@ -746,6 +789,7 @@ fn not_implemented(command: &Command) -> ExitCode {
 /// Render the full dotted command path for diagnostics.
 fn command_name(command: &Command) -> String {
     match command {
+        Command::Recover { .. } => "recover".into(),
         Command::Create { .. } => "create".into(),
         Command::Check { .. } => "check".into(),
         Command::List { .. } => "list".into(),

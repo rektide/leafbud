@@ -603,6 +603,7 @@ mod tests {
 
     fn bound_state() -> State {
         State {
+            last_resolution: None,
             writer: None,
             pending: None,
             id: Uuid::nil(),

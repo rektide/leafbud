@@ -1,5 +1,7 @@
 use super::*;
 use leafbud_document::{Block, BlockKind, Inline, ListStyle, Mark, Occurrence, Page};
+#[path = "recovery_tests.rs"]
+mod recovery;
 #[path = "../../../leaflet/protocol/tests/support/store.rs"]
 mod store;
 
@@ -600,7 +602,7 @@ async fn actual_save_source_races_preserve_new_bytes_and_only_unchanged_intent_c
         assert!(after.state.pending.is_some());
         let pushes = server.store.lock().unwrap().pushes;
         let result = save(&server, temp.path(), &path, true).await;
-        assert_eq!(result.outcome, if comment_only { "saved" } else { "pending" }, "{result:?}");
+        assert_eq!(result.outcome, if comment_only { "settled-prior" } else { "pending" }, "{result:?}");
         assert_eq!(server.store.lock().unwrap().pushes, pushes);
         if comment_only {
             assert!(std::fs::read_to_string(&path).unwrap().contains("author saved during request"));
@@ -706,7 +708,7 @@ async fn connected_follower_preserves_actual_pending_save_then_adopts_a_native_r
                 .or_default()
                 .insert(writer.client_id.to_string(), writer.next_mutation_id - 1);
         }
-        assert_eq!(writable(&server, temp.path(), &path).await.outcome, "saved");
+        assert_eq!(writable(&server, temp.path(), &path).await.outcome, "settled-prior");
         socket.poke();
         outcome(&mut events, Outcome::Unchanged).await;
         let doc = read(&path);

@@ -45,6 +45,32 @@ pub struct Content {
     pub derived_title: Option<String>,
 }
 
+/// Decode exactly one explicitly read, known allocated detached block. This
+/// does not infer entity existence from absence or repair incomplete graphs.
+/// Detached page graphs/card links intentionally require a separate decision.
+pub fn observe_detached_block(facts: &[Value], entity: &str, placement: &str, namespace: Uuid) -> Result<Node> {
+    validate_rows(facts)?;
+    ensure!(facts.iter().all(|r| r["entity"] == entity), "detached block view contains unrelated entities");
+    ensure!(
+        !facts.iter().any(|r| r["attribute"] == "block/card"),
+        "detached page-link recovery is unsupported"
+    );
+    let mut scan = Scan {
+        rows: facts,
+        used: BTreeSet::new(),
+        namespace,
+        nodes: BTreeMap::new(),
+        pages: BTreeMap::new(),
+        visiting: BTreeSet::new(),
+    };
+    let block = scan.block(entity, placement)?;
+    ensure!(
+        facts.iter().all(|r| r["id"].as_str().is_some_and(|id| scan.used.contains(id))),
+        "unsupported detached block facts"
+    );
+    Ok(scan.nodes.remove(&block.key).expect("observed block"))
+}
+
 struct Scan<'a> {
     rows: &'a [Value],
     used: BTreeSet<String>,
@@ -264,19 +290,7 @@ pub fn observe(facts: &[Value], root: &str, namespace: Uuid) -> Result<Content> 
         pages: BTreeMap::new(),
         visiting: BTreeSet::new(),
     };
-    for row in facts {
-        ensure!(
-            row.as_object().is_some_and(|row| row.keys().all(|k| matches!(
-                k.as_str(),
-                "id" | "entity" | "attribute" | "data" | "author_did" | "created_at" | "updated_at" | "indexes" | "version"
-            ))),
-            "unknown native fact fields"
-        );
-        ensure!(
-            row["id"].as_str().is_some() && row["entity"].as_str().is_some() && row["attribute"].as_str().is_some(),
-            "invalid fact shape"
-        );
-    }
+    validate_rows(facts)?;
     let entries = scan.ordered(root, "root/page")?;
     ensure!(entries.len() == 1, "import requires exactly one root entry page (no truncation)");
     let entry = &entries[0];
@@ -334,4 +348,21 @@ pub fn observe(facts: &[Value], root: &str, namespace: Uuid) -> Result<Content> 
         theme,
         derived_title,
     })
+}
+
+fn validate_rows(facts: &[Value]) -> Result<()> {
+    for row in facts {
+        ensure!(
+            row.as_object().is_some_and(|row| row.keys().all(|k| matches!(
+                k.as_str(),
+                "id" | "entity" | "attribute" | "data" | "author_did" | "created_at" | "updated_at" | "indexes" | "version"
+            ))),
+            "unknown native fact fields"
+        );
+        ensure!(
+            row["id"].is_string() && row["entity"].is_string() && row["attribute"].is_string(),
+            "invalid fact shape"
+        );
+    }
+    Ok(())
 }

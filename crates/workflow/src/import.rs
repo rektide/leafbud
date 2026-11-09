@@ -156,6 +156,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         state: State {
             writer: None,
             pending: None,
+            last_resolution: None,
             id,
             state: "draft".into(),
             main_page: Some(main_page),

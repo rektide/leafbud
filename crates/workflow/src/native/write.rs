@@ -29,14 +29,18 @@ pub struct RecoveryReport {
     /// of noncreation. No raw bodies or tokens in the incidental report.
     pub detached_facts_observed: usize,
     pub message: Option<String>,
+    pub terminal: bool,
+    pub source_matches_original: Option<bool>,
 }
-fn report(outcome: RecoveryOutcome) -> RecoveryReport {
+pub(super) fn report(outcome: RecoveryOutcome) -> RecoveryReport {
     RecoveryReport {
         outcome,
         settled: false,
         acknowledged: None,
         detached_facts_observed: 0,
         message: None,
+        terminal: false,
+        source_matches_original: None,
     }
 }
 
@@ -44,7 +48,7 @@ pub(super) struct Observation {
     pub(super) data: LeafletData,
     pub(super) snapshot: PullSnapshot,
     detached_facts: usize,
-    verification: BTreeMap<String, serde_json::Value>,
+    pub(super) verification: BTreeMap<String, serde_json::Value>,
 }
 
 impl RemoteReader {
@@ -137,7 +141,17 @@ impl RemoteReader {
         let Some(attempt) = source.document.state.pending.clone() else {
             return Ok(report(RecoveryOutcome::NoAttempt));
         };
-        if import::hash(&source.document.authored_value()) != attempt.input_hash || import::hash(&source.document.editor_value()) != attempt.desired_hash {
+        let source_matches =
+            import::hash(&source.document.authored_value()) == attempt.input_hash && import::hash(&source.document.editor_value()) == attempt.desired_hash;
+        if !source_matches
+            && matches!(
+                attempt.effect,
+                Effect::Mint {
+                    stage: MintStage::Dispatched | MintStage::Located { .. },
+                    ..
+                }
+            )
+        {
             return Ok(report(RecoveryOutcome::SourceChanged));
         }
         match &attempt.effect {
@@ -210,6 +224,7 @@ impl RemoteReader {
                 let observed = self.native_observation(binding, Some(writer), &roots).await?;
                 let ack = observed.snapshot.acknowledged(writer.client_id);
                 let mut result = report(RecoveryOutcome::Uncertain);
+                result.source_matches_original = Some(source_matches);
                 result.acknowledged = ack;
                 result.detached_facts_observed = observed.detached_facts;
                 if source.check().is_err() {
@@ -219,10 +234,20 @@ impl RemoteReader {
                 // A lower/no acknowledgment after restart is not negative
                 // finality: a delayed earlier request can still arrive.
                 if ack.is_none_or(|id| id < through) {
+                    result.message = Some("writer finality unavailable; old request may still arrive; no direction can override uncertainty".into());
+                    return Ok(result);
+                }
+                result.terminal = true;
+                if !source_matches {
+                    result.outcome = RecoveryOutcome::ResolvedPartial;
+                    result.message = Some("sent request is terminal, but source differs from original attempt; original achievement unverified; use recover --take remote|local --yes for a new decision".into());
                     return Ok(result);
                 }
                 if through != range.last {
                     result.outcome = RecoveryOutcome::ResolvedPartial;
+                    if let Some(message) = &mut result.message {
+                        message.push_str("; recover --take remote|local --yes makes a deliberate new decision");
+                    }
                     result.message = Some("sent prefix is terminal; later reserved requests were never sent; retained for deliberate replan".into());
                 } else {
                     let protected = protection_hash(&observed, protection);
@@ -278,9 +303,20 @@ impl RemoteReader {
         decision_witness: Option<&str>,
         compile: impl FnOnce(&Document, &LeafletData, &PullSnapshot) -> Result<Compiled>,
     ) -> Result<RecoveryReport> {
+        self.execute_resolving_locked(source, decision_witness, None, compile).await
+    }
+
+    pub(super) async fn execute_resolving_locked(
+        &self,
+        source: &mut Source<'_>,
+        decision_witness: Option<&str>,
+        replan: Option<super::resolve::Replan>,
+        compile: impl FnOnce(&Document, &LeafletData, &PullSnapshot) -> Result<Compiled>,
+    ) -> Result<RecoveryReport> {
         validate_binding_intent(&source.text)?;
         let mint = match source.document.state.pending.clone() {
             None => None,
+            Some(attempt) if replan.as_ref().is_some_and(|r| r.original == attempt) => None,
             Some(attempt)
                 if matches!(
                     &attempt.effect,
@@ -309,8 +345,15 @@ impl RemoteReader {
             "source publication differs from confirmed binding; retargeting is unsupported, no push sent"
         );
         let mut writer = source.document.state.writer.clone().unwrap_or_else(WriterState::fresh);
-        let mut before = self.native_observation(&binding, Some(&writer), &[]).await?;
+        let roots = replan.as_ref().map(|r| r.roots.as_slice()).unwrap_or_default();
+        let mut before = self.native_observation(&binding, Some(&writer), roots).await?;
         source.check()?;
+        if let Some(replan) = &replan {
+            ensure!(
+                super::resolve::observation_hash(&before) == replan.resolution.observed_hash,
+                "native drift across recovery decision; old attempt retained"
+            );
+        }
         let hash = import::remote_hash(&before.data, &before.snapshot);
         if let Some(Attempt {
             effect: Effect::Mint { publication, .. },
@@ -340,14 +383,28 @@ impl RemoteReader {
                     .is_some_and(|sync| sync.profile == EDITOR_PROFILE && sync.remote_hash == hash),
             "remote drift/no verified baseline; deliberate current-witness decision required before effects"
         );
-        let compiled = compile(&source.document, &before.data, &before.snapshot)?;
+        let mut effective = source.document.clone();
+        if let Some(replan) = &replan {
+            effective.state.pending = None;
+            effective.state.nodes.extend(replan.nodes.clone());
+        }
+        let compiled = compile(&effective, &before.data, &before.snapshot)?;
         let mut protection = protection(&before, &compiled)?;
+        protection.verification_roots.extend(roots);
+        protection.verification_roots.sort();
+        protection.verification_roots.dedup();
         if !protection.verification_roots.is_empty() {
             before = self.native_observation(&binding, Some(&writer), &protection.verification_roots).await?;
             ensure!(
                 import::remote_hash(&before.data, &before.snapshot) == hash,
                 "native drift while acquiring detached-scope baseline"
             );
+            if let Some(replan) = &replan {
+                ensure!(
+                    super::resolve::observation_hash(&before) == replan.resolution.observed_hash,
+                    "native detached drift while acquiring recovery baseline; old attempt retained"
+                );
+            }
             protection.hash = protection_hash(&before, &protection);
         }
         let scope = scope(&before, &compiled, &binding)?;
@@ -362,7 +419,10 @@ impl RemoteReader {
             BatchLimits::default(),
         )?;
         if requests.is_empty() {
-            let state = verify_desired(&source.document, &compiled.targets, &before)?;
+            let mut state = verify_desired(&effective, &compiled.targets, &before)?;
+            if let Some(replan) = replan {
+                state.last_resolution = Some(replan.resolution);
+            }
             source.checkpoint(state)?;
             let mut result = report(RecoveryOutcome::DesiredVerified);
             result.settled = true;
@@ -370,16 +430,27 @@ impl RemoteReader {
         }
         let range = writer.reserve(compiled.mutations.len()).map_err(anyhow::Error::msg)?;
         // Whole compiler validation and encoding finished before first effect.
-        let current = self.native_observation(&binding, Some(&writer), &[]).await?;
+        let current = self.native_observation(&binding, Some(&writer), roots).await?;
         ensure!(
             import::remote_hash(&current.data, &current.snapshot) == hash,
             "native drift after compilation; no effects sent"
         );
+        if let Some(replan) = &replan {
+            ensure!(
+                super::resolve::observation_hash(&current) == replan.resolution.observed_hash,
+                "native drift before recovery effects; old attempt retained"
+            );
+        }
         source.check()?;
         let mut state = source.document.state.clone();
         state.writer = Some(writer);
+        let next_id = mint.map(|a| a.id).unwrap_or_else(Uuid::new_v4);
+        if let Some(mut replan) = replan {
+            replan.resolution.next_attempt = Some(next_id);
+            state.last_resolution = Some(replan.resolution);
+        }
         state.pending = Some(Attempt {
-            id: mint.map(|a| a.id).unwrap_or_else(Uuid::new_v4),
+            id: next_id,
             input_hash: import::hash(&source.document.authored_value()),
             desired_hash: import::hash(&source.document.editor_value()),
             effect: Effect::Push {
@@ -480,7 +551,7 @@ fn scope(before: &Observation, compiled: &Compiled, binding: &Binding) -> Result
         publication: binding.publication.is_some(),
         ..Default::default()
     };
-    for row in &before.snapshot.facts {
+    for row in before.verification.values() {
         scope.entities.insert(row["entity"].as_str().context("entity")?.parse()?);
         scope.facts.insert(row["id"].as_str().context("fact ID")?.parse()?);
         if matches!(row["data"]["type"].as_str(), Some("reference" | "ordered-reference" | "spatial-reference")) {

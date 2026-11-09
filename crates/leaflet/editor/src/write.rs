@@ -114,9 +114,42 @@ impl Builder<'_> {
 /// Current raw facts remain beside typed meaning; they are not persisted as a
 /// second body. Recreation forks only the selected occurrence's entity.
 pub fn compile(desired: &Document, observed: &Document, facts: &[Value], persisted_title: Option<&str>, recreate: &BTreeSet<String>) -> Result<Compiled> {
+    compile_reusing(desired, observed, facts, persisted_title, recreate, &[])
+}
+
+/// Terminal recovery only: `detached` contains fresh explicit rows of known old
+/// allocations whose associations are supplied in desired.state.nodes. Ordinary
+/// compilation never searches detached state or resurrects confirmed omissions.
+pub fn compile_reusing(
+    desired: &Document,
+    observed: &Document,
+    facts: &[Value],
+    persisted_title: Option<&str>,
+    recreate: &BTreeSet<String>,
+    detached: &[Value],
+) -> Result<Compiled> {
     preflight(desired)?;
     let binding = desired.state.binding.as_ref().context("compiler requires a verified binding")?;
-    let current = observe(facts, &binding.root, desired.state.id)?;
+    let mut current = observe(facts, &binding.root, desired.state.id)?;
+    let mut reused_placements = vec![];
+    for (key, node) in &desired.state.nodes {
+        if let Occurrence::Block { placement, .. } = &node.occurrence
+            && !current
+                .nodes
+                .values()
+                .any(|n| n.entity == node.entity && matches!(&n.occurrence, Occurrence::Block { placement: p, .. } if p == placement))
+        {
+            let rows: Vec<_> = detached.iter().filter(|r| r["entity"] == node.entity).cloned().collect();
+            if !rows.is_empty() {
+                ensure!(facts.iter().chain(detached).all(|r| r["id"] != *placement), "detached placement is occupied");
+                let actual = observe_detached_block(&rows, &node.entity, placement, desired.state.id)?;
+                ensure!(&actual == node, "detached association differs from observed native facts");
+                current.nodes.insert(key.clone(), actual);
+                reused_placements.push(placement.parse()?);
+            }
+        }
+    }
+    let all_facts: Vec<_> = facts.iter().chain(detached).cloned().collect();
     let mint = desired.state.pending.as_ref().is_some_and(|a| matches!(a.effect, Effect::Mint { .. }));
     for key in recreate {
         ensure!(
@@ -126,13 +159,15 @@ pub fn compile(desired: &Document, observed: &Document, facts: &[Value], persist
     }
     let mut builder = Builder {
         desired,
-        facts,
+        facts: &all_facts,
         set: binding.entity_set.parse()?,
         result: Compiled {
             mutations: vec![],
             targets: BTreeMap::new(),
             created_entities: vec![],
-            allocated_facts: vec![],
+            // Explicitly verified absent old placement IDs are available for
+            // reattachment too; no new identity is allocated for those slots.
+            allocated_facts: reused_placements,
         },
     };
     pages::prepare(&mut builder, &current, mint)?;

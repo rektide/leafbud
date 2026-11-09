@@ -9,8 +9,11 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+mod resolve;
 mod save;
 mod write;
+pub use leafbud_document::ResolutionDirection;
+pub use resolve::{RecoverOptions, ResolveReport};
 pub use save::{SaveOptions, SaveReport};
 pub use write::{RecoveryOutcome, RecoveryReport};
 
@@ -144,6 +147,24 @@ impl<'a> Source<'a> {
             },
         )?;
         let text = leafbud_mdx::apply_key_preparation(&self.text, &plan)?;
+        self.check()?;
+        if text != self.text {
+            files::write(&self.path, Some(&self.bytes), text.as_bytes())?;
+        }
+        self.bytes = text.as_bytes().to_vec();
+        self.text = text;
+        self.document = leafbud_mdx::parse(&self.text)?;
+        Ok(())
+    }
+
+    fn adopt(&mut self, document: &Document) -> Result<()> {
+        ensure!(
+            document.state.id == self.document.state.id
+                && document.state.binding == self.document.state.binding
+                && document.state.writer == self.document.state.writer,
+            "recovery adoption cannot change source/native/writer identity"
+        );
+        let text = leafbud_mdx::adopt_remote(&self.text, document)?;
         self.check()?;
         if text != self.text {
             files::write(&self.path, Some(&self.bytes), text.as_bytes())?;
