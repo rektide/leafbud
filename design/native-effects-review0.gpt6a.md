@@ -129,6 +129,27 @@ attempt, or mutate a candidate during this inspection. Exact retained original
 response evidence, if unexpectedly found, would have different standing from a
 candidate list and must be identified as such.
 
+### Recovery target selected
+
+The read-only inspection returned one plausible candidate, **P1 — Untitled**,
+in the configured publication with one empty text seed and no text fact. Its
+UUIDv7 timestamp fell inside the action window. Creator/database creation time
+were not observable, no original action response was recovered, and earlier
+snapshots supplied incomplete negative evidence. Private mapping and observations
+live under `.test-agent/native-effects/recovery-candidates/`.
+
+The operator explicitly selected P1: **“you can use p1 i dont think we need to
+verify etc it seems fine.”** P1 is therefore the selected existing verification
+draft; no further manual confirmation is required. The ordinary source/native
+checks remain part of execution, not a new approval ceremony. This selection is
+an authorization to continue on that object, not proof of original-action
+attribution or an increase to the creation budget.
+
+The active default-adoption Sol session also owns the narrow supplied-locator
+recovery transition and create-free controlled proof on P1. Publication pending
+state can now advance from uncertain dispatch to known locator/binding through
+that explicit selection. Both authorized creation slots remain consumed.
+
 ## Current commissions and next join
 
 - **Default adoption/corrective join:** fresh Sol high,
@@ -136,10 +157,11 @@ candidate list and must be identified as such.
   implementation receipt. Existing bind/recovery tickets remain the work anchors.
 - **Read-only candidate inspection:** retained native-effect Sol,
   `opencode://ses_e4121e55dffeF009EbMiG1Xinz`, owns private scratch findings only.
-  It will return a bounded shortlist or explain why selection cannot be grounded.
+  It completed the bounded shortlist at 310.4k reported context; the operator has
+  selected P1, and this session will not be continued for production code.
 
 These tasks are independent. Parent joins the corrected first-binding semantics
-and the human's recovery selection before further deployed testing. The next
+and the human's now-recorded recovery selection for create-free testing. The next
 proposed implementation batch remains `leafbud-editor-text` +
 `leafbud-editor-structure` with g, followed by complete bind/recovery acceptance
 with Sol. A source/transport checkpoint is not a substitute for that full loop.
