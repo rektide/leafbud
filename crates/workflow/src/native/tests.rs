@@ -15,6 +15,9 @@ mod defaults;
 #[path = "description_tests.rs"]
 mod descriptions;
 
+#[path = "save_tests.rs"]
+mod saves;
+
 const TOKEN: &str = "01999000-0000-7aaa-8000-000000000001";
 const ROOT: &str = "11111111-1111-4111-8111-111111111111";
 const PAGE: &str = "22222222-2222-4222-8222-222222222222";
@@ -320,6 +323,7 @@ async fn prepared_unsent_recovery_clears_only_attempt_and_keeps_reserved_writer_
                 facts: vec![],
                 entities: vec![],
                 metadata_fields: vec![],
+                verification_roots: vec![],
             },
             targets: Default::default(),
             created_entities: vec![],

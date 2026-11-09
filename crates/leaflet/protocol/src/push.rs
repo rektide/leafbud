@@ -174,7 +174,7 @@ impl NativeMutation {
                 } else if !data["value"].is_string() {
                     return Err(Error("invalid string/union/text"));
                 }
-                let value = &data["value"];
+                let value = data.get("value").unwrap_or(&Value::Null);
                 if row.attribute == "block/type"
                     && !matches!(
                         value.as_str(),

@@ -5,15 +5,7 @@ use leafbud_document::{EDITOR_PROFILE, Node, Protection, PushStage, Sync, Writer
 use leafbud_protocol::{BatchLimits, NativeMutation, Target, WriteScope, Writer};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Only actual native arguments and planned IDs, never an alternative document
-/// tree. The future compiler must validate ALL desired source before returning.
-#[allow(dead_code)] // Receiving type; only the controlled synthetic compiler exists in this batch.
-pub(crate) struct Compiled {
-    pub mutations: Vec<NativeMutation>,
-    pub targets: BTreeMap<String, Node>,
-    pub created_entities: Vec<Uuid>,
-    pub allocated_facts: Vec<Uuid>,
-}
+pub(crate) use leafbud_editor::write::Compiled;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -48,14 +40,15 @@ fn report(outcome: RecoveryOutcome) -> RecoveryReport {
     }
 }
 
-struct Observation {
-    data: LeafletData,
-    snapshot: PullSnapshot,
+pub(super) struct Observation {
+    pub(super) data: LeafletData,
+    pub(super) snapshot: PullSnapshot,
     detached_facts: usize,
+    verification: BTreeMap<String, serde_json::Value>,
 }
 
 impl RemoteReader {
-    async fn native_observation(&self, binding: &Binding, writer: Option<&WriterState>, entities: &[Uuid]) -> Result<Observation> {
+    pub(super) async fn native_observation(&self, binding: &Binding, writer: Option<&WriterState>, entities: &[Uuid]) -> Result<Observation> {
         ensure!(binding.base_url == self.client.base_url(), "native binding belongs to another origin");
         let data = self.client.get(binding.token).await?;
         let snapshot = match writer {
@@ -68,8 +61,7 @@ impl RemoteReader {
                 "native writer acknowledgment exceeds persisted reservation; explicit identity/sequence recovery required"
             );
         }
-        let fresh = import::build(self.client.base_url(), &data, &snapshot)?;
-        crate::editor_state::same_identity(binding, &fresh)?;
+        observed_binding(binding, &data, &snapshot)?;
         ensure!(
             data.metadata
                 .permission_token_rights
@@ -81,15 +73,33 @@ impl RemoteReader {
             "native write rights no longer verified"
         );
         let mut detached_facts = 0;
+        let mut verification: BTreeMap<String, _> = snapshot
+            .facts
+            .iter()
+            .map(|r| (r["id"].as_str().expect("validated fact ID").to_owned(), r.clone()))
+            .collect();
         // Explicit-ID RPC is bounded to 128 roots per request. It does not
         // inherit the active graph's rooted visibility limit for detached IDs.
         for roots in entities.chunks(128) {
             let view = self.client.facts_for_entities(roots).await?;
             detached_facts += view.roots.values().map(Vec::len).sum::<usize>();
+            for row in view.roots.values().flatten() {
+                // SQL traversal annotation, not a stored fact field. Keep the
+                // explicit view separate from the strict active observer.
+                let mut row = row.clone();
+                row.as_object_mut().context("explicit fact object")?.remove("root_id");
+                let id = row["id"].as_str().context("explicit fact ID")?;
+                if let Some(old) = verification.insert(id.to_owned(), row.clone()) {
+                    ensure!(
+                        leafbud_editor::witness(&[old], &BTreeMap::new(), serde_json::Value::Null)
+                            == leafbud_editor::witness(std::slice::from_ref(&row), &BTreeMap::new(), serde_json::Value::Null),
+                        "native fact changed across active/explicit verification reads"
+                    );
+                }
+            }
         }
         let confirmed = self.client.get(binding.token).await?;
-        let fresh_confirmed = import::build(self.client.base_url(), &confirmed, &snapshot)?;
-        crate::editor_state::same_identity(binding, &fresh_confirmed)?;
+        observed_binding(binding, &confirmed, &snapshot)?;
         ensure!(
             confirmed
                 .metadata
@@ -109,6 +119,7 @@ impl RemoteReader {
             data,
             snapshot,
             detached_facts,
+            verification,
         })
     }
 
@@ -189,7 +200,14 @@ impl RemoteReader {
                 };
                 let binding = source.document.state.binding.as_ref().context("pending push lacks binding")?;
                 let writer = source.document.state.writer.as_ref().context("pending push lacks writer")?;
-                let observed = self.native_observation(binding, Some(writer), created_entities).await?;
+                let roots: Vec<_> = created_entities
+                    .iter()
+                    .chain(&protection.verification_roots)
+                    .copied()
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect();
+                let observed = self.native_observation(binding, Some(writer), &roots).await?;
                 let ack = observed.snapshot.acknowledged(writer.client_id);
                 let mut result = report(RecoveryOutcome::Uncertain);
                 result.acknowledged = ack;
@@ -251,6 +269,15 @@ impl RemoteReader {
         compile: impl FnOnce(&Document, &LeafletData, &PullSnapshot) -> Result<Compiled>,
     ) -> Result<RecoveryReport> {
         let mut source = Source::open(context, path, selection)?;
+        self.execute_locked(&mut source, decision_witness, compile).await
+    }
+
+    pub(super) async fn execute_locked(
+        &self,
+        source: &mut Source<'_>,
+        decision_witness: Option<&str>,
+        compile: impl FnOnce(&Document, &LeafletData, &PullSnapshot) -> Result<Compiled>,
+    ) -> Result<RecoveryReport> {
         validate_binding_intent(&source.text)?;
         let mint = match source.document.state.pending.clone() {
             None => None,
@@ -282,7 +309,7 @@ impl RemoteReader {
             "source publication differs from confirmed binding; retargeting is unsupported, no push sent"
         );
         let mut writer = source.document.state.writer.clone().unwrap_or_else(WriterState::fresh);
-        let before = self.native_observation(&binding, Some(&writer), &[]).await?;
+        let mut before = self.native_observation(&binding, Some(&writer), &[]).await?;
         source.check()?;
         let hash = import::remote_hash(&before.data, &before.snapshot);
         if let Some(Attempt {
@@ -314,7 +341,15 @@ impl RemoteReader {
             "remote drift/no verified baseline; deliberate current-witness decision required before effects"
         );
         let compiled = compile(&source.document, &before.data, &before.snapshot)?;
-        let protection = protection(&before, &compiled)?;
+        let mut protection = protection(&before, &compiled)?;
+        if !protection.verification_roots.is_empty() {
+            before = self.native_observation(&binding, Some(&writer), &protection.verification_roots).await?;
+            ensure!(
+                import::remote_hash(&before.data, &before.snapshot) == hash,
+                "native drift while acquiring detached-scope baseline"
+            );
+            protection.hash = protection_hash(&before, &protection);
+        }
         let scope = scope(&before, &compiled, &binding)?;
         let target = wire_target(&binding)?;
         let requests = leafbud_protocol::encode_pushes(
@@ -377,8 +412,28 @@ impl RemoteReader {
                 break;
             }
         }
-        self.recover_locked(&mut source, true).await
+        match self.recover_locked(source, true).await {
+            Ok(result) => Ok(result),
+            Err(error) => {
+                let mut result = report(if source.check().is_err() { RecoveryOutcome::SourceChanged } else { RecoveryOutcome::Uncertain });
+                result.message = Some(format!("request may have applied; pending evidence retained after read-back failure: {error:#}"));
+                Ok(result)
+            }
+        }
     }
+}
+
+// Identity/rights observation must still work for an acknowledged, partially
+// applied graph that the complete typed content observer correctly rejects.
+// Compilation and desired verification separately require supported full meaning.
+fn observed_binding(binding: &Binding, data: &LeafletData, snapshot: &PullSnapshot) -> Result<()> {
+    ensure!(data.metadata.id == binding.token && data.metadata.root_entity.as_deref() == Some(binding.root.as_str()), "native origin/token/root changed");
+    ensure!(data.observed_state() == LeafletState::Draft && import::association(data)? == binding.publication, "native lifecycle/publication changed");
+    let sets: BTreeSet<_> = data.metadata.permission_token_rights.iter().filter(|r| r.read == Some(true)).filter_map(|r| r.entity_set.as_deref()).collect();
+    ensure!(sets == BTreeSet::from([binding.entity_set.as_str()]), "native readable entity set changed");
+    let entries: Vec<_> = snapshot.facts.iter().filter(|r| r["entity"] == binding.root && r["attribute"] == "root/page").collect();
+    ensure!(entries.len() == 1 && entries[0]["id"] == binding.entry_fact && entries[0]["data"]["type"] == "ordered-reference", "native entry identity changed");
+    Ok(())
 }
 
 fn wire_writer(writer: &WriterState) -> Writer {
@@ -415,12 +470,41 @@ fn scope(before: &Observation, compiled: &Compiled, binding: &Binding) -> Result
 }
 
 #[allow(dead_code)]
-fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
+pub(super) fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
     let mut facts = BTreeSet::new();
     let mut fields = BTreeSet::new();
+    let mut placements: BTreeMap<Uuid, (Uuid, Uuid)> = before
+        .snapshot
+        .facts
+        .iter()
+        .filter(|r| r["attribute"] == "card/block")
+        .map(|r| {
+            Ok((
+                r["id"].as_str().context("placement ID")?.parse()?,
+                (
+                    r["entity"].as_str().context("parent")?.parse()?,
+                    r["data"]["value"].as_str().context("child")?.parse()?,
+                ),
+            ))
+        })
+        .collect::<Result<_>>()?;
+    let mut detached_scope = false;
     for mutation in &compiled.mutations {
         match mutation {
             NativeMutation::AssertFact(row) => {
+                if row.attribute == "block/card" {
+                    detached_scope |= before
+                        .snapshot
+                        .facts
+                        .iter()
+                        .any(|r| r["entity"] == row.entity.to_string() && r["attribute"] == "block/card" && r["data"] != row.data);
+                }
+                if row.attribute == "card/block" {
+                    let id = row.id.context("placement assertion requires ID")?;
+                    let target = row.data["value"].as_str().context("placement target")?.parse()?;
+                    detached_scope |= placements.get(&id).is_some_and(|old| old.1 != target);
+                    placements.insert(id, (row.entity, target));
+                }
                 if row.attribute == "block/text" {
                     leafbud_editor::read_text(row.data["value"].as_str().context("text payload")?)
                         .context("generated native text fails production decoder before effects")?;
@@ -437,18 +521,34 @@ fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
                     }
                 }
             }
-            NativeMutation::RetractFact { fact_id } | NativeMutation::AddLastBlock { fact_id, .. } => {
-                facts.insert(*fact_id);
-            }
-            NativeMutation::MoveBlock { old_parent, block, .. } => {
-                let rows: Vec<_> = before
+            NativeMutation::RetractFact { fact_id } => {
+                detached_scope |= placements.remove(fact_id).is_some();
+                // A retired page can also become unreachable through a card ref.
+                detached_scope |= before
                     .snapshot
                     .facts
                     .iter()
-                    .filter(|r| r["entity"] == old_parent.to_string() && r["attribute"] == "card/block" && r["data"]["value"] == block.to_string())
+                    .any(|r| r["id"] == fact_id.to_string() && r["attribute"] == "block/card");
+                facts.insert(*fact_id);
+            }
+            NativeMutation::AddLastBlock { fact_id, parent, entity } => {
+                ensure!(
+                    placements.insert(*fact_id, (*parent, *entity)).is_none(),
+                    "addLastBlock reuses an existing placement"
+                );
+                facts.insert(*fact_id);
+            }
+            NativeMutation::MoveBlock {
+                old_parent, block, new_parent, ..
+            } => {
+                let rows: Vec<_> = placements
+                    .iter()
+                    .filter(|(_, (parent, child))| parent == old_parent && child == block)
+                    .map(|(id, _)| *id)
                     .collect();
                 ensure!(rows.len() == 1, "ambiguous/missing moveBlock occurrence before effects");
-                facts.insert(rows[0]["id"].as_str().context("placement")?.parse()?);
+                facts.insert(rows[0]);
+                placements.insert(rows[0], (*new_parent, *block));
             }
             NativeMutation::UpdateLeafletMetadata(meta) => {
                 if meta.title.is_some() {
@@ -477,6 +577,18 @@ fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
         facts: facts.into_iter().collect(),
         entities: compiled.created_entities.clone(),
         metadata_fields: fields.into_iter().collect(),
+        verification_roots: if detached_scope {
+            before
+                .snapshot
+                .facts
+                .iter()
+                .filter_map(|r| r["entity"].as_str().and_then(|s| s.parse().ok()))
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect()
+        } else {
+            vec![]
+        },
     };
     p.hash = protection_hash(before, &p);
     Ok(p)
@@ -484,9 +596,8 @@ fn protection(before: &Observation, compiled: &Compiled) -> Result<Protection> {
 
 fn protection_hash(observed: &Observation, protection: &Protection) -> String {
     let facts: Vec<_> = observed
-        .snapshot
-        .facts
-        .iter()
+        .verification
+        .values()
         .filter(|row| {
             let excluded_fact = row["id"].as_str().and_then(|v| v.parse().ok()).is_some_and(|id| protection.facts.contains(&id));
             let excluded_entity = row["entity"]

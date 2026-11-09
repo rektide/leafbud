@@ -316,6 +316,7 @@ impl Node {
                 "textFact":text_fact,"inactiveTextFact":inactive_text_fact
             }),
             Occurrence::Page { references } => {
+                let references: BTreeSet<_> = references.iter().collect();
                 serde_json::json!({"kind":"page","entity":self.entity,"references":references})
             }
         }

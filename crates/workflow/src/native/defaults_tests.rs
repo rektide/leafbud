@@ -208,6 +208,7 @@ fn checkpoint_boundary_never_persists_new_fields_with_old_hashes_or_accepts_push
             facts: vec![],
             entities: vec![],
             metadata_fields: vec![],
+            verification_roots: vec![],
         },
     };
     let pushed = leafbud_mdx::patch_tracking(&after, &state).unwrap();

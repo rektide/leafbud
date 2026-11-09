@@ -8,6 +8,9 @@ use uuid::Uuid;
 
 mod text;
 pub use text::read as read_text;
+pub use text::write::write as write_text;
+
+pub mod write;
 
 /// The shared wire view retains raw CRDT/fact evidence alongside projection.
 pub fn observe_view(view: &leafbud_protocol::FullView, root: &str, namespace: Uuid) -> Result<Content> {
@@ -318,6 +321,12 @@ pub fn observe(facts: &[Value], root: &str, namespace: Uuid) -> Result<Content> 
         .filter(|s| !s.trim().is_empty());
     let mut pages = vec![main];
     pages.extend(scan.pages.into_values());
+    for node in scan.nodes.values_mut() {
+        if let Occurrence::Page { references } = &mut node.occurrence {
+            references.sort();
+            references.dedup();
+        }
+    }
     Ok(Content {
         pages,
         nodes: scan.nodes,

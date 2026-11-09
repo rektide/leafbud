@@ -40,6 +40,7 @@ mod create;
 mod diff;
 mod import;
 mod pull;
+mod push;
 mod remote;
 mod status;
 mod tidy;
@@ -170,6 +171,7 @@ enum Command {
     /// Plan/execute identity-preserving editor updates and first binding
     /// (save; publish releases)
     Push {
+        #[arg(required_unless_present = "all", conflicts_with = "all")]
         files: Vec<PathBuf>,
         #[arg(long)]
         all: bool,
@@ -187,6 +189,8 @@ enum Command {
         /// Explicitly recreate the document body
         #[arg(long)]
         recreate_body: bool,
+        #[arg(long)]
+        json: bool,
     },
     /// Guarded refresh of bound files from their current editors (local write)
     Pull {
@@ -415,6 +419,47 @@ async fn main() -> ExitCode {
         publication: cli.publication.clone(),
         ..Default::default()
     };
+    if let Command::Push {
+        files,
+        all,
+        state,
+        yes,
+        take,
+        recreate,
+        recreate_body,
+        json,
+    } = &cli.command
+    {
+        if *recreate_body {
+            eprintln!("leafbud: whole-body recreation is not implemented; use a supported --recreate KEY");
+            return ExitCode::FAILURE;
+        }
+        return match push::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            leafbud_workflow::push::Request {
+                files: files.clone(),
+                all: *all,
+                state: state.map(|s| match s {
+                    State::Draft => LeafletState::Draft,
+                    State::Published => LeafletState::Published,
+                }),
+                yes: *yes,
+                take_local: take.is_some(),
+                recreate: recreate.iter().cloned().collect(),
+            },
+            *json,
+        )
+        .await
+        {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("leafbud: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Watch {
         files,
         all,

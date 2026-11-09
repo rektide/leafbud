@@ -12,6 +12,7 @@ leafbud-workflow.workspace = true
 tokio = { workspace = true, features = ["signal"] }
 
 [dev-dependencies]
+leafbud-mdx.workspace = true
 base64.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["io-util", "net", "process"] }

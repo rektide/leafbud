@@ -102,6 +102,7 @@ fn pending_tracking_keeps_authored_bytes_and_cannot_reset_writer_or_advance_rece
                 facts: vec![],
                 entities: vec![],
                 metadata_fields: vec![],
+                verification_roots: vec![],
             },
             targets: Default::default(),
             created_entities: vec![],

@@ -98,6 +98,10 @@ pub struct Protection {
     pub facts: Vec<Uuid>,
     pub entities: Vec<Uuid>,
     pub metadata_fields: Vec<String>,
+    /// Explicit current reads keep detached protected facts visible without
+    /// polluting the active graph projection. IDs only, never saved old bodies.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub verification_roots: Vec<Uuid>,
 }
 impl MintContext {
     pub fn publication(&self) -> Option<&str> {
@@ -180,6 +184,7 @@ impl State {
                 if !valid_fingerprint(&protection.hash)
                     || protection.facts.len() > MAX_TARGETS
                     || protection.entities.len() > MAX_TARGETS
+                    || protection.verification_roots.len() > MAX_TARGETS
                     || protection.metadata_fields.len() > 3
                     || protection
                         .metadata_fields

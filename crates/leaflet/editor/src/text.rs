@@ -6,6 +6,8 @@ use leafbud_document::{Inline, Mark, push_run};
 use serde_json::{Value, json};
 use yrs::{Any, Doc, Map, Out, ReadTxn, Text, Transact, Update, Xml, XmlFragment, XmlOut, types::text::YChange, updates::decoder::Decode};
 
+pub mod write;
+
 pub fn read(update: &str) -> Result<Vec<Inline>> {
     let doc = Doc::new();
     doc.get_or_insert_xml_fragment("prosemirror");

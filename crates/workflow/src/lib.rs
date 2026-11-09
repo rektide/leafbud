@@ -12,6 +12,7 @@ mod inventory;
 mod lock;
 pub mod native;
 pub mod pull;
+pub mod push;
 pub mod refresh;
 pub mod status;
 pub mod tidy;

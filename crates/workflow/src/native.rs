@@ -9,7 +9,9 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+mod save;
 mod write;
+pub use save::{SaveOptions, SaveReport};
 pub use write::{RecoveryOutcome, RecoveryReport};
 
 #[derive(Default)]
@@ -284,12 +286,19 @@ impl RemoteReader {
     /// Leaves pending evidence until full compiler materialization/read-back.
     pub async fn stage_binding(&self, context: &config::Context, path: &Path, selection: Selection) -> Result<BindingReport> {
         let mut source = Source::open(context, path, selection)?;
+        self.stage_binding_locked(&mut source).await
+    }
+
+    async fn stage_binding_locked(&self, source: &mut Source<'_>) -> Result<BindingReport> {
         ensure!(
             source.document.state.binding.is_none() && source.document.state.pending.is_none(),
             "already bound/pending; observe recovery instead of minting again"
         );
         validate_binding_intent(&source.text)?;
-        let publication = resolved_context(&source.document, context);
+        // The complete desired source must be representable BEFORE mint, not
+        // merely the first supported block. Proposed keys remain transient.
+        save::prepared(&source.text)?;
+        let publication = resolved_context(&source.document, source.context);
         if matches!(publication, MintContext::Standalone) {
             ensure!(
                 source.document.tags.is_empty(),
@@ -363,7 +372,7 @@ impl RemoteReader {
             });
         }
         let verification: Result<Document> = async {
-            let store = lock::Store::new(context)?;
+            let store = lock::Store::new(source.context)?;
             let _binding_guard = store
                 .binding(self.client.base_url(), token)?
                 .context("native locator busy in another operation")?;

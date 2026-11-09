@@ -235,6 +235,7 @@ async fn legacy_explicit_empty_pending_hash_is_preserved_not_automatically_reint
                 facts: vec![],
                 entities: vec![],
                 metadata_fields: vec![],
+                verification_roots: vec![],
             },
             targets: Default::default(),
             created_entities: vec![],

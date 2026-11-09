@@ -209,21 +209,30 @@ fn reconcile_keys(existing: &Document, fresh: &Document) -> BTreeMap<String, Str
     };
     let mut rename = BTreeMap::new();
     let mut claimed = BTreeSet::new();
-    for (key, node) in &fresh.state.nodes {
-        let locator = occurrence_of(node);
-        let same_entity: Vec<(&String, &leafbud_document::Node)> = existing.state.nodes.iter().filter(|(_, n)| n.entity == node.entity).collect();
-        let exact: Vec<&String> = same_entity.iter().filter(|(_, n)| occurrence_of(n) == locator).map(|(k, _)| *k).collect();
-        let chosen = if exact.len() == 1 {
-            Some(exact[0].clone())
-        } else if same_entity.len() == 1 {
-            Some(same_entity[0].0.clone())
-        } else {
-            None
-        };
-        if let Some(chosen) = chosen
-            && claimed.insert(chosen.clone())
-        {
-            rename.insert(key.clone(), chosen);
+    // Reserve ALL exact occurrences before any entity-only fallback. Otherwise
+    // a newly added shared occurrence sorting first can steal an existing key.
+    for exact_pass in [true, false] {
+        for (key, node) in &fresh.state.nodes {
+            if rename.contains_key(key) {
+                continue;
+            }
+            let locator = occurrence_of(node);
+            let same_entity: Vec<_> = existing.state.nodes.iter().filter(|(_, n)| n.entity == node.entity).collect();
+            let candidates: Vec<_> = same_entity
+                .iter()
+                .filter(|(_, n)| !exact_pass || occurrence_of(n) == locator)
+                .map(|(k, _)| *k)
+                .collect();
+            let chosen = if candidates.len() == 1 && (exact_pass || same_entity.len() == 1) {
+                Some(candidates[0].clone())
+            } else {
+                None
+            };
+            if let Some(chosen) = chosen
+                && claimed.insert(chosen.clone())
+            {
+                rename.insert(key.clone(), chosen);
+            }
         }
     }
     // Reserve every matched author label before naming unmatched fresh nodes.
