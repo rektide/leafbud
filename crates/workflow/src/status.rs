@@ -155,7 +155,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         item.detail = "not a managed document; import establishes a native binding";
         return item;
     };
-    let existing = match leafbud_mdx::parse_with_spans(source) {
+    let parsed = match leafbud_mdx::parse_with_spans(source) {
         Ok(parsed) => parsed,
         Err(_) => {
             item.outcome = "invalid";
@@ -163,9 +163,8 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
             return item;
         }
     };
-    let existing = &existing.document;
+    let existing = &parsed.document;
     item.document_id = Some(existing.state.id);
-    let parsed = leafbud_mdx::parse_with_spans(source).expect("parsed above");
     item.needs_preparation = parsed.unkeyed().len() + usize::from(parsed.main_page_provisional());
     item.local = editor_state::local_change(existing);
     if item.needs_preparation > 0 && item.local == Change::Unchanged {
