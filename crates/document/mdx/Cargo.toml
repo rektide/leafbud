@@ -15,4 +15,4 @@ satteri-pulldown-cmark.workspace = true
 leafbud-document.workspace = true
 
 [dev-dependencies]
-uuid.workspace = true
+uuid = { workspace = true, features = ["v4"] }

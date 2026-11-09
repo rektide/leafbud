@@ -1,0 +1,279 @@
+//! Source-preserving envelope and author-field patching. Two distinct
+//! operations: [`patch_tracking`] settles only the reserved `@leafbud`
+//! envelope (identity/binding/nodes/receipts) so successful pushes never
+//! reformat the author's body; [`adopt_remote`] additionally adopts changed
+//! remote content and owned author fields for guarded refresh.
+use super::{parse, yaml};
+use anyhow::{Context, Result, bail, ensure};
+use leafbud_document::*;
+use serde_json::{Value, json};
+
+/// Split a managed source into its frontmatter lines (fences excluded) and
+/// the exact body text following the closing fence. The MDX frontmatter
+/// block ends at the first `---` line, matching the native parser's view.
+/// Both `\n` and `\r\n` fences are accepted; lines keep their own bytes.
+pub(crate) fn split_managed(source: &str) -> Result<(Vec<String>, String)> {
+    let source = source.strip_prefix('\u{feff}').unwrap_or(source);
+    ensure!(
+        source.starts_with("---\n") || source.starts_with("---\r\n"),
+        "managed frontmatter opening fence missing"
+    );
+    let opening = if source.starts_with("---\r\n") { "---\r\n" } else { "---\n" };
+    let mut lines = Vec::new();
+    let mut cursor = opening.len();
+    loop {
+        let Some(nl) = source[cursor..].find('\n') else {
+            bail!("managed frontmatter closing fence missing");
+        };
+        let line = &source[cursor..cursor + nl + 1];
+        if line == "---\n" || line == "---\r\n" {
+            return Ok((lines, source[cursor + line.len()..].to_owned()));
+        }
+        lines.push(line.to_owned());
+        cursor += line.len();
+    }
+}
+
+/// Top-level mapping key of a column-0 line, quoted or plain. Comment lines,
+/// nested content and flow continuations (always indented in valid block
+/// mappings) yield None; a multiline scalar therefore cannot impersonate a key.
+fn column_key(line: &str) -> Option<&str> {
+    let line = line.strip_suffix('\n').unwrap_or(line);
+    if line.is_empty() || line.starts_with([' ', '\t', '#']) {
+        return None;
+    }
+    if let Some(q) = line.chars().next().filter(|c| *c == '"' || *c == '\'') {
+        let close = line[1..].find(q)? + 1;
+        let name = &line[1..close];
+        line[close + 1..].trim_start().starts_with(':').then_some(name)
+    } else {
+        let colon = line.find(':')?;
+        let name = &line[..colon].trim_end();
+        (!name.is_empty() && !name.starts_with('[') && !name.starts_with('{')).then_some(name)
+    }
+}
+
+/// Locate the single column-0 definition of `key`.
+fn find_key(lines: &[String], key: &str) -> Result<Option<usize>> {
+    let mut found = None;
+    for (index, line) in lines.iter().enumerate() {
+        if column_key(line) == Some(key) {
+            ensure!(found.replace(index).is_none(), "duplicate frontmatter key {key:?} cannot be patched");
+        }
+    }
+    Ok(found)
+}
+
+/// Exclusive end of a key's value extent: the key line plus following indented
+/// or blank lines, with trailing blank separators excluded.
+fn value_extent(lines: &[String], key_line: usize) -> usize {
+    let mut end = key_line + 1;
+    while end < lines.len() && (lines[end].starts_with([' ', '\t']) || lines[end].trim().is_empty()) {
+        end += 1;
+    }
+    while end > key_line + 1 && lines[end - 1].trim().is_empty() {
+        end -= 1;
+    }
+    end
+}
+
+fn key_lines(key: &str, value: &Value) -> Vec<String> {
+    let mut out = String::new();
+    yaml(&json!({ key.to_owned(): value }), 0, &mut out);
+    out.split_inclusive('\n').map(str::to_owned).collect()
+}
+
+/// Replace, insert or remove one owned top-level key. `Patch::Remove` deletes
+/// the extent; `Patch::Set` rewrites/inserts normalized lines (including an
+/// explicit null spelling, which is distinct from removal).
+enum Patch {
+    Remove,
+    Set(Value),
+}
+
+fn patch_key(lines: &mut Vec<String>, key: &str, patch: &Patch) -> Result<()> {
+    match patch {
+        Patch::Remove => {
+            if let Some(index) = find_key(lines, key)? {
+                let end = value_extent(lines, index);
+                lines.splice(index..end, []);
+            }
+        }
+        Patch::Set(value) => match find_key(lines, key)? {
+            Some(index) => {
+                let end = value_extent(lines, index);
+                lines.splice(index..end, key_lines(key, value));
+            }
+            None => {
+                let at = find_key(lines, "@leafbud")?.context("reserved @leafbud envelope not found for source-preserving patch")?;
+                lines.splice(at..at, key_lines(key, value));
+            }
+        },
+    }
+    Ok(())
+}
+
+/// Persist one indented mapping entry at the top of the reserved `@leafbud`
+/// envelope (used for main-page identity during preparation). A block-style
+/// envelope keeps its other lines byte-for-byte; a flow-style envelope is
+/// regenerated in normalized form because it has no per-line structure.
+pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
+    let (key, value) = line.split_once(':').context("state line must be a mapping entry")?;
+    let (lines, _) = split_managed(source)?;
+    let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for preparation")?;
+    if lines.iter().any(|l| column_key(l).is_some_and(|k| k == key)) {
+        bail!("frontmatter key {key:?} already exists elsewhere; refusing nested insertion");
+    }
+    let block_style = lines.get(envelope + 1).is_some_and(|l| l.starts_with(' ') || l.trim().is_empty());
+    if !block_style {
+        let mut document = parse(source)?;
+        let value: Value = serde_json::from_str(value.trim()).with_context(|| format!("parsing prepared state line {line:?}"))?;
+        apply_state_line(&mut document, key, value)?;
+        return replace_envelope(source, &document.state);
+    }
+    let (mut lines, body) = split_managed(source)?;
+    let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope")?;
+    let newline = if source.contains("\r\n") { "\r\n" } else { "\n" };
+    let inserted = format!("  {line}{newline}");
+    lines.splice(envelope + 1..envelope + 1, vec![inserted]);
+    Ok(reassemble(source, &lines, &body))
+}
+
+/// Apply one typed state entry to a parsed document. Only the fields
+/// preparation is allowed to persist exist here; anything else is refused.
+fn apply_state_line(document: &mut Document, key: &str, value: Value) -> Result<()> {
+    match key {
+        "\"mainPage\"" => {
+            let main: Option<String> = serde_json::from_value(value).context("mainPage value")?;
+            let main = main.context("mainPage cannot be cleared through preparation")?;
+            document.state.main_page = Some(main);
+            Ok(())
+        }
+        _ => bail!("preparation does not own state field {key}"),
+    }
+}
+
+/// Rebuild a managed source from frontmatter lines and the body, keeping the
+/// original's BOM presence and fence line-ending style.
+fn reassemble(source: &str, lines: &[String], body: &str) -> String {
+    let bom = if source.starts_with('\u{feff}') { "\u{feff}".to_string() } else { String::new() };
+    let stripped = source.strip_prefix('\u{feff}').unwrap_or(source);
+    let fence = if stripped.starts_with("---\r\n") { "---\r\n" } else { "---\n" };
+    let mut result = format!("{bom}{fence}");
+    result.push_str(&lines.join(""));
+    result.push_str(fence);
+    result.push_str(body);
+    result
+}
+
+/// Regenerate the reserved `@leafbud` envelope in-place, preserving every
+/// other frontmatter line and the body bytes.
+fn replace_envelope(source: &str, state: &State) -> Result<String> {
+    let (mut lines, body) = split_managed(source)?;
+    let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for source-preserving patch")?;
+    let end = value_extent(&lines, envelope);
+    let mut regenerated = String::new();
+    yaml(&json!({"@leafbud": state}), 0, &mut regenerated);
+    lines.splice(envelope..end, regenerated.split_inclusive('\n').map(str::to_owned));
+    Ok(reassemble(source, &lines, &body))
+}
+
+/// Settle tracking state only: replace the reserved envelope with `next`,
+/// keeping author fields, comments, body bytes and unrelated state untouched.
+///
+/// Guards: the local document identity must not change, and an established
+/// binding may not be silently rebound to another token (first binding —
+/// `None → Some` — is the deliberate transition). Nodes/receipts follow the
+/// verified observation this settlement records. The result is verified to
+/// parse back to exactly `next` with everything else unchanged.
+pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
+    let existing = parse(source)?;
+    ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
+    if let (Some(before), Some(after)) = (&existing.state.binding, &next.binding) {
+        ensure!(before.token == after.token, "tracking settlement cannot rebind a document");
+    }
+    ensure!(next.state == "draft", "unsupported lifecycle");
+    let result = replace_envelope(source, next)?;
+    let parsed = parse(&result).context("tracking settlement validation")?;
+    ensure!(parsed.state == *next, "tracking settlement diverges from the intended state");
+    // Everything outside the envelope must be untouched: same semantic
+    // content (pages/keys/nodes/main page) as the pre-settlement document.
+    ensure!(
+        parsed.semantic_value() == existing.semantic_value(),
+        "tracking settlement changed authored content"
+    );
+    let (_, existing_body) = split_managed(source)?;
+    let (_, result_body) = split_managed(&result)?;
+    ensure!(existing_body == result_body, "tracking settlement must not rewrite the body");
+    Ok(result)
+}
+
+/// Adopt remote-owned content for guarded refresh. `document` is the reviewed
+/// next state of THIS bound document (same format, id and binding token).
+/// Owned author fields that changed are rewritten in normalized form;
+/// unchanged fields, comments, blank lines and unknown/local-only fields keep
+/// their bytes; the reserved `@leafbud` envelope is regenerated. The body is
+/// re-serialized only when page content actually changed. The result is
+/// verified to parse back to exactly `document`.
+pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
+    let existing = parse(source)?;
+    ensure!(existing.format == document.format, "adoption cannot change the document format");
+    ensure!(
+        existing.state.id == document.state.id
+            && existing.state.binding.as_ref().map(|b| b.token) == document.state.binding.as_ref().map(|b| b.token)
+            && document.state.binding.is_some(),
+        "adoption cannot change document identity"
+    );
+    let (mut lines, body) = split_managed(source)?;
+    for (key, old, new) in [
+        ("title", json!(existing.title), json!(document.title)),
+        ("description", json!(existing.description), json!(document.description)),
+        ("tags", json!(existing.tags), json!(document.tags)),
+        ("theme", json!(existing.theme), json!(document.theme)),
+        (
+            "contributors",
+            json!(existing.extra.get("contributors")),
+            json!(document.extra.get("contributors")),
+        ),
+    ] {
+        if old == new {
+            continue;
+        }
+        let patch = if new.is_null() { Patch::Remove } else { Patch::Set(new) };
+        patch_key(&mut lines, key, &patch)?;
+    }
+    // Publication intent is tri-state: absent inherits, explicit null is
+    // standalone, a URI targets a publication. Preserve the distinction.
+    if existing.publication != document.publication {
+        let patch = match &document.publication {
+            Publication::Inherit => Patch::Remove,
+            Publication::Standalone => Patch::Set(json!(null)),
+            Publication::At(uri) => Patch::Set(json!(uri)),
+        };
+        patch_key(&mut lines, "publication", &patch)?;
+    }
+    let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for source-preserving patch")?;
+    let end = value_extent(&lines, envelope);
+    let mut regenerated = String::new();
+    yaml(&json!({"@leafbud": &document.state}), 0, &mut regenerated);
+    lines.splice(envelope..end, regenerated.split_inclusive('\n').map(str::to_owned));
+    let fence = if source.strip_prefix('\u{feff}').unwrap_or(source).starts_with("---\r\n") {
+        "---\r\n"
+    } else {
+        "---\n"
+    };
+    let frontmatter = format!("{fence}{}{fence}", lines.join(""));
+    let body = if existing.pages == document.pages {
+        body
+    } else {
+        super::render::verified_body(document, &frontmatter)?
+    };
+    let bom = if source.starts_with('\u{feff}') { "\u{feff}".to_string() } else { String::new() };
+    let result = bom.clone() + &frontmatter + &body;
+    let parsed = parse(&result).context("source-preserving adoption validation")?;
+    ensure!(
+        parsed.semantic_value() == document.semantic_value() && parsed.state == document.state,
+        "source-preserving adoption would lose content/associations"
+    );
+    Ok(result)
+}

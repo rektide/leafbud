@@ -1,13 +1,17 @@
-//! Bounded import profile: current content and compact identity bindings.
-//! No network, parser arenas, raw snapshots or serialized CRDT history.
+//! Pure document model: current content, source keys, bindings, receipts.
+//! No network, parser arenas, raw snapshots, CRDT history or saved bodies.
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 pub use uuid::Uuid;
 
-pub const PROFILE: &str = "leaflet-import/1";
-/// Editor agreement only; independent of full-document serialization fidelity.
-pub const EDITOR_PROFILE: &str = "leaflet-editor/2";
+/// Source format this model reads and writes (`leafbud-mdx/2`). Local data is
+/// rebuildable; there is no compatibility surface for the retired format 1.
+pub const FORMAT: &str = "leafbud-mdx/2";
+/// Editor agreement receipt profile; independent of serialization fidelity.
+/// Profile 3 canonicalizes desired-new and locally-retired associations
+/// explicitly instead of requiring exact body/key/table equality.
+pub const EDITOR_PROFILE: &str = "leaflet-editor/3";
 pub const EDITOR_OWNED_EXTRA: &[&str] = &["contributors"];
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +50,15 @@ pub fn push_run(out: &mut Vec<Inline>, text: &str, marks: &[Mark]) {
     }
 }
 
+/// Flat list marker style. Numbering is display-derived: the native model
+/// sequences ordered items itself, and source spelling normalizes to `1.`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ListStyle {
+    Bullet,
+    Ordered,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Block {
     pub key: String,
@@ -63,6 +76,12 @@ pub enum BlockKind {
         content: Vec<Inline>,
     },
     Quote {
+        content: Vec<Inline>,
+    },
+    /// One flat list item: a text block occurrence with native list facts.
+    /// Consecutive items form a list; there is no wrapper object or identity.
+    ListItem {
+        style: ListStyle,
         content: Vec<Inline>,
     },
     Code {
@@ -86,6 +105,62 @@ pub struct Page {
     pub key: String,
     pub blocks: Vec<Block>,
 }
+
+/// Publication intent, retaining absent-versus-null through deserialization.
+/// `Inherit` (field absent) defers to configuration while unbound; `Standalone`
+/// (explicit null) selects standalone; `At` selects a publication target.
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub enum Publication {
+    #[default]
+    Inherit,
+    Standalone,
+    At(String),
+}
+
+impl Publication {
+    /// Canonical JSON spelling used by editor/receipt projections.
+    pub fn value(&self) -> Value {
+        match self {
+            Self::Inherit => serde_json::json!({"kind":"inherit"}),
+            Self::Standalone => serde_json::json!({"kind":"standalone"}),
+            Self::At(uri) => serde_json::json!({"kind":"uri","uri":uri}),
+        }
+    }
+}
+
+impl Serialize for Publication {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Standalone => serializer.serialize_none(),
+            Self::At(uri) => serializer.serialize_str(uri),
+            // Absent-by-contract: the document field skips serialization.
+            Self::Inherit => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Publication {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl serde::de::Visitor<'_> for Visitor {
+            type Value = Publication;
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("null or a publication URI string")
+            }
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                Ok(Publication::At(value.to_owned()))
+            }
+            fn visit_unit<E>(self) -> Result<Self::Value, E> {
+                Ok(Publication::Standalone)
+            }
+            fn visit_none<E>(self) -> Result<Self::Value, E> {
+                Ok(Publication::Standalone)
+            }
+        }
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
@@ -95,8 +170,8 @@ pub struct Document {
     pub description: Option<String>,
     #[serde(default)]
     pub tags: Vec<String>,
-    /// Explicit confirmed association; null means standalone, never inherited.
-    pub publication: Option<String>,
+    #[serde(default, skip_serializing_if = "Publication::is_inherit")]
+    pub publication: Publication,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub theme: Option<Theme>,
     #[serde(flatten)]
@@ -116,9 +191,21 @@ pub struct Theme {
 pub struct State {
     pub id: Uuid,
     pub state: String,
-    pub binding: Binding,
+    /// Source key of the implicit main page. Absent until preparation
+    /// persists it; independent of the first heading's spelling.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub main_page: Option<String>,
+    /// Confirmed native association; absent for local-only drafts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binding: Option<Binding>,
+    /// Confirmed page/block occurrence associations. The table may lag desired
+    /// content: keys without rows are new; rows without content are retired.
+    #[serde(default)]
     pub nodes: BTreeMap<String, Node>,
-    pub sync: Sync,
+    /// Last verified agreement; never an attempt. Coherent without a binding
+    /// is impossible, so sync requires binding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sync: Option<Sync>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -128,20 +215,97 @@ pub struct Binding {
     pub root: String,
     pub entity_set: String,
     pub entry_fact: String,
+    /// Confirmed association; explicit null means standalone, never inherited.
     pub publication: Option<String>,
 }
+/// One typed native occurrence locator. Multiple source keys may share an
+/// entity but always identify distinct occurrences.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase", deny_unknown_fields)]
+pub enum Occurrence {
+    /// A block occurrence: its entity, one placement fact, and rich-text
+    /// locators. At most one of the text facts is set for a given kind.
+    Block {
+        placement: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        text_fact: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        inactive_text_fact: Option<String>,
+    },
+    /// A page occurrence: its entity and known incoming reference facts
+    /// (entry and card references pointing at this page).
+    Page { references: Vec<String> },
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Node {
     pub entity: String,
-    /// Occurrence/role keyed membership, not an array index as identity.
-    pub memberships: BTreeMap<String, String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text_fact: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub inactive_text_fact: Option<String>,
+    #[serde(flatten)]
+    pub occurrence: Occurrence,
 }
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+
+impl<'de> Deserialize<'de> for Node {
+    /// Strict decode: exactly `entity`, a `kind` discriminator, and the
+    /// fields of that occurrence variant. Unknown/future node fields are
+    /// rejected rather than silently dropped (the flatten on `Occurrence`
+    /// cannot carry `deny_unknown_fields` itself).
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de::Error as _;
+        let mut map: BTreeMap<String, serde_json::Value> = BTreeMap::deserialize(deserializer)?;
+        let take_string = |map: &mut BTreeMap<String, serde_json::Value>, key: &str| -> Result<Option<String>, D::Error> {
+            match map.remove(key) {
+                None | Some(serde_json::Value::Null) => Ok(None),
+                Some(value) => Ok(Some(String::deserialize(value).map_err(D::Error::custom)?)),
+            }
+        };
+        let entity = take_string(&mut map, "entity")?.ok_or_else(|| D::Error::custom("node entity must be a non-null string"))?;
+        let kind = take_string(&mut map, "kind")?.ok_or_else(|| D::Error::custom("node kind must be a non-null string"))?;
+        let occurrence = match kind.as_str() {
+            "block" => {
+                let placement = take_string(&mut map, "placement")?.ok_or_else(|| D::Error::custom("block occurrence requires a placement"))?;
+                let text_fact = take_string(&mut map, "textFact")?;
+                let inactive_text_fact = take_string(&mut map, "inactiveTextFact")?;
+                Occurrence::Block {
+                    placement,
+                    text_fact,
+                    inactive_text_fact,
+                }
+            }
+            "page" => {
+                let references = match map.remove("references") {
+                    None => vec![],
+                    Some(value) => Vec::<String>::deserialize(value).map_err(D::Error::custom)?,
+                };
+                Occurrence::Page { references }
+            }
+            other => return Err(D::Error::custom(format!("unknown node occurrence kind {other:?}"))),
+        };
+        if let Some(key) = map.keys().next() {
+            return Err(D::Error::custom(format!("unknown node field {key:?}")));
+        }
+        Ok(Node { entity, occurrence })
+    }
+}
+impl Node {
+    /// Canonical locator JSON for receipt projections. Spelling-free: the
+    /// source key addressing this row is not part of the association.
+    pub fn locator_value(&self) -> Value {
+        match &self.occurrence {
+            Occurrence::Block {
+                placement,
+                text_fact,
+                inactive_text_fact,
+            } => serde_json::json!({
+                "kind":"block","entity":self.entity,"placement":placement,
+                "textFact":text_fact,"inactiveTextFact":inactive_text_fact
+            }),
+            Occurrence::Page { references } => {
+                serde_json::json!({"kind":"page","entity":self.entity,"references":references})
+            }
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Sync {
     pub profile: String,
@@ -149,13 +313,36 @@ pub struct Sync {
     pub remote_hash: String,
 }
 
+impl Publication {
+    pub fn is_inherit(publication: &Publication) -> bool {
+        matches!(publication, Publication::Inherit)
+    }
+}
+
 impl Document {
+    /// Source keys referenced by current content: every page and block.
+    /// PageLink targets are page keys and validated to resolve.
+    pub fn content_keys(&self) -> BTreeSet<String> {
+        let mut keys = BTreeSet::new();
+        for page in &self.pages {
+            keys.insert(page.key.clone());
+            for block in &page.blocks {
+                keys.insert(block.key.clone());
+            }
+        }
+        keys
+    }
+
     /// Supported editor meaning and object/occurrence associations. Source-key
-    /// spelling, non-entry page definition order and local-only author metadata
-    /// are not editor changes. Block order and native associations are.
-    /// Call after validating that every source key has exactly one node row.
+    /// spelling, non-entry page definition order and local-only author
+    /// metadata are not editor changes. Desired-new objects carry an explicit
+    /// `new` identity; locally-retired associations are explicit pending
+    /// omissions rather than dropped rows.
     pub fn editor_value(&self) -> Value {
-        let node = |key: &str| serde_json::to_value(self.state.nodes.get(key)).expect("node JSON");
+        let association = |key: &str| match self.state.nodes.get(key) {
+            Some(node) => node.locator_value(),
+            None => serde_json::json!({"kind":"new"}),
+        };
         let page = |page: &Page| {
             let blocks: Vec<_> = page
                 .blocks
@@ -163,25 +350,38 @@ impl Document {
                 .map(|block| {
                     let mut kind = serde_json::to_value(&block.kind).expect("block JSON");
                     if let BlockKind::PageLink { page } = &block.kind {
-                        kind["page"] = node(page);
+                        kind["page"] = association(page);
                     }
-                    serde_json::json!({"association":node(&block.key),"content":kind})
+                    serde_json::json!({"association":association(&block.key),"content":kind})
                 })
                 .collect();
-            serde_json::json!({"association":node(&page.key),"blocks":blocks})
+            serde_json::json!({"association":association(&page.key),"blocks":blocks})
         };
         let mut definitions: Vec<_> = self.pages.iter().skip(1).map(page).collect();
         definitions.sort_by_key(Value::to_string);
+        let retired: Vec<_> = {
+            let content = self.content_keys();
+            let mut rows: Vec<_> = self
+                .state
+                .nodes
+                .iter()
+                .filter(|(key, _)| !content.contains(*key))
+                .map(|(_, node)| node.locator_value())
+                .collect();
+            rows.sort_by_key(Value::to_string);
+            rows
+        };
         let extra: BTreeMap<_, _> = self.extra.iter().filter(|(key, _)| EDITOR_OWNED_EXTRA.contains(&key.as_str())).collect();
         serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":self.description,
-            "tags":self.tags,"publication":self.publication,"theme":self.theme,"extra":extra,
-            "entry":self.pages.first().map(page),"definitions":definitions})
+            "tags":self.tags,"publication":self.publication.value(),"theme":self.theme,"extra":extra,
+            "main":self.pages.first().map(page),"definitions":definitions,"retired":retired})
     }
 
     /// Current semantic projection only. Excludes binding bookkeeping and all
     /// receipt hashes; includes source identities/order and represented meaning.
     pub fn semantic_value(&self) -> Value {
-        serde_json::json!({"profile":PROFILE,"title":self.title,"description":self.description,"tags":self.tags,
-            "publication":self.publication,"theme":self.theme,"extra":self.extra,"pages":self.pages,"nodes":self.state.nodes})
+        serde_json::json!({"format":self.format,"title":self.title,"description":self.description,"tags":self.tags,
+            "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,
+            "mainPage":self.state.main_page,"pages":self.pages,"nodes":self.state.nodes})
     }
 }

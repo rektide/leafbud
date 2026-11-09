@@ -1,5 +1,8 @@
 //! Transient human presentation, not an import/export format or editor witness.
 use super::*;
+use leafbud_document::BlockKind;
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 /// Comparable current editor-authored meaning. Both endpoints use this same
 /// writer. Omits tool state, source keys and local-only metadata. Pages receive
@@ -13,23 +16,15 @@ pub fn render_comparison(document: &Document) -> Result<String> {
     // Validate the complete typed input through the existing proven renderer;
     // never emit a plausible partial view of an invalid document.
     render(document)?;
-    let mut metadata = json!({"title": document.title, "description": document.description,
-        "tags": document.tags, "publication": document.publication, "theme": document.theme});
-    for name in EDITOR_OWNED_EXTRA {
-        if let Some(value) = document.extra.get(*name) {
-            metadata[*name] = value.clone();
-        }
-    }
     let mut out = "---\n".to_owned();
-    yaml(&metadata, 0, &mut out);
+    yaml(&render::metadata_value(document), 0, &mut out);
     out.push_str("---\n\n");
 
     let mut pages: Vec<_> = document.pages.iter().skip(1).collect();
-    pages.sort_by_key(|page| {
-        let node = &document.state.nodes[&page.key];
-        (&node.entity, &node.memberships)
-    });
-    pages.insert(0, &document.pages[0]);
+    pages.sort_by_key(|page| document.state.nodes.get(&page.key).map(|n| n.entity.clone()));
+    if let Some(main) = document.pages.first() {
+        pages.insert(0, main);
+    }
     let labels: BTreeMap<_, _> = pages
         .iter()
         .enumerate()
@@ -46,13 +41,14 @@ pub fn render_comparison(document: &Document) -> Result<String> {
                     let width = text.split(|c| c != '`').map(str::len).max().unwrap_or(0).saturating_add(1).max(3);
                     let fence = "`".repeat(width);
                     let candidate = format!("{fence}{language}\n{text}\n{fence}");
-                    if block_candidate_valid(document, &page.key, block, &candidate) {
+                    if render::block_candidate_valid(document, &page.key, block, &candidate) {
                         candidate
                     } else {
-                        block_line(document, page, block, false)
+                        render::block_line(document, page, block, false)
                     }
                 }
-                _ => block_line(document, page, block, false),
+                BlockKind::ListItem { .. } => render::block_line(document, page, block, false),
+                _ => render::block_line(document, page, block, false),
             };
             let _ = writeln!(out, "{line}\n");
         }
