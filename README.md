@@ -8,6 +8,10 @@ updated:
   at: 2026-11-09
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3d96851dffeS2cPD2vPHjGklF"
+    title: "Complete keyed native compiler, guarded public push, independent Yjs and HTTP/Phoenix verification, and create-free deployed P1 baseline/revision/pull/repeat proof"
+  - resource: /design/keyed-save0.gpt61s.md
+    title: "Version-0.16 complete authoring receipt, APIs, tests and remaining recovery boundaries"
   - resource: "opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf"
     title: "First-binding default/publication preparation and selected-locator recovery; corrected shared description-clear semantics and settled original P1 intent without content effects"
   - resource: /design/native-default-adoption0.gpt61s.md
@@ -34,7 +38,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, and internal native-effect/recovery interfaces, version 0.15.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, and complete keyed native editor saves through public `push`, version 0.16.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -45,11 +49,11 @@ destination shape. Implemented versus pending:
 
 | implemented | not implemented |
 | --- | --- |
-| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
-| `leafbud-protocol` + native web/workflow foundation — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, explicit selected-locator recovery | complete keyed compiler/public `push`; general terminal-partial resolution; completed deployed publication mint/read-back proof |
-| `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning, flat lists and strict Yrs text decoding | canvas, nested/task lists, interactive/other unsupported editor content |
+| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | public release/publishing workflow |
+| `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, explicit selected-locator recovery | general terminal-partial accept/replan; original lost publication-mint attribution |
+| `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning and complete keyed create/update/place/detach compiler, loaded Yrs text/marks/break editing and selected supported-block recreation | canvas, nested/task lists, interactive/other unsupported editor content; whole-body recreation |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -68,7 +72,7 @@ crates/
                 loss-checked initial keyed MDX writing and validation
   leaflet/
     editor/    leafbud-editor: fact graph, Yrs text state, bindings,
-                 bounded pure observation; write planning still pending
+                  pure observation and complete keyed native compilation
     protocol/  leafbud-protocol: native messages, bounded request encoding,
                  raw full views/acknowledgments; no HTTP, Yrs or files
     web/       leafbud-web: cookie auth, discovery, RPC/actions,
@@ -80,7 +84,7 @@ crates/
   workflow/    leafbud-workflow: local files, config, inventory,
                  guarded import/pull, shared refresh, cooperative locks, live follow
   cli/         leafbud (binary): thin Clap/rendering layer;
-                  reads/import/create/check/status/diff/pull/watch/tidy/config; native writes pending
+                   reads/import/create/check/status/diff/push/pull/watch/tidy/config
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
@@ -90,6 +94,66 @@ MDX adapter / editor / record projections; `web` owns effects;
 `workflow` composes the libraries; the CLI stays thin. The scaffold
 adds no crate dependency edges that no code uses yet.
 
+## Keyed editor saves
+
+```sh
+leafbud create drafts/essay.mdx --title "Garden notes"
+# Write ordinary Markdown; keys are assigned once on execution.
+leafbud push drafts/essay.mdx                  # preview: no source/native writes
+leafbud push drafts/essay.mdx --yes            # bind if needed, save; never publish
+leafbud push --all --state draft --yes --json
+leafbud push drafts/essay.mdx --take local --yes # deliberate current-remote decision
+leafbud push drafts/essay.mdx --recreate chosen-key --yes
+```
+
+The complete supported source is preflighted before native effects, including
+before first mint wherever representability/storage intent is knowable. Both
+standalone and publication first binding reuse the native main page/entry and
+detach the verified empty seed. Local UUID/title remain independent of the first
+heading. Normal saves retain existing block/entity/text-fact/membership identities;
+new keys create new objects. Move a block's marker with it, keep one original key
+when splitting or joining, and omit a keyed occurrence to detach its placement.
+Omission never deletes entities or assets. Changed pages use simple native
+move-to-end normalization, not an optimal-edit engine.
+
+Paragraphs, headings, quotes, all supported inline marks/links/hard breaks, flat
+bullet/ordered items, rules, code, HTTP(S)-URL images and reachable linear named
+pages/links save together. Compatible text uses scalar-safe UTF-16 prefix/suffix
+splicing in the loaded Yrs document; awkward supported topology rebuilds only its
+paragraph interior. Unchanged rich meaning emits no text mutation. Type/scalar
+edits retain known inactive text. Shared occurrences must request consistent
+entity fields, or explicitly fork one with `--recreate KEY`; recreation retains
+the selected placement and leaves old entities/other occurrences intact. Repeated
+same-entity placements within one parent are diagnosed, not guessed.
+
+Preview never persists keys/pending, mints or pushes. Effect counts come from
+actual selected native arguments; an unbound preview instead reports source
+preflight because no verified native seed yet exists. `--yes` alone never resolves
+remote drift. `--take local` binds the decision to this invocation's current
+witness and rechecks it before effects; it cannot bypass pending work, unknown
+native semantics or unsupported content. The server is not a remote CAS.
+
+Read-back verifies complete meaning/order/metadata/associations plus protected
+facts, including explicit reads of retained detached objects. Only then does
+tracking-only settlement advance receipts. Repeating an unchanged save sends
+**nothing** and preserves file bytes/mtime. Source edits across waits are preserved;
+remote success can remain locally unsettled. Exact encoded requests may retry
+in-process; after restart, `push` only observes/settles already-achieved terminal
+work or reports pending/partial uncertainty, never independently re-encodes it.
+General terminal accept/replan remains a separate recovery capability.
+
+Reports are version-1 JSON with per-file outcome and native effect counters.
+Exit codes: **0** successful preview/save/no-op, **1** operational/preflight failure,
+**2** usage, **3** needs-decision, **4** pending/partial/source-changed or mixed results.
+`--recreate` requires one explicit file; `--recreate-body` is honestly unimplemented.
+No release, email, automatic cleanup or background auto-push is performed.
+
+Both first-mint contexts pass complete CLI/HTTP fixtures. Actual deployed
+**human-selected existing P1** passed CLI baseline → combined revision → read-back
+→ unchanged pull/repeat. This made zero draft-creation calls; original lost-mint
+attribution is still unestablished, and the old standalone partial is untouched.
+Implementation/evidence: [complete keyed save receipt](design/keyed-save0.gpt61s.md).
+
 ## Native-effect foundation (internal checkpoint)
 
 The ninth, wire-only crate is now consumed by web, editor and workflow.
@@ -98,8 +162,8 @@ prepares source keys once, persists an attempt before mint, stores a returned
 locator before verification, and leaves **pending materialization**, not a saved
 document. Both standalone `/new` and current publication-dashboard action
 discovery have real loopback coverage. `recover_native` observes/settles finite
-attempts; it never remints or re-encodes a request after restart. The complete
-compiler receiving runner remains crate-private; **CLI `push` is not implemented**.
+attempts; it never remints or re-encodes a request after restart. Version 0.16 joins
+this runner to the complete pure editor compiler and public `push` described above.
 
 First binding records the verified publication association explicitly and copies
 only **omitted** theme/contributor defaults into source. Explicit watermark true/
@@ -548,7 +612,7 @@ identity at an explicit old path is not silently selected, and duplicate UUIDs o
 bindings block adoption. External explicit operands work, but rename discovery
 outside the workspace is not recursive. New remote discovery remains `import`.
 
-**Locks and races.** Pull, watch, tidy and import cooperate through OS-released
+**Locks and races.** Push, pull, watch, tidy and import cooperate through OS-released
 advisory locks at `$XDG_CONFIG_HOME/leafbud/locks` (else `~/.config/leafbud/locks`),
 keyed by stable local UUID, not filename. Import also serializes one origin/token
 binding before checking whether it already exists. A busy one-shot operation
