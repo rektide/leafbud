@@ -37,6 +37,7 @@ enum WireCommand {
     Send(Value),
     Burst(Vec<Value>),
     Drop,
+    IgnoreLeaves(oneshot::Sender<()>),
 }
 struct Server {
     origin: String,
@@ -59,6 +60,7 @@ impl Server {
         let task = tokio::spawn(async move {
             let mut ignored = false;
             let mut epoch = 0;
+            let mut ignore_leaves = false;
             loop {
                 let (tcp, _) = listener.accept().await.unwrap();
                 epoch += 1;
@@ -87,6 +89,7 @@ impl Server {
                                 if ignore_first_join && !ignored { ignored = true; continue; }
                             }
                             if frame[3] == "heartbeat" && !heartbeat { continue; }
+                            if frame[3] == "phx_leave" && ignore_leaves { continue; }
                             let reject = reject_presence && frame[3] == "phx_join" && frame[2].as_str().unwrap().contains(":yjs:");
                             let response = json!([frame[0],frame[1],frame[2],"phx_reply",{"status":if reject {"error"} else {"ok"},"response":if reject {json!({"reason":"Invalid JWT private-payload"})} else {json!({})}}]);
                             if socket.send(Message::text(response.to_string())).await.is_err() { break; }
@@ -98,6 +101,7 @@ impl Server {
                                 if socket.flush().await.is_err() { break; }
                             },
                             Some(WireCommand::Drop) => break,
+                            Some(WireCommand::IgnoreLeaves(ack)) => { ignore_leaves = true; let _ = ack.send(()); },
                             None => return,
                         }
                     }
@@ -233,7 +237,7 @@ async fn disconnect_close_error_and_stale_frames_recover_with_new_join_epochs() 
             let mut previous = adapter.wait(|s| s.health == Health::Live).await.roots[&root(3)].clone();
             for close in [Some("phx_error"), Some("phx_close"), None] {
                 if let Some(close) = close {
-                    server.send(event(&join, close, json!({})));
+                    server.send(event(&join, close, json!({"reason":"channel closed"})));
                 } else {
                     server.command.send(WireCommand::Drop).unwrap();
                 }
@@ -457,6 +461,87 @@ async fn durable_terminal_system_error_is_unavailable_without_rejoin_storm() {
 }
 
 #[tokio::test]
+async fn socket_gap_invalidates_presence_until_a_fresh_snapshot() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let mut server = Server::new(false, false, true).await;
+            let mut adapter = Adapter::start(server.bootstrap(), options());
+            adapter.roots(vec![root(11)]).await;
+            let (_, old) = server.frame("phx_join", Some(&name(root(11), true))).await;
+            adapter.wait(|s| s.health == Health::Live).await;
+            server.send(event(&old, "presence_state", json!({})));
+            let state = adapter
+                .wait(|s| s.roots[&root(11)].presence.as_ref().unwrap().evidence == PresenceEvidence::NoPeersObserved)
+                .await;
+            let epoch = state.roots[&root(11)].join_epoch;
+            server.command.send(WireCommand::Drop).unwrap();
+            let (_, fresh) = server.frame("phx_join", Some(&name(root(11), true))).await;
+            let state = adapter.wait(|s| s.health == Health::Live && s.roots[&root(11)].join_epoch > epoch).await;
+            let presence = state.roots[&root(11)].presence.as_ref().unwrap();
+            assert_eq!(presence.evidence, PresenceEvidence::Unknown);
+            assert_eq!(presence.observed_at, None);
+            server.send(event(&old, "presence_state", json!({"old":{"metas":[{"phx_ref":"stale"}]}})));
+            server.frame("heartbeat", None).await;
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            assert_eq!(
+                adapter.state.borrow().roots[&root(11)].presence.as_ref().unwrap().evidence,
+                PresenceEvidence::Unknown
+            );
+            server.send(event(&fresh, "presence_state", json!({})));
+            adapter
+                .wait(|s| s.roots[&root(11)].presence.as_ref().unwrap().evidence == PresenceEvidence::NoPeersObserved)
+                .await;
+            adapter.stop().await;
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn shutdown_bounds_unacknowledged_leaves_without_retries() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let mut server = Server::new(false, false, true).await;
+            let mut adapter = Adapter::start(server.bootstrap(), options());
+            adapter.roots(vec![root(12)]).await;
+            server.frame("phx_join", Some(&name(root(12), true))).await;
+            adapter.wait(|s| s.health == Health::Live).await;
+            let (ack, acknowledged) = oneshot::channel();
+            server.command.send(WireCommand::IgnoreLeaves(ack)).unwrap();
+            acknowledged.await.unwrap();
+            adapter.stop().await;
+            let sent = server.sent.lock().unwrap();
+            assert_eq!(sent.iter().filter(|f| f[3] == "phx_leave").count(), 2);
+            assert_eq!(sent.iter().filter(|f| f[3] == "phx_join").count(), 2);
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn unacknowledged_deselection_resets_socket_without_resurrecting_root() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let mut server = Server::new(false, false, true).await;
+            let mut adapter = Adapter::start(server.bootstrap(), Options { presence: false, ..options() });
+            adapter.roots(vec![root(13), root(14)]).await;
+            let state = adapter.wait(|s| s.health == Health::Live && s.roots.len() == 2).await;
+            let before = state.roots[&root(14)].join_epoch;
+            while server.frames.try_recv().is_ok() {}
+            let (ack, acknowledged) = oneshot::channel();
+            server.command.send(WireCommand::IgnoreLeaves(ack)).unwrap();
+            acknowledged.await.unwrap();
+            adapter.roots(vec![root(14)]).await;
+            let (epoch, _) = server.frame("phx_join", Some(&name(root(14), false))).await;
+            assert!(epoch > 1, "uncertain leave must clear server membership by socket reset");
+            let state = adapter
+                .wait(|s| s.health == Health::Live && s.roots.len() == 1 && s.roots[&root(14)].join_epoch > before)
+                .await;
+            assert!(!state.roots.contains_key(&root(13)));
+            adapter.stop().await;
+        })
+        .await;
+}
+
+#[tokio::test]
 async fn cancellation_during_handshake_needs_no_localset_and_is_bounded() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let project = PublicProject::new(&format!("http://{}", listener.local_addr().unwrap()), &bootstrap::test_key("synthetic")).unwrap();
@@ -506,6 +591,14 @@ fn counters_stale_selection_presence_transaction_and_diagnostics_are_bounded() {
     assert_eq!(presence.diff(&json!({"joins":{},"leaves":{}})).unwrap(), Some(1));
     presence.gap();
     assert_eq!(presence.diff(&json!({"joins":{},"leaves":{}})).unwrap(), None);
+    assert_eq!(rejection(&json!({"reason":"ordinary server close"}).into()), None);
+    assert_eq!(
+        join_rejection(&json!({"reason":"unrecognized join denial"}).into()),
+        Some(Unavailable::Rejected)
+    );
+    assert_eq!(join_rejection(&json!({"code":"TooManyChannels"}).into()), None);
+    assert_eq!(join_rejection(&json!({"code":"too_many_joins"}).into()), None);
+    assert_eq!(join_rejection(&json!({"code":"InvalidJWT"}).into()), Some(Unavailable::AuthOrConfig));
     let project = PublicProject::new("https://private-project.supabase.co", &bootstrap::test_key("private-project")).unwrap();
     let boot = Bootstrap::explicit("https://private-leaflet.example", project.clone()).unwrap();
     for debug in [

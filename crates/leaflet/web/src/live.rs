@@ -19,7 +19,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use futures_util::{StreamExt, future::LocalBoxFuture, stream::FuturesUnordered};
+use futures_util::{FutureExt, StreamExt, future::LocalBoxFuture, stream::FuturesUnordered};
 use phoenix_channel_client::{Channel, ChannelEvent, ClientError, DisconnectReason, ReconnectAction, Socket, SocketEvent, static_join_payload};
 use phoenix_channel_runtime::{Payload, ProtocolEvent};
 use phoenix_channel_runtime_native::{NativeConnector, NativeTimer, NativeTransportOptions};
@@ -352,7 +352,11 @@ enum End {
     Retry,
     Terminal,
 }
-type Jobs = FuturesUnordered<LocalBoxFuture<'static, (Key, u64, Result<End, Error>)>>;
+struct TopicEnd {
+    disposition: End,
+    reset_socket: bool,
+}
+type Jobs = FuturesUnordered<LocalBoxFuture<'static, (Key, u64, Result<TopicEnd, Error>)>>;
 
 /// Run until Stop, command-channel closure, or a fatal local protocol/counter
 /// failure. Leaves and shutdown are bounded. Drop is also safe (closes the local
@@ -501,11 +505,18 @@ async fn session(socket: &Socket, bootstrap: Bootstrap, options: Options, mut co
                 completed = jobs.next(), if !jobs.is_empty() => {
                     let (key, generation, end) = completed.expect("nonempty jobs");
                     let end = end?;
+                    if end.reset_socket && model.borrow().state.connection != Connection::Unavailable {
+                        // A timed-out leave (especially a join still awaiting its
+                        // ack) cannot prove server membership is gone. Reset the
+                        // one socket rather than leave a deselected ghost topic.
+                        { let mut model = model.borrow_mut(); model.state.connection = Connection::Reconnecting; model.publish(); }
+                        tokio::time::timeout(options.leave_timeout, socket.reconnect()).await.map_err(|_| Error::DriverStopped)?.map_err(|_| Error::DriverStopped)?;
+                    }
                     let Some(slot) = slots.get_mut(&key) else { continue };
                     if slot.generation != generation { continue; }
                     slot.cancel = None;
                     slot.running = false;
-                    if (matches!(end, End::Terminal) || model.borrow().state.connection == Connection::Unavailable) && model.borrow().generations.get(&key.0) == Some(&generation) { continue; }
+                    if (matches!(end.disposition, End::Terminal) || model.borrow().state.connection == Connection::Unavailable) && model.borrow().generations.get(&key.0) == Some(&generation) { continue; }
                     let attempt = slot.attempt.saturating_add(1);
                     slots.remove(&key);
                     start(socket, &bootstrap, &options, &model, &mut slots, &mut jobs, key, attempt)?;
@@ -593,7 +604,7 @@ async fn topic(
     model: Shared,
     mut cancellation: oneshot::Receiver<()>,
     attempt: u32,
-) -> Result<End, Error> {
+) -> Result<TopicEnd, Error> {
     let mut channel = channel;
     let mut joined_ref = None;
     let mut presence = Presence::default();
@@ -612,7 +623,20 @@ async fn topic(
                 Some(if terminal.is_some() { End::Terminal } else { End::Retry })
             }
             Err(ClientError::DriverStopped) => return Err(Error::DriverStopped),
-            Err(_) => Some(End::Retry),
+            Err(_) => {
+                // A close/error before the first ack interrupts the join waiter.
+                // Inspect the already-buffered lifecycle payload before retrying;
+                // otherwise terminal pre-join auth closes could loop forever.
+                while let Some(Some(event)) = channel.next_event().now_or_never() {
+                    match event {
+                        ChannelEvent::Protocol(ProtocolEvent::ChannelClosed { payload, .. } | ProtocolEvent::ChannelError { payload, .. }) => terminal = rejection(&payload),
+                        ChannelEvent::Protocol(ProtocolEvent::JoinError { response, .. }) => terminal = join_rejection(&response),
+                        _ => (),
+                    }
+                    if terminal.is_some() { break; }
+                }
+                Some(if terminal.is_some() { End::Terminal } else { End::Retry })
+            },
         }
     };
     let end = if let Some(end) = initial {
@@ -686,63 +710,72 @@ async fn topic(
             SubscriptionState::Reconnecting
         }),
     )?;
-    let _ = tokio::time::timeout(options.leave_timeout, channel.leave()).await;
+    let reset_socket = !matches!(tokio::time::timeout(options.leave_timeout, channel.leave()).await, Ok(Ok(_)));
     // Dispose the registered topic before the central loop is allowed to recreate.
     drop(channel);
     if matches!(end, End::Retry) {
-        tokio::select! { _ = &mut cancellation => return Ok(End::Retired), _ = tokio::time::sleep(options.delay(attempt)) => () }
+        tokio::select! { _ = &mut cancellation => return Ok(TopicEnd { disposition: End::Retired, reset_socket }), _ = tokio::time::sleep(options.delay(attempt)) => () }
     }
-    Ok(end)
+    Ok(TopicEnd {
+        disposition: end,
+        reset_socket,
+    })
+}
+
+enum Failure {
+    AuthOrConfig,
+    Transient,
+    Unspecified,
+}
+
+fn classify(payload: &Payload) -> Failure {
+    let value: Value = payload.deserialize().unwrap_or(Value::Null);
+    let text: String = value
+        .to_string()
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .flat_map(char::to_lowercase)
+        .collect();
+    if [
+        "unauthorized",
+        "notauthorized",
+        "forbidden",
+        "invalidjwt",
+        "malformedjwt",
+        "jwtexpired",
+        "invalidtoken",
+        "invalidapi",
+        "invalidsignature",
+        "invalidconfig",
+        "tenantnotfound",
+        "realtimedisabledfortenant",
+        "permissiondenied",
+    ]
+    .iter()
+    .any(|part| text.contains(part))
+    {
+        Failure::AuthOrConfig
+    } else if ["timeout", "ratelimit", "toomany", "database", "restart", "shutdown", "unavailable", "overload"]
+        .iter()
+        .any(|part| text.contains(part))
+    {
+        Failure::Transient
+    } else {
+        Failure::Unspecified
+    }
 }
 
 fn rejection(payload: &Payload) -> Option<Unavailable> {
-    let value: Value = payload.deserialize().unwrap_or(Value::Null);
-    if value == json!({}) || value.is_null() {
-        return None;
-    } // normal close / unspecified transient error
-    let text = value.to_string().to_ascii_lowercase();
-    if [
-        "unauthorized",
-        "not authorized",
-        "forbidden",
-        "invalid jwt",
-        "jwt expired",
-        "invalid token",
-        "invalid api",
-        "invalid signature",
-        "invalid config",
-        "tenant not found",
-        "permission denied",
-    ]
-    .iter()
-    .any(|part| text.contains(part))
-    {
-        Some(Unavailable::AuthOrConfig)
-    } else if [
-        "timeout",
-        "rate limit",
-        "too many",
-        "database",
-        "restart",
-        "shutdown",
-        "unavailable",
-        "overload",
-    ]
-    .iter()
-    .any(|part| text.contains(part))
-    {
-        None
-    } else {
-        Some(Unavailable::Rejected)
-    }
+    // A server close/error retains selected-root intent unless auth/config is
+    // explicitly terminal. Generic close reasons are not join rejections.
+    matches!(classify(payload), Failure::AuthOrConfig).then_some(Unavailable::AuthOrConfig)
 }
 
 fn join_rejection(payload: &Payload) -> Option<Unavailable> {
-    let value: Value = payload.deserialize().unwrap_or(Value::Null);
-    if value.is_null() || value == json!({}) {
-        Some(Unavailable::Rejected)
-    } else {
-        rejection(payload)
+    match classify(payload) {
+        Failure::AuthOrConfig => Some(Unavailable::AuthOrConfig),
+        Failure::Transient => None,
+        Failure::Unspecified => Some(Unavailable::Rejected),
     }
 }
 
