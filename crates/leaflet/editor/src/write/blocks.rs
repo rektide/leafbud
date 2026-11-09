@@ -28,7 +28,32 @@ pub(super) fn prepare(builder: &mut Builder<'_>, current: &Content, recreate: &B
             let (text_fact, active) = if let Some(done) = written.get(&entity_key) {
                 done.clone()
             } else {
-                let done = fields(builder, entity, &block.kind)?;
+                // Retained supported meaning, not raw default spelling, decides
+                // whether this block needs work. Do not initialize absent blank
+                // text/default scalars or clear inactive fields on an import.
+                let unchanged = prior.is_some()
+                    && !replacement
+                    && current.pages.iter().flat_map(|p| &p.blocks).any(|old| {
+                        current.nodes[&old.key].entity == entity_key
+                            && match (&old.kind, &block.kind) {
+                                (BlockKind::PageLink { page: a }, BlockKind::PageLink { page: b }) => {
+                                    current.nodes[a].entity == builder.result.targets[b].entity
+                                }
+                                (a, b) => a == b,
+                            }
+                    });
+                let done = if unchanged {
+                    let text = builder.one(entity, "block/text")?.and_then(|r| r["id"].as_str()).map(str::to_owned);
+                    (
+                        text,
+                        matches!(
+                            block.kind,
+                            BlockKind::Paragraph { .. } | BlockKind::Heading { .. } | BlockKind::Quote { .. } | BlockKind::ListItem { .. }
+                        ),
+                    )
+                } else {
+                    fields(builder, entity, &block.kind)?
+                };
                 written.insert(entity_key.clone(), done.clone());
                 done
             };

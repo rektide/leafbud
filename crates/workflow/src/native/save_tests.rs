@@ -844,3 +844,57 @@ async fn display_title_fallback_is_not_a_persisted_metadata_noop() {
         assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "unchanged");
     }
 }
+
+#[tokio::test]
+async fn unchanged_imported_defaults_keep_absent_facts_and_inactive_data() {
+    let server = Server::new(true).await;
+    // Real supported native spellings, not the compiler's canonical construction.
+    {
+        let mut store = server.store.lock().unwrap();
+        for (index, kind) in ["text", "text", "code", "image"].iter().enumerate() {
+            let entity = Uuid::new_v4().to_string();
+            store.entities.insert(entity.clone());
+            for row in [
+                json!({"id":Uuid::new_v4(),"entity":store::PAGE,"attribute":"card/block","data":{"type":"ordered-reference","value":entity,"position":format!("b{index}")}}),
+                json!({"id":Uuid::new_v4(),"entity":entity,"attribute":"block/type","data":{"type":"block-type-union","value":kind}}),
+            ] {
+                store.assert(row);
+            }
+            if index < 2 {
+                store.assert(json!({"id":Uuid::new_v4(),"entity":entity,"attribute":"block/is-list","data":{"type":"boolean","value":index==1}}));
+            } else {
+                // Inactive supported text must not be decoded or rewritten.
+                store.assert(json!({"id":Uuid::new_v4(),"entity":entity,"attribute":"block/text","data":{"type":"text","value":"opaque inactive"}}));
+            }
+            if index == 3 {
+                store.assert(
+                    json!({"id":Uuid::new_v4(),"entity":entity,"attribute":"block/image","data":{"type":"image","src":"https://example.test/image.png"}}),
+                );
+            }
+        }
+        store.data["title"] = "Native defaults".into();
+        store.extras.insert("publication_title".into(), json!("Native defaults"));
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("import.mdx");
+    let reader = server.reader();
+    let token = store::TOKEN.parse().unwrap();
+    let data = reader.client.get(token).await.unwrap();
+    let snapshot = reader.client.pull(token).await.unwrap();
+    let imported = import::build(&server.http.base_url, &data, &snapshot).unwrap();
+    write(&path, &imported);
+    let bytes = std::fs::read(&path).unwrap();
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let facts = server.store.lock().unwrap().facts.clone();
+    for yes in [false, true, true] {
+        let result = save(&server, temp.path(), &path, yes).await;
+        assert_eq!(result.outcome, "unchanged", "{result:?}");
+        assert!(result.effects.is_empty(), "{result:?}");
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+        assert_eq!(read(&path).state.nodes, imported.state.nodes);
+        assert_eq!(read(&path).state.writer, imported.state.writer);
+        assert_eq!(server.store.lock().unwrap().facts, facts);
+        assert_eq!(server.store.lock().unwrap().pushes, 0);
+    }
+}
