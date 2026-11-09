@@ -49,6 +49,8 @@ sources:
     title: "Reviewed commissioned Sol probe: deployed passive joins/presence, maintained Phoenix client lifecycle evidence and production watch API handoff"
   - resource: /design/authoring-review0.gpt6a.md
     title: "Parent review of landed batch A and concrete correction/transport join conditions"
+  - resource: /design/live-transport0.gpt61s.md
+    title: "Production web transport checkpoint accepted after parent source review; workflow/CLI adoption remains the next join"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/index.tsx
     title: "Source-inspected rootEntity poke subscription, reconnect pull, poll backstop and browser push batching"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/serverPullData.ts
@@ -703,3 +705,10 @@ accepts its core choices and commissions focused corrections to preparation,
 identity projection, tracking settlement and status before adoption integration.
 A fresh g correction pass and an independent Sol production transport checkpoint
 run in parallel, with separate owned files and an explicit parent join.
+
+The [production transport](live-transport0.gpt61s.md) has now returned through
+`224f08f8` at coordinated version 0.12.0. Parent source review accepts its
+`web::live` boundary and the reported scoped/passive verification. Connected
+watch remains open until the corrected foundation joins shared refresh/locking,
+selection, scheduler and CLI integration; the transport-only return is an
+internal checkpoint, not the user's completed live-sync workflow.

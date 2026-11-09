@@ -34,6 +34,14 @@ sources:
     title: "Reviewed preparation/normalization composition and source byte guard"
   - resource: /experiments/15-live-connection/live-connection0.gpt61s.md
     title: "Accepted transport evidence and interface handoff for independent web implementation"
+  - resource: /design/live-transport0.gpt61s.md
+    title: "Reviewed production transport checkpoint, loopback results and passive deployed adapter verification"
+  - resource: /crates/leaflet/web/src/live.rs
+    title: "Reviewed actual driver, latest-state root sequences, selection generations and socket/topic lifecycle"
+  - resource: /crates/leaflet/web/src/live/bootstrap.rs
+    title: "Reviewed origin-scoped cookie-free discovery and explicit public project configuration"
+  - resource: /crates/leaflet/web/src/live/presence.rs
+    title: "Reviewed transactional bounded presence reduction and unknown-on-gap semantics"
 ---
 
 # Authoring foundation review and connected-watch join
@@ -112,6 +120,29 @@ The parent joins both results before continuing Sol into shared refresh/locking,
 workspace selection, watcher scheduling and CLI integration. The transport-only
 checkpoint does not close connected watch. No new offline list/metadata/rekey
 batch is inserted ahead of the user's commissioned live-sync path.
+
+### Transport checkpoint reviewed
+
+Sol returned the production adapter through `224f08f8`, with implementation
+checkpoints recorded in [its receipt](live-transport0.gpt61s.md). Parent read the
+actual live driver, bootstrap and presence reducer and accepts that transport
+boundary for integration. Reported scoped evidence is 27 passing web tests,
+strict clippy/formatting, and a successful passive production-adapter session
+including deselect/reselect and the heartbeat window. The point-in-time broad
+run encountered two tests still being changed by the parallel foundation pass;
+the final integrated check belongs after that pass returns.
+
+In particular, the incoming state uses session-wide monotonic stamps across root
+deselect/reselect, presence diffs are transactional, and the local driver remains
+polled during joins/recovery. The controller must discard serviced stamps when
+starting a new transport run, gate readiness on acknowledged joins, and service
+only the sequence captured at refresh start. These are the receiving obligations,
+not reasons to replace the transport with another implementation.
+
+The transport session finished around 201k reported tokens. Connected-watch
+integration is a separate coherent checkpoint; use a fresh Sol session with these
+receipts if the remaining controller/locking scope would exceed the operator's
+session target. The foundation correction still owns its files until return.
 
 The [build path](keyed-build-path0.gpt6a.md) remains the current direction; the
 [batch A receipt](author-create-keys0.glm53m.md) preserves the implementation
