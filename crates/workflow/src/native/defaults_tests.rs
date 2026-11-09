@@ -797,7 +797,7 @@ async fn bound_explicit_retarget_and_inherit_are_diagnosed_before_compiler_or_pu
 }
 
 #[tokio::test]
-async fn omitted_description_does_not_adopt_or_hide_native_empty_string_on_acknowledged_readback() {
+async fn omitted_description_and_native_empty_string_settle_same_clear_intent_without_source_copying() {
     let server = EffectServer::new(0, None).await;
     server.fixture.lock().unwrap()["leaflet_data"]["description"] = "".into();
     let temp = tempfile::tempdir().unwrap();
@@ -809,11 +809,10 @@ async fn omitted_description_does_not_adopt_or_hide_native_empty_string_on_ackno
         .execute_compiled(&old::context(temp.path()), &path, Selection::default(), None, metadata_compiler(1))
         .await
         .unwrap();
-    assert_eq!(result.outcome, write::RecoveryOutcome::ResolvedPartial);
+    assert_eq!(result.outcome, write::RecoveryOutcome::DesiredVerified);
     assert_eq!(result.acknowledged, Some(1));
     let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert!(after.description.is_none());
-    assert_eq!(after.state.sync, doc.state.sync);
-    assert_eq!(after.state.pending.as_ref().unwrap().input_hash, import::hash(&doc.authored_value()));
-    assert_eq!(after.state.pending.as_ref().unwrap().desired_hash, import::hash(&doc.editor_value()));
+    assert!(result.settled && after.state.pending.is_none());
+    assert_eq!(after.authored_value(), doc.authored_value());
 }

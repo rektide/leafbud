@@ -612,3 +612,155 @@ async fn inspect_selected_partial(remote: &RemoteReader, path: &Path, dir: &Path
     eprintln!("P1 terminal partial; differing projection fields: {differences:?}; old intent retained, no retry/re-encoding");
     Ok(())
 }
+
+/// Review correction: observe the already terminal selected P1 only. No mint,
+/// locator selection, mutation compiler, request replay or CRDT construction.
+#[tokio::test]
+#[ignore = "requires selected-P1 create-free description-clear settlement authorization"]
+async fn settle_selected_p1_original_clear_intent_without_content_effects() -> Result<()> {
+    ensure!(
+        std::env::var("LEAFBUD_NATIVE_PROBE").as_deref() == Ok("authorized-selected-p1-clear-settlement"),
+        "explicit P1 clear-settlement authorization required"
+    );
+    let root = std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.test-agent/native-effects"))?;
+    let dir = root.join("deployed");
+    let path = dir.join("publication.mdx");
+    let standalone = dir.join("standalone.mdx");
+    let budgets = [dir.join("standalone.started"), dir.join("publication.started")];
+    let budget_bytes = [std::fs::read(&budgets[0])?, std::fs::read(&budgets[1])?];
+    let standalone_bytes = std::fs::read(&standalone)?;
+    let standalone_mtime = std::fs::metadata(&standalone)?.modified()?;
+    let catalogue: Value = serde_json::from_slice(&std::fs::read(root.join("recovery-candidates/catalogue.private.json"))?)?;
+    let candidate = catalogue["candidates"]
+        .as_array()
+        .context("private catalogue")?
+        .iter()
+        .find(|c| c["label"] == "P1")
+        .context("selected P1 missing")?;
+    let token: Uuid = candidate["token"].as_str().context("selected token")?.parse()?;
+    let mut context = crate::config::load(None, &Default::default(), None)?;
+    context.workspace_root = dir.clone();
+    let remote = crate::RemoteOptions::default().connect().await?;
+    let source = std::fs::read_to_string(&path)?;
+    let before = leafbud_mdx::parse(&source)?;
+    ensure!(
+        before.state.binding.as_ref().is_some_and(|binding| binding.token == token),
+        "source is not the human-selected P1"
+    );
+    ensure!(
+        leafbud_mdx::header(&source)?.get("description").is_none(),
+        "original P1 description absence changed; stop without reinterpretation"
+    );
+    let attempt = before.state.pending.as_ref().context("P1 no longer pending; do not reconstruct old intent")?;
+    ensure!(
+        matches!(
+            &attempt.effect,
+            Effect::Push {
+                stage: PushStage::Partial { .. } | PushStage::Dispatched { .. },
+                ..
+            }
+        ),
+        "P1 is not an already dispatched content attempt"
+    );
+    ensure!(
+        attempt.input_hash == import::hash(&before.authored_value()) && attempt.desired_hash == import::hash(&before.editor_value()),
+        "original pending hashes differ under corrected projection; no rewrite permitted"
+    );
+    let evidence = serde_json::json!({
+        "session":"opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf", "parent":"opencode://ses_e4217c526ffeXeHByo5ZswnB3F",
+        "selection":"human-selected-P1", "originalMintAttribution":"not-established", "originalAttempt":attempt,
+        "currentInputHash":import::hash(&before.authored_value()), "currentDesiredHash":import::hash(&before.editor_value()),
+        "originalHashesMatchBeforeSettlement":true, "descriptionFieldPresent":false,
+    });
+    let evidence_path = dir.join("publication.selected-p1.clear-before.private.json");
+    if evidence_path.exists() {
+        let old: Value = serde_json::from_slice(&std::fs::read(&evidence_path)?)?;
+        ensure!(old == evidence, "preserved pre-settlement evidence differs; stop");
+    } else {
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&evidence_path)?;
+        file.write_all(&serde_json::to_vec_pretty(&evidence)?)?;
+        file.sync_all()?;
+    }
+    let report = remote.recover_native(&context, &path, Selection::default(), true).await?;
+    std::fs::write(dir.join("publication.selected-p1.clear-recovery.json"), serde_json::to_vec_pretty(&report)?)?;
+    ensure!(
+        report.outcome == RecoveryOutcome::DesiredVerified && report.settled,
+        "P1 current state differs beyond corrected clear semantics; retained, no content repair/replay"
+    );
+    let settled = std::fs::read_to_string(&path)?;
+    let after = leafbud_mdx::parse(&settled)?;
+    ensure!(
+        after.authored_value() == before.authored_value()
+            && after.state.id == before.state.id
+            && after.state.binding == before.state.binding
+            && after.state.writer == before.state.writer,
+        "settlement changed author intent/identity/writer"
+    );
+    ensure!(
+        after.state.pending.is_none() && after.state.sync.is_some() && leafbud_mdx::header(&settled)?.get("description").is_none(),
+        "settlement did not keep original absent description"
+    );
+    ensure!(
+        leafbud_mdx::patch_tracking(&source, &after.state)? == settled,
+        "settlement changed bytes beyond tracking envelope"
+    );
+    let status = crate::status::inspect(&context, crate::status::Request { files: vec![path.clone()] }, Some(&remote)).await?;
+    ensure!(
+        status.items.len() == 1 && status.items[0].outcome == "clean",
+        "P1 status not clean after settlement"
+    );
+    let observed = remote
+        .observe_editor(&after)
+        .await
+        .map_err(|_| anyhow::anyhow!("P1 settled observation failed"))?;
+    ensure!(
+        observed.agreement.endpoints_equal && observed.data.observed_state() == LeafletState::Draft,
+        "P1 settled endpoints/lifecycle differ"
+    );
+    let bytes = std::fs::read(&path)?;
+    let mtime = std::fs::metadata(&path)?.modified()?;
+    ensure!(
+        remote.refresh_document(&context, &path, Default::default()).await.outcome == crate::refresh::Outcome::Unchanged,
+        "P1 pull not unchanged"
+    );
+    let no_op = remote
+        .execute_compiled(&context, &path, Selection::default(), None, |_, _, _| {
+            Ok(Compiled {
+                mutations: vec![],
+                targets: BTreeMap::new(),
+                created_entities: vec![],
+                allocated_facts: vec![],
+            })
+        })
+        .await?;
+    ensure!(
+        no_op.outcome == RecoveryOutcome::DesiredVerified && no_op.settled && std::fs::read(&path)? == bytes && std::fs::metadata(&path)?.modified()? == mtime,
+        "P1 repeat not exact byte/mtime no-op"
+    );
+    let standalone_report = remote.recover_native(&context, &standalone, Selection::default(), false).await?;
+    ensure!(
+        standalone_report.outcome == RecoveryOutcome::ResolvedPartial
+            && std::fs::read(&standalone)? == standalone_bytes
+            && std::fs::metadata(&standalone)?.modified()? == standalone_mtime,
+        "original standalone partial/evidence changed"
+    );
+    ensure!(
+        std::fs::read(&budgets[0])? == budget_bytes[0] && std::fs::read(&budgets[1])? == budget_bytes[1],
+        "consumed creation budgets changed"
+    );
+    std::fs::write(
+        dir.join("publication.selected-p1.clear-evidence.private.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "originalAttemptId":attempt.id, "originalInputHash":attempt.input_hash, "originalDesiredHash":attempt.desired_hash,
+            "originalHashesMatchBeforeSettlement":true, "authoredInputHashAfter":import::hash(&after.authored_value()),
+            "trackingOnlySettlement":true, "descriptionFieldInserted":false, "recovery":report, "status":"clean",
+            "boundEndpointsEqual":true, "pull":"unchanged", "repeat":"byte-and-mtime-noop", "standalone":standalone_report,
+            "standaloneSourcePreserved":true, "creationBudgetsUnchanged":true, "nativeContentEffects":0, "lifecycle":"unpublished-draft",
+            "originalMintAttribution":"not-established", "completeKeyedCompiler":false,
+        }))?,
+    )?;
+    eprintln!(
+        "P1: original hashes unchanged; desired-verified tracking-only settlement, clean status, equal endpoints, unchanged pull and exact repeat no-op. Zero native content effects. Standalone original partial preserved."
+    );
+    Ok(())
+}

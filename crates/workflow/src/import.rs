@@ -131,6 +131,13 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         .or_else(|| data.metadata.title.clone().filter(|s| !s.trim().is_empty()))
         .unwrap_or_else(|| "Untitled".into());
     let publication_uri = publication.clone();
+    // A present publication clear is authoritative; do not resurrect an older
+    // standalone description through the fallback. Keep raw witness inputs above.
+    let description = if pull.extras.contains_key("publication_description") {
+        string("publication_description")?
+    } else {
+        data.metadata.description.clone()
+    };
     let publication = match publication {
         None => Publication::Standalone,
         Some(uri) => Publication::At(uri),
@@ -140,7 +147,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     let mut document = Document {
         format: FORMAT.into(),
         title,
-        description: string("publication_description")?.or_else(|| data.metadata.description.clone()),
+        description: leafbud_document::canonical_description(description.as_deref()).map(str::to_owned),
         tags,
         publication: publication.clone(),
         theme: content.theme,

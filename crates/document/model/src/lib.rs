@@ -16,6 +16,14 @@ pub const FORMAT: &str = "leafbud-mdx/2";
 pub const EDITOR_PROFILE: &str = "leaflet-editor/3";
 pub const EDITOR_OWNED_EXTRA: &[&str] = &["contributors"];
 
+/// Shared semantic clear representation. Do not trim: every nonempty string,
+/// including whitespace, is meaningful and remains byte-exact. Authored values
+/// and conservative native witnesses retain their original representation.
+#[doc(hidden)]
+pub fn canonical_description(description: Option<&str>) -> Option<&str> {
+    description.filter(|description| !description.is_empty())
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Inline {
@@ -383,7 +391,7 @@ impl Document {
             rows
         };
         let extra: BTreeMap<_, _> = self.extra.iter().filter(|(key, _)| EDITOR_OWNED_EXTRA.contains(&key.as_str())).collect();
-        serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":self.description,
+        serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":canonical_description(self.description.as_deref()),
             "tags":self.tags,"publication":self.publication.value(),"theme":self.theme,"extra":extra,
             "main":self.pages.first().map(page),"definitions":definitions,"retired":retired})
     }
@@ -391,7 +399,7 @@ impl Document {
     /// Current semantic projection only. Excludes binding bookkeeping and all
     /// receipt hashes; includes source identities/order and represented meaning.
     pub fn semantic_value(&self) -> Value {
-        serde_json::json!({"format":self.format,"title":self.title,"description":self.description,"tags":self.tags,
+        serde_json::json!({"format":self.format,"title":self.title,"description":canonical_description(self.description.as_deref()),"tags":self.tags,
             "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,
             "mainPage":self.state.main_page,"pages":self.pages,"nodes":self.state.nodes})
     }

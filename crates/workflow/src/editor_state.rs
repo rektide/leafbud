@@ -274,7 +274,13 @@ pub(crate) fn adopt(existing: &Document, fresh: &Document) -> Document {
     let mut document = Document {
         format: fresh.format.clone(),
         title: fresh.title.clone(),
-        description: fresh.description.clone(),
+        description: if leafbud_document::canonical_description(existing.description.as_deref())
+            == leafbud_document::canonical_description(fresh.description.as_deref())
+        {
+            existing.description.clone()
+        } else {
+            leafbud_document::canonical_description(fresh.description.as_deref()).map(str::to_owned)
+        },
         tags: fresh.tags.clone(),
         publication: fresh.publication.clone(),
         theme: fresh.theme.clone(),

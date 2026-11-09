@@ -354,7 +354,11 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
     let (mut lines, body) = split_managed(source)?;
     for (key, old, new) in [
         ("title", json!(existing.title), json!(document.title)),
-        ("description", json!(existing.description), json!(document.description)),
+        (
+            "description",
+            json!(canonical_description(existing.description.as_deref())),
+            json!(canonical_description(document.description.as_deref())),
+        ),
         ("tags", json!(existing.tags), json!(document.tags)),
         ("theme", json!(existing.theme), json!(document.theme)),
         (

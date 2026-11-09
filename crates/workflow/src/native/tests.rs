@@ -12,6 +12,9 @@ use std::sync::{
 #[path = "defaults_tests.rs"]
 mod defaults;
 
+#[path = "description_tests.rs"]
+mod descriptions;
+
 const TOKEN: &str = "01999000-0000-7aaa-8000-000000000001";
 const ROOT: &str = "11111111-1111-4111-8111-111111111111";
 const PAGE: &str = "22222222-2222-4222-8222-222222222222";
@@ -444,7 +447,26 @@ impl EffectServer {
                 *acks.lock().unwrap()=Some((last["clientID"].as_str().unwrap().into(),last["id"].as_u64().unwrap()));
                 // A controlled synthetic native effect, not an implementation
                 // mirror/compiler simulator: only persisted metadata changes.
-                if mode!=1 {remote.lock().unwrap()["leaflet_data"]["title"]=last["args"]["title"].clone();}
+                 if mode!=1 {
+                     let mut fixture=remote.lock().unwrap();
+                     for mutation in mutations {
+                         let args=&mutation["args"];
+                         if mutation["name"]=="updateLeafletMetadata" {
+                             for field in ["title","description"] {
+                                 if let Some(value)=args.get(field) { fixture["leaflet_data"][field]=value.clone(); }
+                             }
+                         } else if mutation["name"]=="updatePublicationDraft" {
+                             for field in ["title","description","tags"] {
+                                 if let Some(value)=args.get(field) {
+                                     let key=format!("publication_{field}");
+                                     let patch=fixture["response"]["patch"].as_array_mut().unwrap();
+                                     let update=json!({"op":"put","key":key,"value":value});
+                                     if let Some(old)=patch.iter_mut().find(|p|p["key"]==key) {*old=update;}else{patch.push(update);}
+                                 }
+                             }
+                         }
+                     }
+                 }
                 if mode==4 {
                     let mut fixture=remote.lock().unwrap();
                     let entity=fixture["response"]["patch"].as_array().unwrap().iter().find(|p|p["value"]["attribute"]=="block/type" && p["value"]["data"]["value"]=="text").unwrap()["value"]["entity"].clone();
