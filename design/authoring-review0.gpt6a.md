@@ -3,7 +3,7 @@ type: Review
 title: "Authoring foundation review and connected-watch join"
 description: "Parent architectural review of batch A: accepted source choices, concrete identity/preparation/settlement defects, a focused correction commission and independent realtime transport work."
 resource: /design/authoring-review0.gpt6a.md
-status: corrections-commissioned
+status: accepted-for-watch-integration
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
@@ -36,6 +36,8 @@ sources:
     title: "Accepted transport evidence and interface handoff for independent web implementation"
   - resource: /design/live-transport0.gpt61s.md
     title: "Reviewed production transport checkpoint, loopback results and passive deployed adapter verification"
+  - resource: /design/authoring-corrections0.glm53m.md
+    title: "Reviewed completed correction pass and 200-test integrated foundation/transport result"
   - resource: /crates/leaflet/web/src/live.rs
     title: "Reviewed actual driver, latest-state root sequences, selection generations and socket/topic lifecycle"
   - resource: /crates/leaflet/web/src/live/bootstrap.rs
@@ -55,10 +57,11 @@ not automatically rerun by the parent. The final chat reported 173 tests while
 the durable receipt says 175; the correction handoff should report its actual
 final check result rather than propagate that discrepancy.
 
-**Integration acceptance is conditional on the corrections below.** These are
-contract gaps in the new boundaries, not a request to replace the architecture.
-They were identified by reading code; the correction agent must turn them into
-executable regression cases before closing its pass.
+**The corrected foundation is accepted for watch integration.** The initial review
+identified the contract gaps below and commissioned executable regressions before
+fixing them. The completion addendum records their resolution and the joined
+foundation/transport check. Earlier findings retain the reviewed predecessor's
+scope rather than describing defects still present in the corrected tip.
 
 ## Choices accepted
 
@@ -143,6 +146,30 @@ The transport session finished around 201k reported tokens. Connected-watch
 integration is a separate coherent checkpoint; use a fresh Sol session with these
 receipts if the remaining controller/locking scope would exceed the operator's
 session target. The foundation correction still owns its files until return.
+
+### Correction return and integration commission
+
+The [correction receipt](authoring-corrections0.glm53m.md) records the failing
+regressions and fixes, including the flow-envelope refinement at `ab84ca8a`.
+Parent re-read the corrected new-object projection, `authored_value`, whole-binding
+settlement guards, source-bound preparation and reachable status branches. These
+resolve the review's architectural join conditions. The reported final check is
+**200/200 workspace tests**, including the production transport, with clean fmt
+and clippy; it supersedes the earlier concurrent 189/191 snapshot.
+
+Keep the disclosed narrow preparation limits visible: provisional-main PageLink
+retargeting recognizes three exact attribute forms, and trailing-comment/non-JSON
+flow envelopes may fail preparation rather than being rewritten. These are
+diagnosed source-format limitations, not permission to guess identities or lose
+content. They do not block connected adoption of supported current-format files.
+
+Fresh **Sol high**, `opencode://ses_e416ba4e7ffeZ1ThfycXYgNh5S`, is commissioned
+to complete `leafbud-editor-follow`: reuse the accepted transport, extract shared
+per-document refresh, add stable-ID cooperative locks, serial fair scheduling,
+inventory rescans/backstop, JSONL/transition reporting and `watch` CLI. This is the
+full inbound workflow slice. Its tests must exercise actual socket-to-HTTP-to-file
+adoption, source conflicts/races and cancellation. A passive real smoke can use
+an isolated fresh import; no deployed edit is assumed from a quiet session.
 
 The [build path](keyed-build-path0.gpt6a.md) remains the current direction; the
 [batch A receipt](author-create-keys0.glm53m.md) preserves the implementation

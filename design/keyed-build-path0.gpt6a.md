@@ -712,3 +712,10 @@ The [production transport](live-transport0.gpt61s.md) has now returned through
 watch remains open until the corrected foundation joins shared refresh/locking,
 selection, scheduler and CLI integration; the transport-only return is an
 internal checkpoint, not the user's completed live-sync workflow.
+
+The [foundation corrections](authoring-corrections0.glm53m.md) have returned with
+200/200 workspace tests including transport, and parent review accepts the joined
+boundary. Fresh Sol session `opencode://ses_e416ba4e7ffeZ1ThfycXYgNh5S` now owns
+completion of `leafbud-editor-follow`: connected adoption, shared locking and
+refresh, scheduler/selection and CLI. This is the full inbound delivery rather
+than another transport-only checkpoint.
