@@ -150,11 +150,11 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
             "legacy springleaf format/namespace; explicit namespace conversion required before interpreting editor evidence; status never migrates files";
         return item;
     }
-    let Some(state) = header.get("@leafbud") else {
+    if header.get("@leafbud").is_none() {
         item.outcome = "untracked";
         item.detail = "not a managed document; import establishes a native binding";
         return item;
-    };
+    }
     let parsed = match leafbud_mdx::parse_with_spans(source) {
         Ok(parsed) => parsed,
         Err(_) => {
@@ -172,7 +172,16 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         // persisted yet; report it without claiming durable identity.
         item.local = Change::Changed;
     }
-    if state.get("binding").is_none_or(serde_json::Value::is_null) {
+    // Duplicate identities stay explicit in every reachable state, unbound
+    // and newly bound included: resolving copies precedes any other verdict.
+    if inventory.duplicates.contains(path) {
+        item.outcome = "ambiguous";
+        item.detail = "duplicate local document ID or native binding; resolve the copies before managed operations";
+        return item;
+    }
+    // Typed optional state: an explicit `sync: null` deserializes to the
+    // same absent receipts as a missing field.
+    if existing.state.binding.is_none() {
         item.outcome = "unbound";
         item.baseline = "none";
         item.detail = if item.needs_preparation > 0 {
@@ -182,23 +191,26 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         };
         return item;
     }
-    item.receipt_profile = state["sync"]["profile"].as_str().map(str::to_owned);
-    if item.receipt_profile.as_deref() != Some(EDITOR_PROFILE) || state["state"] != "draft" {
-        item.outcome = "unsupported";
-        item.detail = "unsupported receipt profile or lifecycle; no historical editor agreement inferred";
-        return item;
-    }
-    if state.get("sync").is_none() {
-        item.outcome = "bound-no-receipt";
-        item.detail = "bound but no verified agreement yet; receipts settle only after a verified save/pull";
-        return item;
+    match &existing.state.sync {
+        None => {
+            item.outcome = "bound-no-receipt";
+            item.baseline = "none";
+            item.detail = "bound but no verified agreement yet; receipts settle only after a verified save/pull";
+            return item;
+        }
+        // Defensive: the typed parse already rejects unknown profiles and
+        // lifecycles, so this branch keeps the diagnostic explicit if the
+        // two validations ever diverge.
+        Some(sync) if sync.profile != EDITOR_PROFILE || existing.state.state != "draft" => {
+            item.outcome = "unsupported";
+            item.detail = "unsupported receipt profile or lifecycle; no historical editor agreement inferred";
+            return item;
+        }
+        Some(_) => {
+            item.receipt_profile = existing.state.sync.as_ref().map(|sync| sync.profile.clone());
+        }
     }
     item.baseline = editor_state::baseline(existing);
-    if inventory.duplicates.contains(path) {
-        item.outcome = "ambiguous";
-        item.detail = "duplicate local document ID or native binding; resolve the copies before managed operations";
-        return item;
-    }
     let binding = existing.state.binding.as_ref().expect("binding present");
     if binding.root.is_empty() || binding.entity_set.is_empty() || binding.entry_fact.is_empty() {
         item.outcome = "unsupported";

@@ -21,6 +21,66 @@ async fn one(root: &Path, path: &Path, remote: Option<&RemoteReader>) -> Item {
 }
 
 #[tokio::test]
+async fn bound_without_receipts_is_reachable_and_never_claimed_clean() {
+    let (server, _current) = server_current().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    let source = std::fs::read_to_string(&path).unwrap();
+    // One span covering the whole sync block, from its key line through the
+    // remoteHash line, so both variants share exact boundaries.
+    let start = source.find("  \"sync\":").expect("sync block");
+    let hash_at = source[start..].find("\"remoteHash\"").expect("remote hash") + start;
+    let end = source[hash_at..].find('\n').expect("line end") + hash_at + 1;
+    let variants = [
+        ("absent", format!("{}{}", &source[..start], &source[end..])),
+        (
+            "explicit-null",
+            format!("{}  \"sync\": null\n{}", &source[..start], &source[end..]),
+        ),
+    ];
+    for (name, source) in variants {
+        assert!(leafbud_mdx::parse(&source).is_ok(), "{name}: the state is valid source");
+        std::fs::write(&path, &source).unwrap();
+        let reader = reader(&server);
+        let calls = server.request_count("/api/rpc/get_leaflet_data");
+        let item = one(temp.path(), &path, Some(&reader)).await;
+        assert_eq!(item.outcome, "bound-no-receipt", "{name}");
+        assert_eq!(item.baseline, "none");
+        assert_eq!(item.receipt_profile, None);
+        assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), calls, "{name}: no fetch without receipts");
+        // Offline status never turns the absence of receipts into clean.
+        let item = one(temp.path(), &path, None).await;
+        assert_eq!(item.outcome, "bound-no-receipt");
+        assert_eq!(item.local, Change::Unknown);
+    }
+}
+
+#[tokio::test]
+async fn duplicate_unbound_identities_stay_explicit() {
+    let (server, _current) = server_current().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
+    // Two unbound drafts sharing one document UUID: binding and receipts
+    // disappear together (receipts without a binding are incoherent).
+    let source = std::fs::read_to_string(&path).unwrap();
+    let start = source.find("  \"binding\":").expect("binding");
+    let hash_at = source.find("\"remoteHash\"").expect("remote hash");
+    let end = source[hash_at..].find('\n').unwrap() + hash_at + 1;
+    let unbound = format!("{}{}", &source[..start], &source[end..]);
+    assert!(leafbud_mdx::parse(&unbound).is_ok());
+    std::fs::write(&path, &unbound).unwrap();
+    let copy = temp.path().join("copy.mdx");
+    std::fs::write(&copy, &unbound).unwrap();
+    let report = inspect(&context(temp.path()), Request::default(), None).await.unwrap();
+    let items: Vec<_> = report.items.iter().map(|i| (i.path.clone(), i.outcome)).collect();
+    assert!(
+        items.iter().all(|(_, outcome)| *outcome == "ambiguous"),
+        "duplicate unbound UUIDs must not silently report unbound: {items:?}"
+    );
+    assert_eq!(report.failed, 2);
+}
+
+#[tokio::test]
 async fn status_state_matrix_is_read_only_including_convergence_and_offline() {
     let (server, current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();
