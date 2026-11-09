@@ -4,8 +4,10 @@ Local-first MDX authoring for [leaflet.pub](https://leaflet.pub)
 documents, in Rust: one MDX file per document, durable identities,
 push saves the Leaflet editor, publish releases, pull adopts web edits.
 
-Status: **Markdown-first rich text with checked fallbacks, deliberate
-`tidy --markdown`, scoped read-only status, external-tool human diff, guarded pull, layered config, version 0.10.0.** The accepted authoring interface
+Status: **offline draft creation, one-time source-key preparation
+(`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
+Markdown-first rich text with checked fallbacks, scoped read-only status,
+external-tool human diff, guarded pull, layered config, version 0.11.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus
@@ -18,8 +20,8 @@ destination shape. Implemented versus pending:
 | --- | --- |
 | `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; `leafbud-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
-| `leafbud-document` + `leafbud-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
+| `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -120,6 +122,51 @@ cookie web client, **not** the configured PDS. Imports retain the observed
 remote publication association (including explicit standalone null), never
 retargeting a binding from ambient defaults or inventing publication dates.
 
+## Local authoring: create, check and key preparation
+
+```sh
+cargo run -p leafbud -- create drafts/essay.mdx --title "An essay"
+cargo run -p leafbud -- create drafts/notes.mdx --title Notes --standalone
+cargo run -p leafbud -- check drafts/essay.mdx
+cargo run -p leafbud -- tidy drafts/essay.mdx --keys --dry-run --json
+```
+
+`create` writes one unbound local draft offline: format `leafbud-mdx/2`, a
+stable random document UUID, an empty implicit main page, no binding or
+receipts, and no remote object of any kind. Existing files are never
+overwritten. Publication intent is tri-state and needs no native identity:
+omitted inherits configuration at first binding, `--standalone` records an
+explicit null, and the global `--publication URI` records a target.
+
+The format-2 grammar is unambiguous: top-level Markdown blocks and
+`<Key id="…" />` markers accumulate in order into the **implicit main
+page**; `<Page name="…" kind="linear">` components are named page
+definitions that may appear anywhere without interrupting main order;
+`PageLink` targets may be forward references. Blocks without a Key marker
+are new content, not parse errors — identity is assigned once through
+preparation, never inferred from position or text. Flat `-`/`1.` lists are
+one keyed block per item (task and nested lists are loud diagnostics);
+ordered numbering normalizes to `1.` because the native model sequences
+display numbering itself.
+
+Preparation (`tidy --keys`, or executed push later) inserts one
+`b-<uuid>` Key marker per new block — splitting authored multi-item lists
+into per-item markers — persists the implicit main page's `p-<uuid>`
+identity in the reserved envelope, keeps every unrelated byte (comments,
+line endings, BOM, witnesses), proves the result through the production
+parser, and repeats as an exact no-op. The confirmed node table may lag
+desired content: keys without rows are new (explicit `new` identities in
+the editor projection), rows without content are explicit pending
+omissions rather than dropped or nulled. Retained-key renames never change
+editor identity, and locally created UUIDs survive later binding. Check
+reports how many objects still need keys; status labels unbound drafts
+honestly and never hashes random previews as durable identity.
+
+The `~/l` live checkout files predate format 2; they are rebuildable local
+data and a deliberate fresh `import` replaces them (no migration path is
+intended). Batch implementation handoff:
+[`design/author-create-keys0.glm53m.md`](design/author-create-keys0.glm53m.md).
+
 ## Checkout drafts as editable MDX
 
 ```sh
@@ -159,7 +206,9 @@ with **335 blocks**, from 30 observed Leaflets; 3 published objects were exclude
 No draft failed. A full rerun preserved all 27 files' bytes and modification
 times. This is all **observed** drafts: the pinned upstream identity query has
 no explicit pagination/limit, but backend/account-wide completeness remains
-unverified. No remote save or publication was performed.
+unverified. No remote save or publication was performed. Those files predate
+format `leafbud-mdx/2` and are no longer parseable; local checkout data is
+disposable, so a deliberate fresh `import` replaces them when wanted.
 
 Current implementation/verification handoff:
 [`design/draft-checkout0.gpt61s.md`](design/draft-checkout0.gpt61s.md).
@@ -180,11 +229,13 @@ an operation plan; [human diff](#human-localeditor-diff) is a separate view.
 
 For supported bound drafts, status reports `clean`, `local-changed`,
 `remote-changed`, `both-changed`, `converged` or `unverified`, with independent
-local/remote change evidence. Missing/inaccessible native objects, unbound or
-unmanaged operands, unsupported profiles/lifecycles/content, identity changes,
+local/remote change evidence. Missing/inaccessible native objects, unmanaged
+operands, **unbound** local drafts, bound-without-receipt documents,
+unsupported profiles/lifecycles/content, identity changes,
 invalid files, duplicate document IDs/bindings and local read races are explicit
-per-file outcomes. Missing does not prove deletion. Other origins are not
-retargeted: select the bound `--base-url` explicitly.
+per-file outcomes. Unbound drafts report `needs-preparation` counts without
+claiming durable identity. Missing does not prove deletion. Other origins are
+not retargeted: select the bound `--base-url` explicitly.
 
 Offline status requires no credentials or network and **never says clean**:
 remote change/equality remain unknown, even when the stored local input matches.
@@ -196,7 +247,8 @@ distinguished. Naming witnesses are `not-tracked`; release equality is
 JSON schema `version: 1` has `workspace`, `offline`, `selected`, `failed`,
 `ignored_unmanaged`, `names`, `release` and `items`. Each item carries its
 `path`, `outcome`, safe `detail`, `local` (`unchanged`/`changed`/`unknown`),
-`baseline`, `receipt_profile`, nullable `endpoints_equal`/`document_id`, and
+`baseline`, `receipt_profile`, nullable `endpoints_equal`/`document_id`,
+`needs_preparation`, and
 `remote` (`freshness`, `change`, nullable `observed_profile`/`observed_hash`).
 Current observation hashes name their scope; change evidence uses the stored
 receipt's interpretation. Neither human nor JSON reports include document
@@ -395,16 +447,17 @@ keeps the file's line-ending convention, BOM/CRLF files work, witnesses and
 stale receipts are never touched (formatting never accepts local edits), a
 second tidy writes nothing, and writes are atomic under the original-byte
 guard. `--all` selects the workspace's managed files; unmanaged files are
-ignored. `--keys`, `--from` and `--accept` are not implemented yet and are
+ignored. `--keys` assigns missing durable source identities (see
+[authoring](#local-authoring-create-check-and-key-preparation)); `--from`
+and `--accept` (naming reconciliation) are not implemented yet and are
 rejected with exit 1 instead of half-running. Exit codes: 0 success/no-op,
 1 all failed, 4 mixed batches (2 usage).
 
-A read-only `tidy --all --markdown --dry-run` over the live 27-file
-workspace predicted 26 files normalizable (281 blocks) and 0 failures; one
-file was already clean and one block was kept exact as a candidate-mismatch.
-The user-indicated motivating link file converts its single href-only `Run`
-to bracket Markdown with frontmatter bytes, Key markers and semantics
-unchanged (verified on a scratch copy; no live file was rewritten).
+A read-only `tidy --all --markdown --dry-run` over the (then-format-1) live
+27-file workspace predicted 26 files normalizable (281 blocks) and 0
+failures; one file was already clean and one block was kept exact as a
+candidate-mismatch. That prediction predates format 2; the pass mechanics
+are unchanged and re-verified by the current test corpus.
 
 Current implementation/verification handoff:
 [`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md).
@@ -444,6 +497,7 @@ PDS or leaflet draft.
 - Transient human Markdown/external-tool diff: [`design/human-diff0.gpt61s.md`](design/human-diff0.gpt61s.md)
 - Markdown-first rich text (approved design): [`design/markdown-roundtrip0.gpt6a.md`](design/markdown-roundtrip0.gpt6a.md)
 - Markdown round-trip implementation receipt: [`design/markdown-roundtrip1.glm53m.md`](design/markdown-roundtrip1.glm53m.md)
+- Offline create/key-preparation batch (format 2) receipt: [`design/author-create-keys0.glm53m.md`](design/author-create-keys0.glm53m.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
 
 Never commit credentials or real response bodies; see
