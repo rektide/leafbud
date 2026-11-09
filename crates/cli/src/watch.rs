@@ -1,3 +1,4 @@
+use crate::remote::text;
 use leafbud_workflow::{
     RemoteOptions,
     config::{self, Config},
@@ -70,7 +71,7 @@ pub async fn run(
                         Detail::Connection { health, message } => writeln!(
                             output,
                             "connection {health:?}{}",
-                            message.as_ref().map(|s| format!(": {s}")).unwrap_or_default()
+                            message.as_ref().map(|s| format!(": {}", text(s))).unwrap_or_default()
                         )?,
                         Detail::Inventory {
                             selected,
@@ -79,22 +80,23 @@ pub async fn run(
                         } => writeln!(
                             output,
                             "inventory {selected} files; {subscribed_roots} roots{}",
-                            message.as_ref().map(|s| format!(": {s}")).unwrap_or_default()
+                            message.as_ref().map(|s| format!(": {}", text(s))).unwrap_or_default()
                         )?,
                         Detail::Document { report, acquisition } => writeln!(
                             output,
                             "{} {} [{acquisition}]{}",
                             report.outcome.as_str(),
-                            report.path.display(),
-                            report.message.as_ref().map(|s| format!(": {s}")).unwrap_or_default()
+                            text(&report.path.display().to_string()),
+                            report.message.as_ref().map(|s| format!(": {}", text(s))).unwrap_or_default()
                         )?,
                         Detail::Presence { path, state, .. } => writeln!(
                             output,
                             "presence {} {:?}; observed {:?} (advisory only)",
-                            path.display(),
+                            text(&path.display().to_string()),
                             state.evidence,
                             state.observed_at
                         )?,
+                        Detail::Subscription { path, state, .. } => writeln!(output, "subscription {} {state:?}", text(&path.display().to_string()))?,
                         Detail::Summary { summary } => writeln!(
                             output,
                             "stopped: {} selected; {} refreshes; {} writes; {} cancelled; {:?}",

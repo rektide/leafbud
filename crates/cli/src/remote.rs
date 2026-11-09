@@ -32,7 +32,7 @@ pub async fn show(options: RemoteOptions, locator: &str, json: bool) -> Result<(
 }
 
 /// Remote strings are untrusted terminal input; escape control characters.
-fn text(value: &str) -> String {
+pub(crate) fn text(value: &str) -> String {
     value
         .chars()
         .flat_map(|c| if c.is_control() { c.escape_default().collect::<Vec<_>>() } else { vec![c] })

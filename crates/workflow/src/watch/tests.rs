@@ -51,6 +51,12 @@ impl Http {
                     let mut first = String::new();
                     stream.read_line(&mut first).await.unwrap();
                     let path = first.split_whitespace().nth(1).unwrap().to_owned();
+                    if path == "/" {
+                        let _ = stream
+                            .write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 13\r\nConnection: close\r\n\r\n<html></html>")
+                            .await;
+                        return;
+                    }
                     let mut len = 0;
                     loop {
                         let mut line = String::new();
@@ -351,6 +357,11 @@ fn copy_event(event: &Event) -> Event {
                 state: state.clone(),
             },
             Detail::Summary { summary } => Detail::Summary { summary: summary.clone() },
+            Detail::Subscription { path, document_id, state } => Detail::Subscription {
+                path: path.clone(),
+                document_id: *document_id,
+                state: *state,
+            },
         },
     }
 }
@@ -760,6 +771,326 @@ async fn http_auth_failure_retries_fairly_and_missing_remote_never_prunes() {
         socket.poke();
         outcome(&mut events, refresh::Outcome::Unavailable).await;
         assert!(path.exists());
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::join!(run, actions);
+    report.unwrap();
+}
+
+#[tokio::test]
+async fn bootstrap_failure_is_degraded_bounded_and_slow_backstop_is_not_live() {
+    let http = Http::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    http.change(TOKEN, "Slow fallback adoption");
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    let options = Options {
+        rescan: Duration::from_millis(20),
+        backstop: Duration::from_millis(180),
+        bootstrap_retry: Duration::from_secs(30),
+        ..Default::default()
+    };
+    let (cancel, cancelled) = watch::channel(false);
+    let (tx, mut events) = mpsc::unbounded_channel();
+    let run = reader.watch(
+        &context,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+        options,
+        cancelled,
+        |e| {
+            tx.send(copy_event(e)).unwrap();
+            Ok(())
+        },
+    );
+    let actions = async {
+        tokio::time::sleep(Duration::from_millis(70)).await;
+        assert_eq!(
+            http.reads.load(Ordering::SeqCst),
+            0,
+            "failed bootstrap does not bypass initial readiness as live"
+        );
+        let mut degraded = false;
+        tokio::time::timeout(Duration::from_secs(4), async {
+            loop {
+                match events.recv().await.unwrap().detail {
+                    Detail::Connection { health, message } => {
+                        assert_ne!(health, live::Health::Live);
+                        if health == live::Health::Degraded {
+                            assert!(message.is_some());
+                            degraded = true;
+                        }
+                    }
+                    Detail::Document { report, acquisition } if report.outcome == refresh::Outcome::Updated => {
+                        assert_eq!(acquisition, "degraded-poll");
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .await
+        .unwrap();
+        assert!(degraded);
+        assert!(std::fs::read_to_string(&path).unwrap().contains("Slow fallback adoption"));
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::join!(run, actions);
+    report.unwrap();
+}
+
+#[tokio::test]
+async fn cancellation_during_bootstrap_and_unacknowledged_join_is_finite() {
+    let http = Http::new().await;
+    let socket = Socket::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    let before = std::fs::read(&path).unwrap();
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    socket.hold_join.store(true, Ordering::SeqCst);
+    let (cancel, cancelled) = watch::channel(false);
+    let run = reader.watch(
+        &context,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+        socket.options(),
+        cancelled,
+        |_| Ok(()),
+    );
+    let actions = async {
+        until(|| socket.joins.load(Ordering::SeqCst) > 0).await;
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::time::timeout(Duration::from_secs(3), async { tokio::join!(run, actions) })
+        .await
+        .unwrap();
+    assert_eq!(report.unwrap().refreshes, 0);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    // A landing server which never responds exercises dropping discovery itself.
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let reader = RemoteReader::new(leafbud_web::LeafletClient::new(&format!("http://{}", listener.local_addr().unwrap()), None).unwrap());
+    let (cancel, cancelled) = watch::channel(false);
+    let run = reader.watch(
+        &context,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+        Options::default(),
+        cancelled,
+        |_| Ok(()),
+    );
+    let actions = async {
+        let (_tcp, _) = listener.accept().await.unwrap();
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::time::timeout(Duration::from_secs(2), async { tokio::join!(run, actions) })
+        .await
+        .unwrap();
+    report.unwrap();
+}
+
+#[tokio::test]
+async fn changing_root_during_read_cancels_old_selection_then_reselect_catches_up() {
+    let http = Http::new().await;
+    let socket = Socket::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    let original = std::fs::read_to_string(&path).unwrap();
+    http.hold.store(true, Ordering::SeqCst);
+    http.change(TOKEN, "Adopt only after original root returns");
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    let (cancel, cancelled) = watch::channel(false);
+    let (tx, mut events) = mpsc::unbounded_channel();
+    let run = reader.watch(
+        &context,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+        socket.options(),
+        cancelled,
+        |e| {
+            tx.send(copy_event(e)).unwrap();
+            Ok(())
+        },
+    );
+    let actions = async {
+        until(|| http.reads.load(Ordering::SeqCst) == 1).await;
+        let mut doc = leafbud_mdx::parse(&original).unwrap();
+        doc.state.binding.as_mut().unwrap().root = Uuid::new_v4().to_string();
+        let changed = leafbud_mdx::render(&doc).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        until(|| socket.joins.load(Ordering::SeqCst) >= 2).await;
+        http.hold.store(false, Ordering::SeqCst);
+        http.release.notify_waiters();
+        outcome(&mut events, refresh::Outcome::NeedsDecision).await;
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), changed);
+        std::fs::write(&path, &original).unwrap();
+        outcome(&mut events, refresh::Outcome::Updated).await;
+        assert!(std::fs::read_to_string(&path).unwrap().contains("Adopt only after original root returns"));
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::join!(run, actions);
+    assert!(report.unwrap().cancelled_refreshes >= 1);
+}
+
+#[tokio::test]
+async fn two_imports_share_binding_lock_and_recheck_selection_after_release() {
+    let http = Http::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    http.hold.store(true, Ordering::SeqCst);
+    let first = reader.import(
+        &context,
+        crate::import::Request {
+            locator: Some(TOKEN.into()),
+            to: Some("one.mdx".into()),
+            ..Default::default()
+        },
+    );
+    let other = async {
+        until(|| http.reads.load(Ordering::SeqCst) == 1).await;
+        let report = reader
+            .import(
+                &context,
+                crate::import::Request {
+                    locator: Some(TOKEN.into()),
+                    to: Some("two.mdx".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(report.failed, 1);
+        assert!(report.items[0].error.as_deref().unwrap().contains("busy"));
+        http.hold.store(false, Ordering::SeqCst);
+        http.release.notify_waiters();
+    };
+    let (report, _) = tokio::join!(first, other);
+    assert_eq!(report.unwrap().imported, 1);
+    let report = reader
+        .import(
+            &context,
+            crate::import::Request {
+                locator: Some(TOKEN.into()),
+                to: Some("two.mdx".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.failed, 1);
+    assert!(!temp.path().join("two.mdx").exists());
+    assert!(temp.path().join("one.mdx").exists());
+}
+
+#[tokio::test]
+async fn refresh_preserves_raw_future_pending_and_owned_state_without_network() {
+    let http = Http::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    let original = std::fs::read_to_string(&path).unwrap();
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    for (extra, wanted) in [
+        ("pending: {unknownVersion: 99, evidence: [private]}", refresh::Outcome::Pending),
+        ("pending: null", refresh::Outcome::Invalid),
+        ("futureOwned: {doNotDrop: true}", refresh::Outcome::Invalid),
+    ] {
+        let changed = original.replacen("\"@leafbud\":\n", &format!("\"@leafbud\":\n  {extra}\n"), 1);
+        assert_ne!(changed, original);
+        std::fs::write(&path, &changed).unwrap();
+        let report = reader
+            .refresh_document(
+                &context,
+                &path,
+                refresh::Policy {
+                    take_remote: true,
+                    ..Default::default()
+                },
+            )
+            .await;
+        assert_eq!(report.outcome, wanted);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), changed);
+    }
+    assert_eq!(http.reads.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn a_new_transport_stamp_domain_cannot_be_serviced_by_an_old_inflight_read() {
+    let http = Http::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    let selection = selection::Selection::new(
+        temp.path().into(),
+        &http.base,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let (selected, roots) = selection.scan().unwrap();
+    let root = roots[0];
+    let (roots_tx, _) = watch::channel(roots);
+    let joined = live::State {
+        health: live::Health::Live,
+        connection: live::Connection::Connected,
+        roots: BTreeMap::from([(
+            root,
+            live::RootState {
+                subscription: live::SubscriptionState::Joined,
+                observation_seq: 1,
+                join_epoch: 1,
+                observed_at: Some(SystemTime::now()),
+                presence: None,
+            },
+        )]),
+    };
+    let (state, mut receiver) = watch::channel(Transport {
+        generation: 1,
+        state: joined.clone(),
+        message: None,
+    });
+    let (cancel, cancelled) = watch::channel(false);
+    let (tx, mut events) = mpsc::unbounded_channel();
+    http.hold.store(true, Ordering::SeqCst);
+    let options = Options {
+        rescan: Duration::from_millis(20),
+        ..Default::default()
+    };
+    let mut emit = |e: &Event| {
+        tx.send(copy_event(e)).unwrap();
+        Ok(())
+    };
+    // The restart stamp collision is injected at the state seam; the document
+    // transaction, HTTP acquisition and adoption remain the production path.
+    let run = reader.watch_controller(&context, &selection, selected, &options, cancelled, &roots_tx, &mut receiver, &mut emit);
+    let actions = async {
+        until(|| http.reads.load(Ordering::SeqCst) == 1).await;
+        http.change(TOKEN, "New run has a distinct stamp domain");
+        state.send_replace(Transport {
+            generation: 2,
+            state: joined,
+            message: None,
+        });
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        http.hold.store(false, Ordering::SeqCst);
+        http.release.notify_waiters();
+        outcome(&mut events, refresh::Outcome::Updated).await;
+        assert!(http.reads.load(Ordering::SeqCst) >= 2);
+        assert!(std::fs::read_to_string(&path).unwrap().contains("New run has a distinct stamp domain"));
         cancel.send_replace(true);
     };
     let (report, _) = tokio::join!(run, actions);

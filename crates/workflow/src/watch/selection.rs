@@ -69,7 +69,7 @@ impl Selection {
                 let bytes = std::fs::read(&path).context("local source missing or unreadable; not recreated")?;
                 item.fingerprint = Sha256::digest(&bytes).to_vec();
                 let source = String::from_utf8(bytes).context("local source is not UTF-8")?;
-                let header = leafbud_mdx::header(&source).context("invalid managed frontmatter; preserved")?;
+                let header = leafbud_mdx::header(&source).map_err(|_| anyhow::anyhow!("invalid managed frontmatter; preserved"))?;
                 item.id = crate::lock::source_id(&source).ok();
                 if !self.all && self.anchors.iter().any(|(p, id)| p == &path && id.is_some() && id != &item.id) {
                     item.problem = Some((
@@ -102,7 +102,8 @@ impl Selection {
                     item.problem = Some((refresh::Outcome::Pending, "unresolved pending state; preserved for explicit recovery".into()));
                     return Ok(());
                 }
-                let parsed = leafbud_mdx::parse_with_spans(&source).context("unsupported/invalid local source or owned state; preserved")?;
+                let parsed =
+                    leafbud_mdx::parse_with_spans(&source).map_err(|_| anyhow::anyhow!("unsupported/invalid local source or owned state; preserved"))?;
                 let Some(binding) = parsed.document.state.binding.clone() else {
                     item.problem = Some((refresh::Outcome::Unbound, "unbound local draft; watch does not establish bindings".into()));
                     return Ok(());

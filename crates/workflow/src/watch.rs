@@ -83,6 +83,11 @@ pub enum Detail {
         #[serde(flatten)]
         state: live::PresenceState,
     },
+    Subscription {
+        path: PathBuf,
+        document_id: Option<Uuid>,
+        state: live::SubscriptionState,
+    },
     Summary {
         #[serde(flatten)]
         summary: Summary,
@@ -118,6 +123,7 @@ struct Entry {
     failures: u32,
     last: Option<(refresh::Outcome, Option<String>)>,
     presence: Option<live::PresenceState>,
+    subscription: Option<live::SubscriptionState>,
 }
 impl Entry {
     fn new(selected: selection::Selected) -> Self {
@@ -132,6 +138,7 @@ impl Entry {
             failures: 0,
             last: None,
             presence: None,
+            subscription: None,
         }
     }
 }
@@ -170,9 +177,10 @@ impl RemoteReader {
                 options.bootstrap_timeout
             ]
             .iter()
-            .all(|d| !d.is_zero())
-                && options.retry_max >= options.retry_min,
-            "watch intervals must be positive and retry bounds ordered"
+            .all(|d| !d.is_zero() && *d <= Duration::from_secs(30 * 86400))
+                && options.retry_max >= options.retry_min
+                && options.retry_max <= Duration::from_secs(30 * 86400),
+            "watch intervals must be positive, at most 30 days, and retry bounds ordered"
         );
         let root = std::fs::canonicalize(&context.workspace_root).context("resolving watch workspace")?;
         let selection = selection::Selection::new(root, self.client.base_url(), request)?;
@@ -247,6 +255,26 @@ impl RemoteReader {
                 )?;
             }
             for entry in entries.values_mut() {
+                if entry.selected.root.is_some() {
+                    let subscription = entry.selected.root.and_then(|r| latest.state.roots.get(&r)).map(|r| r.subscription).unwrap_or(
+                        if latest.state.connection == live::Connection::Unavailable {
+                            live::SubscriptionState::Unavailable(live::Unavailable::Closed)
+                        } else {
+                            live::SubscriptionState::Joining
+                        },
+                    );
+                    if entry.subscription != Some(subscription) {
+                        entry.subscription = Some(subscription);
+                        event(
+                            emit,
+                            Detail::Subscription {
+                                path: entry.selected.path.clone(),
+                                document_id: entry.selected.id,
+                                state: subscription,
+                            },
+                        )?;
+                    }
+                }
                 if let Some(presence) = entry
                     .selected
                     .root

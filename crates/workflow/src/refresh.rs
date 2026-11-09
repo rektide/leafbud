@@ -255,7 +255,7 @@ fn validate_selection(context: &config::Context, path: &Path, expected: &Identit
     let source = std::fs::read_to_string(path).context("selected source lost; not recreated")?;
     let header = leafbud_mdx::header(&source)?;
     ensure!(
-        lock::source_id(&source)? == expected.id && header["@leafbud"]["binding"] == serde_json::to_value(&expected.binding)?,
+        lock::source_id(&source)? == expected.id && serde_json::from_value::<Binding>(header["@leafbud"]["binding"].clone())? == expected.binding,
         "selected source identity/binding changed; preserved"
     );
     ensure!(

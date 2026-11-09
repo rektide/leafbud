@@ -88,10 +88,16 @@ impl Inventory {
                 binding.get("baseUrl").and_then(Value::as_str),
                 binding.get("token").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()),
             ) {
-                self.index.entry((base.into(), token)).or_default().push(path.clone());
+                let paths = self.index.entry((base.into(), token)).or_default();
+                if !paths.contains(path) {
+                    paths.push(path.clone());
+                }
             }
             if let Some(id) = state["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
-                self.ids.entry(id).or_default().push(path.clone());
+                let paths = self.ids.entry(id).or_default();
+                if !paths.contains(path) {
+                    paths.push(path.clone());
+                }
             }
         }
         self.find_duplicates();
