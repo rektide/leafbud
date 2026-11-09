@@ -120,7 +120,7 @@ impl RemoteReader {
         self.recover_locked(&mut source, settle).await
     }
 
-    async fn recover_locked(&self, source: &mut Source<'_>, settle: bool) -> Result<RecoveryReport> {
+    pub(super) async fn recover_locked(&self, source: &mut Source<'_>, settle: bool) -> Result<RecoveryReport> {
         let Some(attempt) = source.document.state.pending.clone() else {
             return Ok(report(RecoveryOutcome::NoAttempt));
         };

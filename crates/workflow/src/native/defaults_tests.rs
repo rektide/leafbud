@@ -216,13 +216,15 @@ fn checkpoint_boundary_never_persists_new_fields_with_old_hashes_or_accepts_push
 
 #[tokio::test]
 async fn inherited_publication_and_defaults_survive_first_materialization_restart_status_pull_and_noop() {
-    for (publication, explicit_theme) in [
-        (false, None),
-        (true, None),
-        (false, Some(false)),
-        (true, Some(false)),
-        (false, Some(true)),
-        (true, Some(true)),
+    for (publication, explicit_theme, selected_locator) in [
+        (false, None, false),
+        (true, None, false),
+        (false, Some(false), false),
+        (true, Some(false), false),
+        (false, Some(true), false),
+        (true, Some(true), false),
+        (false, None, true),
+        (true, None, true),
     ] {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("draft.mdx");
@@ -315,8 +317,26 @@ async fn inherited_publication_and_defaults_survive_first_materialization_restar
         let reader = client(&server);
         let mut context = old::context(temp.path());
         context.effective.publication = if publication { Some(URI.into()) } else { None };
-        let report = reader.stage_binding(&context, &path, Selection::default()).await.unwrap();
+        let report = if selected_locator {
+            let text = located(&path, &server.base_url, publication);
+            let mut doc = leafbud_mdx::parse(&text).unwrap();
+            if let Effect::Mint { stage, .. } = &mut doc.state.pending.as_mut().unwrap().effect {
+                *stage = MintStage::Dispatched;
+            }
+            std::fs::write(&path, leafbud_mdx::patch_tracking(&text, &doc.state).unwrap()).unwrap();
+            reader
+                .select_mint_locator(&context, &path, Selection::default(), doc.state.pending.unwrap().id, TOKEN.parse().unwrap())
+                .await
+                .unwrap()
+        } else {
+            reader.stage_binding(&context, &path, Selection::default()).await.unwrap()
+        };
         assert!(matches!(report.outcome, BindingOutcome::PendingMaterialization), "{report:?}");
+        if selected_locator {
+            assert!(report.message.as_ref().unwrap().contains("attribution is not established"));
+            assert_eq!(server.request_count("/new"), 0);
+            assert!(!server.requests().iter().any(|r| r.method == "POST" && r.path.ends_with("dashboard")));
+        }
         let normalized = std::fs::read_to_string(&path).unwrap();
         let doc = leafbud_mdx::parse(&normalized).unwrap();
         let prepared_main = doc.state.main_page.clone();
@@ -617,4 +637,135 @@ async fn old_acknowledged_partial_push_does_not_acquire_new_defaults_or_rewrite_
     assert!(after.theme.is_none());
     assert_eq!(after.state.sync, doc.state.sync);
     assert_eq!(server.pushes.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn explicit_locator_selection_checkpoints_before_observation_and_retains_failed_or_racing_candidate() {
+    for mode in ["verified", "wrong-rights", "non-seed", "source-race"] {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("draft.mdx");
+        draft(&path, "");
+        let (mut data, mut view) = seed(true);
+        if mode == "wrong-rights" {
+            data["permission_token_rights"][0]["write"] = false.into();
+        }
+        if mode == "non-seed" {
+            view["patch"][4]["value"]["data"]["value"] = "heading".into();
+        }
+        let observed_path = path.clone();
+        let before_observation = Arc::new(Mutex::new(None::<Attempt>));
+        let captured = before_observation.clone();
+        let server = TestServer::spawn(Arc::new(move |r| match r.path.as_str() {
+            "/api/rpc/get_leaflet_data" => {
+                let text = std::fs::read_to_string(&observed_path).unwrap();
+                let doc = leafbud_mdx::parse(&text).unwrap();
+                if captured.lock().unwrap().is_none() {
+                    assert!(matches!(
+                        doc.state.pending.as_ref().unwrap().effect,
+                        Effect::Mint {
+                            stage: MintStage::Located { .. },
+                            ..
+                        }
+                    ));
+                    assert!(doc.theme.is_none() && doc.state.binding.is_none());
+                    *captured.lock().unwrap() = doc.state.pending;
+                }
+                if mode == "source-race" {
+                    std::fs::write(&observed_path, text.replace("Desired prose", "New author prose")).unwrap();
+                }
+                (200, json!({"result":{"error":null,"data":data}}).to_string())
+            }
+            "/api/rpc/pull" => (200, view.to_string()),
+            _ => panic!("selected locator recovery has no mint/push"),
+        }))
+        .await;
+        let text = located(&path, &server.base_url, true);
+        let mut doc = leafbud_mdx::parse(&text).unwrap();
+        let attempt = doc.state.pending.as_mut().unwrap();
+        if let Effect::Mint { stage, .. } = &mut attempt.effect {
+            *stage = MintStage::Dispatched;
+        }
+        let original_attempt = attempt.clone();
+        std::fs::write(&path, leafbud_mdx::patch_tracking(&text, &doc.state).unwrap()).unwrap();
+        let result = client(&server)
+            .select_mint_locator(
+                &old::context(temp.path()),
+                &path,
+                Selection::default(),
+                original_attempt.id,
+                TOKEN.parse().unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(result.locator_persisted);
+        let intermediate = before_observation.lock().unwrap().clone().unwrap();
+        assert_eq!(intermediate.id, original_attempt.id);
+        assert_eq!(intermediate.input_hash, original_attempt.input_hash);
+        assert_eq!(intermediate.desired_hash, original_attempt.desired_hash);
+        let after = std::fs::read_to_string(&path).unwrap();
+        let doc = leafbud_mdx::parse(&after).unwrap();
+        if mode == "verified" {
+            assert!(matches!(result.outcome, BindingOutcome::PendingMaterialization));
+            assert!(doc.theme.as_ref().unwrap().leaflet_watermark && doc.state.binding.is_some());
+            assert_ne!(doc.state.pending.as_ref().unwrap().input_hash, original_attempt.input_hash);
+        } else {
+            assert!(matches!(result.outcome, BindingOutcome::LocatedUnverified | BindingOutcome::SourceChanged));
+            assert_eq!(doc.state.pending.as_ref().unwrap(), &intermediate);
+            assert!(doc.theme.is_none() && doc.state.binding.is_none());
+            if mode == "source-race" {
+                assert!(after.contains("New author prose"));
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn explicit_locator_selection_rejects_stale_attempt_changed_source_replacement_and_prospective_duplicates() {
+    for mode in ["stale-id", "edited-source", "prepared", "different-known-token", "external-duplicate"] {
+        let temp = tempfile::tempdir().unwrap();
+        let external = tempfile::tempdir().unwrap();
+        let path = temp.path().join("draft.mdx");
+        let other = external.path().join("other.mdx");
+        draft(&path, "");
+        draft(&other, "");
+        let server = TestServer::spawn(Arc::new(|_| panic!("invalid explicit selection must fail before observation"))).await;
+        let text = located(&path, &server.base_url, true);
+        let mut doc = leafbud_mdx::parse(&text).unwrap();
+        if let Effect::Mint { stage, .. } = &mut doc.state.pending.as_mut().unwrap().effect {
+            *stage = match mode {
+                "prepared" => MintStage::Prepared,
+                "different-known-token" => MintStage::Located { token: Uuid::new_v4() },
+                _ => MintStage::Dispatched,
+            };
+        }
+        let mut attempt_id = doc.state.pending.as_ref().unwrap().id;
+        if mode == "stale-id" {
+            attempt_id = Uuid::new_v4();
+        }
+        let mut text = leafbud_mdx::patch_tracking(&text, &doc.state).unwrap();
+        if mode == "edited-source" {
+            text = text.replace("Desired prose", "New author prose");
+        }
+        if mode == "external-duplicate" {
+            std::fs::write(&other, located(&other, &server.base_url, true)).unwrap();
+        }
+        std::fs::write(&path, &text).unwrap();
+        assert!(
+            client(&server)
+                .select_mint_locator(
+                    &old::context(temp.path()),
+                    &path,
+                    Selection {
+                        operands: vec![path.clone(), other]
+                    },
+                    attempt_id,
+                    TOKEN.parse().unwrap()
+                )
+                .await
+                .is_err(),
+            "{mode}"
+        );
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+        assert!(server.requests().is_empty());
+    }
 }

@@ -98,6 +98,31 @@ impl<'a> Source<'a> {
 
     fn checkpoint(&mut self, state: State) -> Result<()> {
         self.check()?;
+        // Check a newly introduced locator against the complete selection too;
+        // indexing only the old bytes cannot catch a prospective duplicate.
+        let locator = state
+            .binding
+            .as_ref()
+            .map(|b| (b.base_url.as_str(), b.token))
+            .or_else(|| match &state.pending.as_ref()?.effect {
+                Effect::Mint {
+                    base_url,
+                    stage: MintStage::Located { token },
+                    ..
+                } => Some((base_url.as_str(), *token)),
+                _ => None,
+            });
+        if let Some((base, token)) = locator {
+            let mut inventory = inventory::scan(&self.context.workspace_root, None)?;
+            inventory.include_operands(&self.operands);
+            ensure!(
+                inventory
+                    .index
+                    .get(&(base.to_owned(), token))
+                    .is_none_or(|paths| paths.iter().all(|p| p == &self.path)),
+                "selected native locator already belongs to another local source; preserved"
+            );
+        }
         let text = leafbud_mdx::patch_tracking(&self.text, &state)?;
         if text != self.text {
             files::write(&self.path, Some(&self.bytes), text.as_bytes())?;
@@ -182,6 +207,78 @@ fn resolved_context(document: &Document, context: &config::Context) -> MintConte
 }
 
 impl RemoteReader {
+    /// Explicit caller-selected existing recovery object for a dispatched mint
+    /// whose response was lost. No creation, discovery or attribution inference.
+    /// `attempt_id` guards stale selections; a known locator is never replaced.
+    /// The supplied token is checkpointed BEFORE native verification so failure
+    /// remains recoverable, then normal rights/seed/default preparation applies.
+    pub async fn select_mint_locator(
+        &self,
+        context: &config::Context,
+        path: &Path,
+        selection: Selection,
+        attempt_id: Uuid,
+        token: Uuid,
+    ) -> Result<BindingReport> {
+        let mut source = Source::open(context, path, selection)?;
+        validate_binding_intent(&source.text)?;
+        let attempt = source
+            .document
+            .state
+            .pending
+            .as_ref()
+            .context("no pending mint for explicit locator selection")?;
+        ensure!(attempt.id == attempt_id, "pending attempt differs from explicit recovery selection");
+        ensure!(
+            import::hash(&source.document.authored_value()) == attempt.input_hash && import::hash(&source.document.editor_value()) == attempt.desired_hash,
+            "source differs from pending mint intent; explicit locator not adopted"
+        );
+        let Effect::Mint { base_url, stage, .. } = &attempt.effect else {
+            anyhow::bail!("locator selection requires a pending mint, not a push");
+        };
+        ensure!(base_url == self.client.base_url(), "pending mint belongs to another origin");
+        ensure!(
+            matches!(stage, MintStage::Dispatched) || matches!(stage, MintStage::Located { token: existing } if *existing == token),
+            "only a dispatched mint or the same known locator can receive explicit selection"
+        );
+        let mut state = source.document.state.clone();
+        if let Effect::Mint { stage, .. } = &mut state.pending.as_mut().expect("mint").effect {
+            *stage = MintStage::Located { token };
+        }
+        source.checkpoint(state)?;
+        let verification = self.recover_locked(&mut source, true).await;
+        match verification {
+            Ok(result) => Ok(BindingReport {
+                outcome: if result.outcome == RecoveryOutcome::SourceChanged {
+                    BindingOutcome::SourceChanged
+                } else {
+                    BindingOutcome::PendingMaterialization
+                },
+                token: Some(token),
+                locator_persisted: true,
+                binding: source.document.state.binding.clone(),
+                message: Some(
+                    "caller-selected recovery object; original mint-result attribution is not established; authored materialization remains pending".into(),
+                ),
+                undecoded_mint: None,
+            }),
+            Err(error) => Ok(BindingReport {
+                outcome: if source.check().is_err() {
+                    BindingOutcome::SourceChanged
+                } else {
+                    BindingOutcome::LocatedUnverified
+                },
+                token: Some(token),
+                locator_persisted: true,
+                binding: source.document.state.binding.clone(),
+                message: Some(format!(
+                    "caller-selected locator retained, not proof of original mint attribution; verification/preparation pending: {error:#}"
+                )),
+                undecoded_mint: None,
+            }),
+        }
+    }
+
     /// Internal drafting foundation: resolve/authenticate, prepare keys once,
     /// persist dispatch BEFORE mint, record returned locator BEFORE verification.
     /// Leaves pending evidence until full compiler materialization/read-back.
