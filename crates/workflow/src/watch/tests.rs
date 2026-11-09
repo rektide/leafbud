@@ -1113,3 +1113,72 @@ async fn symlinked_workspace_root_does_not_invent_duplicate_identities() {
     assert_eq!(report.outcome, refresh::Outcome::Unchanged);
     assert_eq!(report.path, path);
 }
+
+#[tokio::test]
+async fn witness_only_poke_settles_without_body_rewrite_and_unsupported_remote_is_preserved() {
+    let http = Http::new().await;
+    let socket = Socket::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    // An inactive rich-text fact is witnessed while the visible block is code.
+    let mut baseline = fixture();
+    let entity = baseline["response"]["patch"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|op| op["value"]["attribute"] == "block/type" && op["value"]["data"]["value"] == "text")
+        .unwrap()["value"]["entity"]
+        .clone();
+    for op in baseline["response"]["patch"].as_array_mut().unwrap() {
+        if op["value"]["attribute"] == "block/type" && op["value"]["entity"] == entity {
+            op["value"]["data"]["value"] = json!("code");
+        }
+    }
+    baseline["response"]["patch"].as_array_mut().unwrap().push(json!({"op":"put","key":"11111111-1111-4111-8111-111111111111","value":{"id":"11111111-1111-4111-8111-111111111111","entity":entity,"attribute":"block/code","data":{"type":"string","value":"Visible code stays exact"}}}));
+    *http.fixtures.write().unwrap().get_mut(TOKEN).unwrap() = baseline;
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    let before = std::fs::read_to_string(&path).unwrap();
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    let (cancel, cancelled) = watch::channel(false);
+    let (tx, mut events) = mpsc::unbounded_channel();
+    let run = reader.watch(
+        &context,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+        socket.options(),
+        cancelled,
+        |e| {
+            tx.send(copy_event(e)).unwrap();
+            Ok(())
+        },
+    );
+    let actions = async {
+        outcome(&mut events, refresh::Outcome::Unchanged).await;
+        {
+            let mut current = http.fixtures.write().unwrap();
+            for op in current.get_mut(TOKEN).unwrap()["response"]["patch"].as_array_mut().unwrap() {
+                if op["value"]["attribute"] == "block/text" && op["value"]["entity"] == entity {
+                    op["value"]["data"]["value"] = json!("opaque-inactive-witness-change");
+                }
+            }
+        }
+        socket.poke();
+        outcome(&mut events, refresh::Outcome::ReceiptsOnly).await;
+        let settled = std::fs::read_to_string(&path).unwrap();
+        let changed: Vec<_> = before.lines().zip(settled.lines()).filter(|(a, b)| a != b).collect();
+        assert_eq!(changed.len(), 1);
+        assert!(changed[0].1.contains("remoteHash"));
+        http.fixtures.write().unwrap().get_mut(TOKEN).unwrap()["response"]["patch"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"op":"put","key":"future-extra","value":{"opaque":true}}));
+        socket.poke();
+        outcome(&mut events, refresh::Outcome::Unsupported).await;
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), settled);
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::join!(run, actions);
+    assert_eq!(report.unwrap().writes, 1);
+}
