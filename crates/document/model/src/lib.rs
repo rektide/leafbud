@@ -335,13 +335,16 @@ impl Document {
 
     /// Supported editor meaning and object/occurrence associations. Source-key
     /// spelling, non-entry page definition order and local-only author
-    /// metadata are not editor changes. Desired-new objects carry an explicit
-    /// `new` identity; locally-retired associations are explicit pending
-    /// omissions rather than dropped rows.
+    /// metadata are not editor changes. Confirmed objects carry their native
+    /// locator; desired-new objects carry an explicit `new` identity that
+    /// includes their source key, so distinct new objects never collapse into
+    /// one marker (a link retarget between two new pages is a real change).
+    /// Locally-retired associations are explicit pending omissions rather
+    /// than dropped rows.
     pub fn editor_value(&self) -> Value {
         let association = |key: &str| match self.state.nodes.get(key) {
             Some(node) => node.locator_value(),
-            None => serde_json::json!({"kind":"new"}),
+            None => serde_json::json!({"kind":"new","key":key}),
         };
         let page = |page: &Page| {
             let blocks: Vec<_> = page

@@ -623,9 +623,10 @@ mod tests {
         let parsed = parse_with_spans(source).unwrap();
         assert!(parsed.main_page_provisional());
         assert_eq!(parsed.document.pages[0].key, "p-auto");
-        // Provisional main-page identity does not leak into editor value.
+        // Provisional main-page identity is explicit new identity, never a
+        // hidden alias, and carries its deterministic source spelling.
         let value = parsed.document.editor_value();
-        assert_eq!(value["main"]["association"], json!({"kind": "new"}));
+        assert_eq!(value["main"]["association"], json!({"kind": "new", "key": "p-auto"}));
     }
 
     #[test]
@@ -713,7 +714,7 @@ mod tests {
         let source = crate::render(&document).unwrap();
         let parsed = parse_with_spans(&source).unwrap();
         let value = parsed.document.editor_value();
-        assert_eq!(value["main"]["blocks"][0]["association"], json!({"kind": "new"}));
+        assert_eq!(value["main"]["blocks"][0]["association"], json!({"kind": "new", "key": "b-fresh"}));
         assert_eq!(value["retired"][0]["entity"], "e-gone");
         assert_eq!(value["retired"].as_array().map(Vec::len), Some(1));
     }

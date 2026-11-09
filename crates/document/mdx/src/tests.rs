@@ -1186,6 +1186,87 @@ fn editor_value_is_stable_under_key_rename_and_new_key_assignment() {
     assert_ne!(value, base);
 }
 
+/// Desired-new objects carry their explicit source identity, so distinct new
+/// objects never collapse into one `new` marker: retargeting a link between
+/// two different new pages is an editor-meaningful change.
+#[test]
+fn new_objects_have_explicit_source_identity() {
+    let mut document = unbound();
+    document.state.main_page = Some("p-main".into());
+    document.pages = vec![
+        Page {
+            key: "p-main".into(),
+            blocks: vec![Block {
+                key: "b-link".into(),
+                kind: BlockKind::PageLink { page: "p-left".into() },
+            }],
+        },
+        Page {
+            key: "p-left".into(),
+            blocks: vec![Block {
+                key: "b-left".into(),
+                kind: BlockKind::Paragraph { content: vec![run("left", &[])] },
+            }],
+        },
+        Page {
+            key: "p-right".into(),
+            blocks: vec![Block {
+                key: "b-right".into(),
+                kind: BlockKind::Paragraph { content: vec![run("right", &[])] },
+            }],
+        },
+    ];
+    let base = document.editor_value();
+    assert_eq!(base["main"]["blocks"][0]["content"]["page"], json!({"kind": "new", "key": "p-left"}));
+    assert_ne!(
+        base["definitions"][0]["association"],
+        base["definitions"][1]["association"],
+        "two new pages have distinct identities"
+    );
+    // Retargeting the link to the other new page changes editor meaning.
+    let mut retargeted = document.clone();
+    retargeted.pages[0].blocks[0].kind = BlockKind::PageLink { page: "p-right".into() };
+    let retargeted_value = retargeted.editor_value();
+    assert_ne!(base, retargeted_value, "a retarget between distinct new pages must not collapse");
+    assert_eq!(
+        retargeted_value["main"]["blocks"][0]["content"]["page"],
+        json!({"kind": "new", "key": "p-right"})
+    );
+    // Confirmed associations stay spelling-free: once the link has a row,
+    // renaming its retained key does not churn the value.
+    let mut confirmed = retargeted.clone();
+    let row = Node {
+        entity: "e-link".into(),
+        occurrence: Occurrence::Block {
+            placement: "f-link".into(),
+            text_fact: None,
+            inactive_text_fact: None,
+        },
+    };
+    confirmed.state.nodes.insert("b-link".into(), row.clone());
+    let confirmed_value = confirmed.editor_value();
+    assert_eq!(confirmed_value["main"]["blocks"][0]["association"]["entity"], "e-link");
+    confirmed.state.nodes.remove("b-link").unwrap();
+    confirmed.state.nodes.insert("b-link-2".into(), row);
+    confirmed.pages[0].blocks[0].key = "b-link-2".into();
+    assert_eq!(confirmed.editor_value(), confirmed_value);
+    // Reordering new blocks is also editor-meaningful (their identity is
+    // positional content, not a uniform null).
+    let mut reordered = unbound();
+    reordered.state.main_page = Some("p-main".into());
+    let item = |text: &str| Block {
+        key: format!("b-{text}"),
+        kind: BlockKind::Paragraph { content: vec![run(text, &[])] },
+    };
+    reordered.pages = vec![Page {
+        key: "p-main".into(),
+        blocks: vec![item("first"), item("second")],
+    }];
+    let ordered = reordered.editor_value();
+    reordered.pages[0].blocks.swap(0, 1);
+    assert_ne!(ordered, reordered.editor_value());
+}
+
 /// Ordinary structural authoring: splitting keeps one retained key and one
 /// new piece; joining retires one key; ordering never infers identity from
 /// position or text similarity.
@@ -1200,7 +1281,7 @@ fn split_join_order_and_the_last_block() {
     assert_eq!(parsed.unkeyed().len(), 1, "the new piece needs preparation, not inference");
     let value = parsed.document.editor_value();
     assert_eq!(value["main"]["blocks"][0]["association"]["entity"], "e-b1");
-    assert_eq!(value["main"]["blocks"][1]["association"], json!({"kind": "new"}));
+    assert_eq!(value["main"]["blocks"][1]["association"], json!({"kind": "new", "key": "b-auto-1"}));
     // Join: one keyed block disappears; its row retires without a successor.
     let joined = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-1\" />\njoined text\n");
     let parsed = parse_with_spans(&joined).unwrap();
