@@ -11,7 +11,9 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Provisional main-page key while `@leafbud.mainPage` is not yet persisted.
-pub(crate) const PROVISIONAL_PAGE: &str = "p-auto";
+/// Deterministic (never random) so previews cannot present churn as identity.
+pub const PROVISIONAL_MAIN_PAGE: &str = "p-auto";
+pub(crate) use PROVISIONAL_MAIN_PAGE as PROVISIONAL_PAGE;
 
 struct Reader {
     arena: Arena<Mdast>,
@@ -381,7 +383,17 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     let children = reader.arena.get_children(0).to_vec();
     let first = *children.first().context("empty managed document")?;
     ensure!(reader.kind(first) == MdastNodeType::Yaml, "YAML frontmatter required");
-    let mut document: Document = frontmatter(reader.value(first))?;
+    let raw: Value = frontmatter(reader.value(first))?;
+    let mut document: Document = serde_json::from_value(raw.clone()).map_err(|_| anyhow::anyhow!("invalid/restricted managed frontmatter"))?;
+    // A bound document must carry its publication association explicitly:
+    // Option deserialization would silently treat a missing field as null
+    // (standalone). Missing means unknown, never silently standalone.
+    if document.state.binding.is_some() {
+        ensure!(
+            raw["@leafbud"]["binding"].get("publication").is_some(),
+            "bound publication association is unknown (explicit null or URI required)"
+        );
+    }
     ensure!(
         document.format == FORMAT && document.state.state == "draft",
         "unsupported managed format/lifecycle"

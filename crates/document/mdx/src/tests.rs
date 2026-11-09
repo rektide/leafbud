@@ -948,31 +948,48 @@ fn tidy_handles_bom_prefixed_source() {
 // ============ Key preparation ============
 
 /// A tiny deterministic key source for tests.
-fn counter(source: &str) -> impl FnMut() -> String + '_ {
+fn counter(prefix: &str) -> impl FnMut() -> String + use<> {
     let mut next = 0;
+    let prefix = prefix.to_owned();
     move || {
         next += 1;
-        format!("{source}-{next}")
+        format!("{prefix}-{next}")
     }
 }
 
 #[test]
 fn preparation_assigns_stable_keys_and_persists_main_page() {
     let authored_source = "---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}\n---\n\n# Intro\n\nfirst paragraph\n\n- item one\n- item two\n";
-    let plan = prepare_keys(authored_source, &mut counter("b")).unwrap();
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        authored_source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     assert_eq!(plan.assigned, 4, "heading, paragraph and two list items");
-    assert_eq!(plan.main_page.as_deref(), Some("b-5"));
+    assert_eq!(plan.main_page.as_deref(), Some("p-1"), "the page source supplies the main-page key");
     let prepared = apply_key_preparation(authored_source, &plan).unwrap();
     assert!(prepared.contains("<Key id=\"b-1\" />\n# Intro"));
     assert!(prepared.contains("<Key id=\"b-2\" />\nfirst paragraph"));
     // The multi-item list is split by per-item markers with bytes preserved.
     assert!(prepared.contains("<Key id=\"b-3\" />\n- item one\n<Key id=\"b-4\" />\n- item two"));
-    assert!(prepared.contains("\"mainPage\": \"b-5\""), "main-page identity persisted in the envelope");
+    assert!(prepared.contains("\"mainPage\": \"p-1\""), "main-page identity persisted in the envelope");
     let parsed = parse_with_spans(&prepared).unwrap();
     assert!(parsed.unkeyed().is_empty());
-    assert_eq!(parsed.document.state.main_page.as_deref(), Some("b-5"));
+    assert_eq!(parsed.document.state.main_page.as_deref(), Some("p-1"));
     // Repeated preparation is an exact no-op.
-    let again = prepare_keys(&prepared, &mut counter("z")).unwrap();
+    let (mut block, mut page) = (counter("z"), counter("q"));
+    let again = prepare_keys(
+        &prepared,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     assert!(again.is_noop());
     assert_eq!(apply_key_preparation(&prepared, &again).unwrap(), prepared);
 }
@@ -981,16 +998,40 @@ fn preparation_assigns_stable_keys_and_persists_main_page() {
 fn preparation_is_preview_only_until_applied() {
     let authored_source =
         "---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}\n---\n\nfirst\n";
-    let plan = prepare_keys(authored_source, &mut counter("b")).unwrap();
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        authored_source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     assert_eq!(plan.assigned, 1);
     // Planning does not mutate the source; two plans propose different keys.
-    let other = prepare_keys(authored_source, &mut counter("c")).unwrap();
+    let (mut block, mut page) = (counter("c"), counter("r"));
+    let other = prepare_keys(
+        authored_source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     assert_ne!(plan.edits[0].text, other.edits[0].text);
     let applied = apply_key_preparation(authored_source, &plan).unwrap();
     assert_eq!(parse_with_spans(authored_source).unwrap().unkeyed().len(), 1, "original stays unprepared");
     assert_eq!(parse_with_spans(&applied).unwrap().unkeyed().len(), 0);
     // Proof uses the same proposed keys; a mismatched key fails the proof.
-    let mismatched = prepare_keys(authored_source, &mut counter("b")).unwrap();
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let mismatched = prepare_keys(
+        authored_source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     let mut tampered = mismatched.clone();
     tampered.edits[0].text = tampered.edits[0].text.replace("b-1", "b-9");
     assert!(apply_key_preparation(authored_source, &tampered).is_err());
@@ -999,12 +1040,28 @@ fn preparation_is_preview_only_until_applied() {
 #[test]
 fn preparation_preserves_crlf_and_bom() {
     let authored_source = "---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}\n---\n\nfirst\r\n\r\nsecond\r\n".replace('\n', "\r\n");
-    let plan = prepare_keys(&authored_source, &mut counter("b")).unwrap();
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        &authored_source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     let prepared = apply_key_preparation(&authored_source, &plan).unwrap();
     assert!(prepared.contains("<Key id=\"b-1\" />\r\nfirst"));
     assert!(prepared.contains("<Key id=\"b-2\" />\r\nsecond"));
     let bommed = format!("\u{feff}{}", authored_source);
-    let plan = prepare_keys(&bommed, &mut counter("b")).unwrap();
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        &bommed,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     let prepared = apply_key_preparation(&bommed, &plan).unwrap();
     assert!(prepared.starts_with('\u{feff}'));
 }
@@ -1013,7 +1070,15 @@ fn preparation_preserves_crlf_and_bom() {
 fn preparation_keeps_retired_rows_and_existing_keys() {
     // A retired row in the envelope plus one keyed block and one new block.
     let source = "---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}\n---\n\n<Key id=\"b-1\" />\nkept\n\nadded\n";
-    let plan = prepare_keys(source, &mut counter("fresh")).unwrap();
+    let (mut block, mut page) = (counter("fresh"), counter("p"));
+    let plan = prepare_keys(
+        source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
     assert_eq!(plan.assigned, 1);
     assert!(plan.main_page.is_none(), "persisted main-page identity is untouched");
     let prepared = apply_key_preparation(source, &plan).unwrap();
@@ -1085,4 +1150,45 @@ fn editor_value_is_stable_under_key_rename_and_new_key_assignment() {
     assert_eq!(value["retired"].as_array().map(Vec::len), Some(1), "the removed block's row retires");
     assert_eq!(value["retired"][0]["entity"], "e-b1");
     assert_ne!(value, base);
+}
+
+/// Ordinary structural authoring: splitting keeps one retained key and one
+/// new piece; joining retires one key; ordering never infers identity from
+/// position or text similarity.
+#[test]
+fn split_join_order_and_the_last_block() {
+    let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-1\": {\"entity\": \"e-b1\", \"kind\": \"block\", \"placement\": \"f-b1\"}}}";
+    // Split: the retained key stays on the first piece; the second is new.
+    let split = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-1\" />\nfirst half\n\nsecond half\n");
+    let parsed = parse_with_spans(&split).unwrap();
+    assert_eq!(parsed.document.pages[0].blocks.len(), 2);
+    assert_eq!(parsed.document.pages[0].blocks[0].key, "b-1");
+    assert_eq!(parsed.unkeyed().len(), 1, "the new piece needs preparation, not inference");
+    let value = parsed.document.editor_value();
+    assert_eq!(value["main"]["blocks"][0]["association"]["entity"], "e-b1");
+    assert_eq!(value["main"]["blocks"][1]["association"], json!({"kind": "new"}));
+    // Join: one keyed block disappears; its row retires without a successor.
+    let joined = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-1\" />\njoined text\n");
+    let parsed = parse_with_spans(&joined).unwrap();
+    assert_eq!(parsed.document.pages[0].blocks.len(), 1);
+    // Deleting the last block leaves a valid empty main page.
+    let emptied = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n");
+    let parsed = parse_with_spans(&emptied).unwrap();
+    assert!(parsed.document.pages[0].blocks.is_empty());
+    assert_eq!(parsed.document.editor_value()["retired"].as_array().map(Vec::len), Some(1));
+}
+
+/// Page links may reference named pages defined after the link (forward
+/// references are ordinary authorship order, not errors).
+#[test]
+fn page_links_may_reference_forward_definitions() {
+    let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"p-main\": {\"entity\": \"e-main\", \"kind\": \"page\", \"references\": []}, \"b-1\": {\"entity\": \"e-b1\", \"kind\": \"block\", \"placement\": \"f-b1\"}, \"p-later\": {\"entity\": \"e-later\", \"kind\": \"page\", \"references\": []}}}";
+    let source = format!(
+        "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-1\" />\n<PageLink page=\"p-later\" />\n\n<Page name=\"p-later\" kind=\"linear\">\n\nabout\n\n</Page>\n"
+    );
+    let parsed = parse_with_spans(&source).unwrap();
+    assert_eq!(parsed.document.pages.len(), 2);
+    // Unresolved targets stay errors.
+    let dangling = source.replace("p-later\" />\n\n<Page name=\"p-later\"", "p-gone\" />\n\n<Page name=\"p-later\"");
+    assert!(parse(&dangling).unwrap_err().to_string().contains("unresolved page link"));
 }

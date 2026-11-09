@@ -156,7 +156,11 @@ fn apply_state_line(document: &mut Document, key: &str, value: Value) -> Result<
 /// Rebuild a managed source from frontmatter lines and the body, keeping the
 /// original's BOM presence and fence line-ending style.
 fn reassemble(source: &str, lines: &[String], body: &str) -> String {
-    let bom = if source.starts_with('\u{feff}') { "\u{feff}".to_string() } else { String::new() };
+    let bom = if source.starts_with('\u{feff}') {
+        "\u{feff}".to_string()
+    } else {
+        String::new()
+    };
     let stripped = source.strip_prefix('\u{feff}').unwrap_or(source);
     let fence = if stripped.starts_with("---\r\n") { "---\r\n" } else { "---\n" };
     let mut result = format!("{bom}{fence}");
@@ -268,7 +272,11 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
     } else {
         super::render::verified_body(document, &frontmatter)?
     };
-    let bom = if source.starts_with('\u{feff}') { "\u{feff}".to_string() } else { String::new() };
+    let bom = if source.starts_with('\u{feff}') {
+        "\u{feff}".to_string()
+    } else {
+        String::new()
+    };
     let result = bom.clone() + &frontmatter + &body;
     let parsed = parse(&result).context("source-preserving adoption validation")?;
     ensure!(

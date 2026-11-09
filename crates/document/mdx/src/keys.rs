@@ -38,10 +38,18 @@ impl KeyPreparation {
     }
 }
 
-/// Plan key preparation. `fresh` supplies candidate key spellings (callers
-/// own randomness/uniqueness policy; typical spelling is `b-<uuid>`).
-/// Preview/check never apply this plan; executed tidy/push do.
-pub fn prepare_keys(source: &str, fresh: &mut dyn FnMut() -> String) -> Result<KeyPreparation> {
+/// Key proposals for preparation: one source per kind of identity. Callers
+/// own randomness and spelling policy; typical spellings are `b-<uuid>` for
+/// block/list-item keys and `p-<uuid>` for the implicit main page.
+pub struct KeySource<'a> {
+    pub block: &'a mut dyn FnMut() -> String,
+    pub page: &'a mut dyn FnMut() -> String,
+}
+
+/// Plan key preparation. Preview/check never apply this plan; executed
+/// tidy/push do.
+pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation> {
+    let KeySource { block, page } = keys;
     let parsed = parse_with_spans(source)?;
     let unkeyed = parsed.unkeyed();
     // Propose keys in document order; insertions stay in ascending span order.
@@ -54,7 +62,7 @@ pub fn prepare_keys(source: &str, fresh: &mut dyn FnMut() -> String) -> Result<K
         .filter(|key| !unkeyed_contains(&unkeyed, &parsed, key))
         .collect();
     for &index in &unkeyed {
-        let key = fresh();
+        let key = block();
         ensure!(
             key.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) && key.chars().all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c)),
             "proposed key {key:?} is not a valid source key spelling"
@@ -71,7 +79,7 @@ pub fn prepare_keys(source: &str, fresh: &mut dyn FnMut() -> String) -> Result<K
         .zip(proposed.iter().map(|(_, key)| key.clone()))
         .map(|(&index, key)| (index, key))
         .collect();
-    let main_page = document.state.main_page.is_none().then(fresh);
+    let main_page = document.state.main_page.is_none().then(page);
     if let Some(main) = &main_page {
         for page in &mut document.pages {
             if page.key == super::parse::PROVISIONAL_PAGE {
