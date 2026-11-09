@@ -287,11 +287,11 @@ async fn actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identi
     let old = doc.pages[0].blocks[0].key.clone();
     let source = leafbud_mdx::render(&doc)
         .unwrap()
-        .replace(&old, "manual-key")
         .replacen("\n\"@leafbud\":", "\ncustom: {keep: [1, 2]}\n\"@leafbud\":", 1);
     std::fs::write(&path, &source).unwrap();
     let reader = http.reader();
     let context = fixtures::context(temp.path());
+    crate::author::rename(&context, &path, &old, "manual-key").unwrap();
     let (cancel, _) = watch::channel(false);
     let (tx, mut events) = mpsc::unbounded_channel();
     let run = reader.watch(
@@ -325,6 +325,57 @@ async fn actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identi
     };
     let (report, _) = tokio::join!(run, actions);
     assert_eq!(report.unwrap().writes, 1);
+}
+
+#[tokio::test]
+async fn managed_metadata_edit_stays_dirty_and_follower_preserves_it() {
+    let http = Http::new().await;
+    let socket = Socket::new().await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+    let reader = http.reader();
+    let context = fixtures::context(temp.path());
+    let original = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    crate::author::edit(
+        &context,
+        &path,
+        &crate::author::MetadataEdit {
+            title: Some("Local authored title".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let bytes = std::fs::read(&path).unwrap();
+    let (cancel, cancelled) = watch::channel(false);
+    let (tx, mut events) = mpsc::unbounded_channel();
+    let run = reader.watch(
+        &context,
+        Request {
+            all: true,
+            ..Default::default()
+        },
+        socket.options(),
+        cancelled,
+        |e| {
+            tx.send(copy_event(e)).unwrap();
+            Ok(())
+        },
+    );
+    let actions = async {
+        outcome(&mut events, refresh::Outcome::LocalDirty).await;
+        http.change(TOKEN, "Remote cannot overwrite metadata edit");
+        socket.poke();
+        outcome(&mut events, refresh::Outcome::NeedsDecision).await;
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert_eq!(
+            leafbud_mdx::parse(std::str::from_utf8(&bytes).unwrap()).unwrap().state.sync,
+            original.state.sync
+        );
+        cancel.send_replace(true);
+    };
+    let (report, _) = tokio::join!(run, actions);
+    assert_eq!(report.unwrap().writes, 0);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
 }
 
 // Event owns only small transition metadata, never remote content. This helper
@@ -515,6 +566,28 @@ async fn source_save_during_await_is_preserved_and_cancellation_releases_writer_
         .unwrap();
         assert_eq!(tidy.failed, 1);
         assert!(tidy.items[0].error.as_deref().unwrap().contains("busy"));
+        assert!(
+            crate::author::edit(
+                &context,
+                &path,
+                &crate::author::MetadataEdit {
+                    title: Some("Blocked by watch".into()),
+                    ..Default::default()
+                }
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("busy")
+        );
+        let key = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().pages[0].blocks[0]
+            .key
+            .clone();
+        assert!(
+            crate::author::rename(&context, &path, &key, "blocked-by-watch")
+                .unwrap_err()
+                .to_string()
+                .contains("busy")
+        );
         let newer = std::fs::read_to_string(&path)
             .unwrap()
             .replace("Synthetic body copy", "Author save during HTTP");

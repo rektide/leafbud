@@ -54,7 +54,11 @@ pub fn rename_key(input: &str, old: &str, new: &str) -> Result<String> {
     let (_, state) = header.node.entry("@leafbud").context("reserved envelope absent")?;
     if expected.state.main_page.as_deref() == Some(old) {
         expected.state.main_page = Some(new.into());
-        let (_, value) = state.value.entry("mainPage").context("mainPage value absent")?;
+        let (key, value) = state.value.entry("mainPage").context("mainPage value absent")?;
+        ensure!(
+            key.referenced.line() == value.referenced.line(),
+            "unsupported mainPage scalar patch shape; rewrite it as a single-line string first"
+        );
         let range = source::range(value)?;
         ensure!(
             super::frontmatter::<String>(&input[header.offset + range.start..header.offset + range.end])
@@ -81,7 +85,8 @@ pub fn rename_key(input: &str, old: &str, new: &str) -> Result<String> {
         });
     }
     let out = source::splice(input, edits)?;
-    let actual = super::parse(&out).context("renamed source failed validation; nothing was changed")?;
+    let actual =
+        super::parse(&out).context("renamed source failed validation; nothing was changed (tidy --keys first if provisional identities would shift)")?;
     ensure!(actual == expected, "rename would change unrelated content or associations; nothing was changed");
     Ok(out)
 }

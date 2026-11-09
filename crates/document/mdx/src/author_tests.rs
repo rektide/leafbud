@@ -196,10 +196,29 @@ fn rename_confirmed_identity_receipts_inactive_text_and_retired_collision() {
     assert_eq!(after.state.sync, before.state.sync);
     assert!(rename_key(&source, "old", "retired").is_err());
     assert!(rename_key(&source, "retired", "unused").is_err());
+    // The same surgical scalar/key edits work in a flow-style envelope (and
+    // even a flow root), without rerendering its other members.
+    let (lines, body) = patch::split_managed(&source).unwrap();
+    assert!(!lines.is_empty());
+    let flow = format!("---\n{}\n---\n{body}", serde_json::to_string(&header(&source).unwrap()).unwrap());
+    let renamed_flow = rename_key(&flow, "old", "fresh").unwrap();
+    assert_eq!(parse(&renamed_flow).unwrap(), after);
+    assert!(rename_key(&flow, "main", "start").is_ok());
     let crlf = format!("\u{feff}{}", source.replace('\n', "\r\n"));
     let renamed = rename_key(&crlf, "old", "fresh").unwrap();
     assert_eq!(
         renamed,
         format!("\u{feff}{}", rename_key(&source, "old", "fresh").unwrap().replace('\n', "\r\n"))
     );
+}
+
+#[test]
+fn rename_escaped_expression_keys_and_bom_interleaved_pages() {
+    let source = input(
+        "\n<Key id = { \"ol\\u0064\" } />\ntext\n\n<Key id='ref' />\n<PageLink page = { \"detail\\u0073\" } />\n\n<Page kind = {\"linear\"} name = 'details'>\n\n<Key id='child' />\nchild text\n\n</Page>\n\n<Key id='later' />\nlater text\n",
+    );
+    let expected = rename_key(&rename_key(&source, "old", "new").unwrap(), "details", "appendix").unwrap();
+    let input = format!("\u{feff}{}", source.replace('\n', "\r\n"));
+    let renamed = rename_key(&rename_key(&input, "old", "new").unwrap(), "details", "appendix").unwrap();
+    assert_eq!(renamed, format!("\u{feff}{}", expected.replace('\n', "\r\n")));
 }
