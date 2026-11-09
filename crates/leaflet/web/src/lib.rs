@@ -12,6 +12,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 mod home;
+pub mod live;
 mod pull;
 pub use home::{DiscoveredLeaflet, Discovery, Identity, parse_home};
 pub use pull::{PullSnapshot, parse_pull};
@@ -199,6 +200,12 @@ impl LeafletClient {
 
     pub fn base_url(&self) -> &str {
         self.base.as_str().trim_end_matches('/')
+    }
+
+    /// Resolve public realtime configuration using a separate, cookie-free client.
+    /// Explicit overrides are scoped to this Leaflet origin, never a global cache.
+    pub async fn live_bootstrap(&self, project: Option<live::PublicProject>) -> Result<live::Bootstrap, live::Error> {
+        live::Bootstrap::resolve(self.base_url(), project).await
     }
 
     pub fn editor_url(&self, id: Uuid) -> String {

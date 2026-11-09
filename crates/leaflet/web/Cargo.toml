@@ -5,13 +5,20 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64.workspace = true
+futures-util = "0.3"
 jiff.workspace = true
+phoenix-channel-client = "=0.1.1"
+phoenix-channel-runtime = "=0.1.1"
+phoenix-channel-runtime-native = "=0.1.1"
 regex.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
+tokio = { workspace = true, features = ["sync", "time"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["io-util", "net"] }
+tokio-tungstenite = "0.29"
