@@ -1,0 +1,6 @@
+{
+  "note": "Synthetic wire frames. No deployed identifiers, tokens or responses.",
+  "poke": [null, null, "realtime:rootEntity:synthetic-root", "broadcast", {"type": "broadcast", "event": "poke", "payload": {}}],
+  "state": ["2", null, "realtime:yjs:synthetic-root", "presence_state", {"synthetic-peer": {"metas": [{"phx_ref": "ref-a", "awarenessClientID": 1}, {"phx_ref": "ref-b", "awarenessClientID": 2}]}}],
+  "diff": [null, null, "realtime:yjs:synthetic-root", "presence_diff", {"joins": {"synthetic-peer": {"metas": [{"phx_ref": "ref-c", "phx_ref_prev": "ref-a"}]}}, "leaves": {"synthetic-peer": {"metas": [{"phx_ref": "ref-b"}]}}}]
+}

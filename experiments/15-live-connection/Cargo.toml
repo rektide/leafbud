@@ -1,0 +1,19 @@
+[package]
+name = "leafbud-live-probe"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+futures-util = "0.3"
+phoenix-channel-client = "=0.1.1"
+phoenix-channel-runtime = "=0.1.1"
+phoenix-channel-runtime-native = "=0.1.1"
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time", "fs"] }
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
+url = "2"
