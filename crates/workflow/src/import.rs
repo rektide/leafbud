@@ -86,7 +86,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     ensure!(data.observed_state() == LeafletState::Draft, "published object is outside draft import profile");
     let root = data.metadata.root_entity.as_deref().context("missing native root entity")?;
     let id = Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("{base}/{}", data.metadata.id).as_bytes());
-    let content = leafbud_editor::observe(&pull.facts, root, id)?;
+    let content = leafbud_editor::observe_view(pull, root, id)?;
     let entity_sets: BTreeSet<_> = data
         .metadata
         .permission_token_rights
@@ -148,6 +148,8 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         extra,
         pages: content.pages,
         state: State {
+            writer: None,
+            pending: None,
             id,
             state: "draft".into(),
             main_page: Some(main_page),

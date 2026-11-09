@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 pub use uuid::Uuid;
+mod attempt;
+pub use attempt::*;
 
 /// Source format this model reads and writes (`leafbud-mdx/2`). Local data is
 /// rebuildable; there is no compatibility surface for the retired format 1.
@@ -206,6 +208,12 @@ pub struct State {
     /// is impossible, so sync requires binding.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sync: Option<Sync>,
+    /// Stable native request identity/next reserved sequence, never a Yrs ID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub writer: Option<WriterState>,
+    /// Unresolved effect evidence, never a body, request journal or receipt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending: Option<Attempt>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

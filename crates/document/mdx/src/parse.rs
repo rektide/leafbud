@@ -483,6 +483,7 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
         );
     }
     ensure!(!document.title.trim().is_empty(), "empty document title");
+    document.state.validate_attempt().map_err(anyhow::Error::msg)?;
 
     // Implicit main page: top-level Key markers and ordinary blocks, in order.
     // Named Page definitions are lifted out wherever they appear; their
@@ -602,6 +603,8 @@ mod tests {
 
     fn bound_state() -> State {
         State {
+            writer: None,
+            pending: None,
             id: Uuid::nil(),
             state: "draft".into(),
             main_page: Some("p-main".into()),

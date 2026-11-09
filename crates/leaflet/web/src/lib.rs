@@ -24,6 +24,8 @@ pub const DEFAULT_BASE_URL: &str = "https://leaflet.pub";
 pub enum Error {
     #[error("malformed full editor pull: {0}")]
     Pull(&'static str),
+    #[error("native effect protocol: {0}")]
+    Native(&'static str),
     #[error("Leaflet transport failed")]
     Transport(#[source] reqwest::Error),
     #[error("{operation} returned HTTP {status}")]
@@ -166,6 +168,17 @@ impl std::fmt::Debug for LeafletClient {
 }
 
 impl LeafletClient {
+    pub(crate) async fn read_json(&self, response: reqwest::Response, operation: &'static str) -> Result<Value, Error> {
+        let status = response.status();
+        if !status.is_success() {
+            return Err(Error::Http {
+                operation,
+                status: status.as_u16(),
+            });
+        }
+        let body = response.text().await.map_err(transport)?;
+        serde_json::from_str(&body).map_err(|_| Error::Native("invalid JSON response"))
+    }
     pub fn new(base_url: &str, auth_token: Option<&str>) -> Result<Self, Error> {
         let base = Url::parse(base_url.trim()).map_err(|_| Error::BadBaseUrl)?;
         if !matches!(base.scheme(), "https" | "http")

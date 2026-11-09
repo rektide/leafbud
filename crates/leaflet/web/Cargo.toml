@@ -5,6 +5,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+leafbud-protocol.workspace = true
 base64.workspace = true
 futures-util = "0.3"
 jiff.workspace = true

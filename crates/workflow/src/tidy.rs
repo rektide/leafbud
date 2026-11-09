@@ -143,6 +143,10 @@ fn tidy_file(context: &config::Context, path: &Path, dry_run: bool, run_keys: bo
 fn try_tidy(context: &config::Context, path: &Path, dry_run: bool, run_keys: bool, run_markdown: bool) -> Result<Item> {
     let store = crate::lock::Store::new(context)?;
     let (_guard, original, source) = crate::lock::read(path, &store)?;
+    ensure!(
+        leafbud_mdx::header(&source)?["@leafbud"].get("pending").is_none_or(serde_json::Value::is_null),
+        "pending native attempt; tidy preserves source for explicit recovery"
+    );
     let mut inventory = crate::inventory::scan(&context.workspace_root, None)?;
     inventory.include_operands(&[path.into()]);
     ensure!(!inventory.duplicates.contains(path), "duplicate local identity/binding; preserved");

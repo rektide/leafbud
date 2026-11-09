@@ -9,6 +9,11 @@ use uuid::Uuid;
 mod text;
 pub use text::read as read_text;
 
+/// The shared wire view retains raw CRDT/fact evidence alongside projection.
+pub fn observe_view(view: &leafbud_protocol::FullView, root: &str, namespace: Uuid) -> Result<Content> {
+    observe(&view.facts, root, namespace)
+}
+
 /// Conservative current editor evidence, not a representable-content digest.
 /// Unknown fact fields/payloads and extras remain witnessed even when observe
 /// refuses them. Transport timestamps, row versions and indexes are excluded.

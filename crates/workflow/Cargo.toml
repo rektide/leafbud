@@ -5,6 +5,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+leafbud-protocol.workspace = true
 anyhow.workspace = true
 figment2.workspace = true
 tempfile.workspace = true

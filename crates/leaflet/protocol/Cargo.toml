@@ -1,0 +1,11 @@
+[package]
+name = "leafbud-protocol"
+description = "Small native Leaflet wire vocabulary, bounded requests and raw full views"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true

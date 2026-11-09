@@ -15,6 +15,8 @@ fn node(entity: &str, occurrence: Occurrence) -> Node {
 
 fn document() -> Document {
     let state = State {
+        writer: None,
+        pending: None,
         id: Uuid::nil(),
         state: "draft".into(),
         main_page: Some("p-main".into()),

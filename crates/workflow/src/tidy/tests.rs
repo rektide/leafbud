@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 
 fn document() -> Document {
     let state = State {
+        writer: None,
+        pending: None,
         id: Uuid::nil(),
         state: "draft".into(),
         main_page: Some("p-main".into()),

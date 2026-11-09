@@ -62,6 +62,8 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
         // receipts and no persisted main-page key: preparation assigns
         // main-page identity once, when the document first has content.
         state: State {
+            writer: None,
+            pending: None,
             id: Uuid::new_v4(),
             state: "draft".into(),
             main_page: None,

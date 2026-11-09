@@ -181,6 +181,37 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
     }
     // Typed optional state: an explicit `sync: null` deserializes to the
     // same absent receipts as a missing field.
+    if let Some(pending) = &existing.state.pending {
+        item.outcome = match &pending.effect {
+            leafbud_document::Effect::Mint {
+                stage: leafbud_document::MintStage::Prepared,
+                ..
+            }
+            | leafbud_document::Effect::Push {
+                stage: leafbud_document::PushStage::Prepared,
+                ..
+            } => "pending-prepared",
+            leafbud_document::Effect::Mint {
+                stage: leafbud_document::MintStage::Dispatched,
+                ..
+            }
+            | leafbud_document::Effect::Push {
+                stage: leafbud_document::PushStage::Dispatched { .. },
+                ..
+            } => "pending-uncertain",
+            leafbud_document::Effect::Mint {
+                stage: leafbud_document::MintStage::Located { .. },
+                ..
+            } => "pending-materialization",
+            leafbud_document::Effect::Push {
+                stage: leafbud_document::PushStage::Partial { .. },
+                ..
+            } => "resolved-partial",
+        };
+        item.detail = "unresolved native attempt preserved; status neither replays effects nor advances receipts";
+        item.baseline = editor_state::baseline(existing);
+        return item;
+    }
     if existing.state.binding.is_none() {
         item.outcome = "unbound";
         item.baseline = "none";

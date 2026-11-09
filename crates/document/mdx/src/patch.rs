@@ -243,6 +243,17 @@ pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     let existing = parse(source)?;
     ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
     ensure!(next.state == "draft", "unsupported lifecycle");
+    if let Some(before) = &existing.state.writer {
+        let after = next.writer.as_ref().context("tracking cannot discard a writer's reserved mutation IDs")?;
+        ensure!(
+            before.client_id == after.client_id && before.client_group_id == after.client_group_id && after.next_mutation_id >= before.next_mutation_id,
+            "tracking cannot reset writer identity/sequence"
+        );
+    }
+    ensure!(
+        next.pending.is_none() || next.sync == existing.state.sync,
+        "unresolved effects cannot advance agreement receipts"
+    );
     match (&existing.state.binding, &next.binding) {
         (Some(before), Some(after)) => ensure!(before == after, "tracking settlement cannot rebind or alter an established binding"),
         (Some(_), None) => bail!("tracking settlement cannot drop an established binding"),

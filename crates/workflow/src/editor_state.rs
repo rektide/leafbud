@@ -272,6 +272,8 @@ fn adopt(existing: &Document, fresh: &Document) -> Document {
         extra,
         pages,
         state: State {
+            writer: existing.state.writer.clone(),
+            pending: existing.state.pending.clone(),
             id: existing.state.id,
             state: existing.state.state.clone(),
             main_page: fresh.state.main_page.as_ref().map(|main| key(main)),

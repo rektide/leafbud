@@ -1003,7 +1003,6 @@ async fn refresh_preserves_raw_future_pending_and_owned_state_without_network() 
     let context = fixtures::context(temp.path());
     for (extra, wanted) in [
         ("pending: {unknownVersion: 99, evidence: [private]}", refresh::Outcome::Pending),
-        ("pending: null", refresh::Outcome::Invalid),
         ("futureOwned: {doNotDrop: true}", refresh::Outcome::Invalid),
     ] {
         let changed = original.replacen("\"@leafbud\":\n", &format!("\"@leafbud\":\n  {extra}\n"), 1);
