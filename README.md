@@ -8,6 +8,10 @@ updated:
   at: 2026-11-09
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3d511cf0ffeKLT5XsWr37v0r6"
+    title: "Offline metadata editing, native-preserving key rename and local inventory; source/identity/receipt guards and loopback CLI/watch verification"
+  - resource: /design/local-authoring-tools0.gpt61s.md
+    title: "Version-0.18 local-authoring implementation receipt and bounded source-shape contract"
   - resource: "opencode://ses_e3d6d728effe6RFnyZcrUtifT9"
     title: "Retained native-default no-op correction, explicit terminal recovery/replanning, 300-test gate and create-free deployed standalone accept-current/status/pull/no-op proof"
   - resource: /design/terminal-recovery0.gpt61s.md
@@ -42,7 +46,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, and explicit terminal `recover`, version 0.17.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename` and local `list`, version 0.18.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -57,7 +61,7 @@ destination shape. Implemented versus pending:
 | `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, selected-locator recovery and deliberate terminal accept-current/replan | original lost publication-mint attribution; general repair of incomplete/unsupported partial graphs |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning and complete keyed create/update/place/detach compiler, loaded Yrs text/marks/break editing and selected supported-block recreation | canvas, nested/task lists, interactive/other unsupported editor content; whole-body recreation |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, `recover FILE [--take remote\|local] [--yes] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, selected-field `edit`, `keys rename`, `list --state/--json`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, `recover FILE [--take remote\|local] [--yes] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | `publish`, `export`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -88,7 +92,7 @@ crates/
   workflow/    leafbud-workflow: local files, config, inventory,
                  guarded import/pull, shared refresh, cooperative locks, live follow
   cli/         leafbud (binary): thin Clap/rendering layer;
-                    reads/import/create/check/status/diff/push/recover/pull/watch/tidy/config
+                     reads/import/create/check/list/edit/keys/status/diff/push/recover/pull/watch/tidy/config
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
@@ -297,8 +301,8 @@ Document AT-URI resolution is explicitly unsupported for now.
 without a published document is still `draft`; direct publication/standalone
 document linkage is `published`. Coverage is always reported as **unknown**:
 only the observed homepage/contributor payload is read; account-wide
-completeness and pagination are unverified. Root `list` remains a separate,
-unimplemented **local** inventory command.
+completeness and pagination are unverified. Root `list` is a separate,
+offline **local** inventory command.
 
 `show` inspects metadata, reported rights and linkage—not editor facts, MDX
 import or a proven ability to write. JSON reports have `version: 1` and
@@ -377,6 +381,70 @@ data and a deliberate fresh `import` replaces them (no migration path is
 intended). Batch implementation handoff:
 [`design/author-create-keys0.glm53m.md`](design/author-create-keys0.glm53m.md).
 
+## Offline metadata, key names and local inventory
+
+```sh
+leafbud list --json
+leafbud list --state draft
+leafbud edit drafts/essay.mdx --title "Garden notes" --description "Fresh observations"
+leafbud edit drafts/essay.mdx --description ''     # clear; whitespace is meaningful
+leafbud edit drafts/essay.mdx --tag gardens --tag notes # REPLACE ordered tags
+leafbud edit drafts/essay.mdx --clear-tags         # explicitly write []
+leafbud edit drafts/essay.mdx --published-at 2026-11-09T12:00:00Z
+leafbud edit drafts/essay.mdx --now                # mutually exclusive with --published-at
+leafbud keys rename drafts/essay.mdx old-key introduction
+```
+
+All three commands are offline and never read native credentials, fetch editors,
+save remotely, publish or adopt defaults. Paths/config follow the shared workspace
+rules. `edit` requires at least one selected field; omitted flags leave fields
+alone. Titles must be nonempty. Description absence/null/empty string are equivalent
+clear intent, so an already-cleared description keeps its spelling; nonempty
+whitespace is not trimmed. Tags replace, never implicitly append/sort/deduplicate;
+`--tag` and `--clear-tags` conflict. Ordinary edits preserve dates. Explicit dates
+must have an offset (no local-timezone assumption), and are emitted as Jiff UTC
+timestamps. A date edit changes local publication intent only, not the editor edge.
+
+Only selected author entries are normalized; exact body bytes, unrelated YAML,
+unknown author values and compact state survive. Comments on rewritten entries
+are retained (inline/removed-value comments may become standalone lines).
+The helper supports block-style top-level fields, including multiline values and
+flow/block tag lists. A flow-style whole header or unusual unsupported patch shape
+fails without writes; explicitly reshape it first. The entire result reparses and
+is checked against the selected changes. No generic property setter is provided.
+
+`keys rename` updates an explicit block Key, named Page or persisted `mainPage`,
+actual PageLink targets and the current node-map key. Attribute quoting/JSON
+expression/whitespace forms are selected through the real parser; prose, code and
+unrelated fields are not searched/replaced. Native entity, placement, active/inactive
+text IDs, UUID, binding, writer reservations, receipts and historical `lastResolution`
+stay unchanged. Confirmed keys keep the editor fingerprint; new unconfirmed keys
+are still source identities and may legitimately change it. Missing/retired-only
+keys, invalid spellings and collisions (including retired rows) fail. `OLD == NEW`
+is a validated byte/mtime no-op. Use `tidy --keys` first if provisional identities
+would shift; block-scalar `mainPage` values must first become single-line strings.
+
+Both writing helpers use the same stable-UUID OS lock as watch/push/pull, reread
+after acquisition, check workspace/external-operand duplicate identities and guard
+the final atomic write against changed bytes. Pending attempts are refused with a
+`recover` hint. Unknown future owned state is refused and preserved. No receipts
+are recomputed to hide a local edit; actual no-ops preserve bytes and mtime.
+
+`list` scans regular managed-looking `.mdx` files, never symlink files/directories.
+Lifecycle comes from the header, not directory placement. It reports title/path,
+UUID, lifecycle/format/receipt profile, header-declared native locator, pending and
+last-resolution presence. A bad body can still expose useful header evidence:
+`valid` only claims a successfully parsed current supported document, not remote
+freshness. Duplicate UUID/native bindings are counted across the whole workspace
+before filtering. Broken, unsupported and ambiguous items stay visible even under
+a state filter; published/legacy/future profiles remain explicitly unsupported,
+not adopted or migrated. JSON has `version: 1`, per-file outcomes/diagnostics and
+summary counts. No keys, locks, config directories or receipts are created by list.
+Exits: **0** successful list (including pending reports), **1** all listed items
+failed/unsupported or operational failure, **4** mixed results; usage errors **2**.
+The editing helpers use **0** success/no-op, **1** refusal/failure, **2** usage.
+Details/evidence: [local authoring receipt](design/local-authoring-tools0.gpt61s.md).
+
 ## Checkout drafts as editable MDX
 
 ```sh
@@ -431,8 +499,8 @@ cargo run -p leafbud -- --root /home/rektide/l status --offline --json
 cargo run -p leafbud -- status drafts/chosen.mdx --json
 ```
 
-No operands selects local managed MDX files, not remote discovery or a new
-`list` command. Operands resolve against the workspace; absolute operands are
+No operands selects local managed MDX files, not remote discovery; `list` separately
+inventories local files without editor observation. Operands resolve against the workspace; absolute operands are
 also supported. Status never writes bodies, keys, receipts or remotes—even
 when current endpoints have converged. It does not compare text or explain
 an operation plan; [human diff](#human-localeditor-diff) is a separate view.
@@ -760,20 +828,23 @@ Current implementation/verification handoff:
 ```
 cargo build
 cargo run -p leafbud -- --version
-cargo run -p leafbud -- push essay.mdx   # -> "not implemented", exit 1
+cargo run -p leafbud -- list --json     # local inventory, no authentication
 ```
 
 Checks: `cargo fmt`, `cargo clippy --workspace --all-targets`,
 `cargo nextest run`. Regular tests are offline (loopback HTTP responders,
 committed fixtures under `experiments/`) and never contact real drafts/PDSes.
 Ignored deployment harnesses require separate explicit authorization/private
-records; both original creation slots are consumed. The latest authorized harness
-is create-free selected-P1 clear-intent settlement, with its passing result documented above.
+records; both original creation slots are consumed. Create-free selected-P1 save
+and standalone terminal recovery results are documented above; local tools use
+only temporary synthetic sources/loopback servers, never the live corpus.
 
 ## Reading map
 
 - Accepted interface (CLI, crates, YAML policy):
   [`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md)
+- Offline metadata edits, native-preserving key rename and local inventory:
+  [`design/local-authoring-tools0.gpt61s.md`](design/local-authoring-tools0.gpt61s.md)
 - Current write-side design (complete drafting with stable keyed blocks):
   [`design/keyed-authoring0.gpt6a.md`](design/keyed-authoring0.gpt6a.md)
 - New/changed/dropped block flows and reordering options:
