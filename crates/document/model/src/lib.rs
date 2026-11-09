@@ -200,7 +200,7 @@ pub struct State {
     pub binding: Option<Binding>,
     /// Confirmed page/block occurrence associations. The table may lag desired
     /// content: keys without rows are new; rows without content are retired.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub nodes: BTreeMap<String, Node>,
     /// Last verified agreement; never an attempt. Coherent without a binding
     /// is impossible, so sync requires binding.
