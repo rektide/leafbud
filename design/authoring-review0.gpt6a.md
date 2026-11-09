@@ -44,6 +44,16 @@ sources:
     title: "Reviewed origin-scoped cookie-free discovery and explicit public project configuration"
   - resource: /crates/leaflet/web/src/live/presence.rs
     title: "Reviewed transactional bounded presence reduction and unknown-on-gap semantics"
+  - resource: /design/connected-watch0.gpt61s.md
+    title: "Integrated connected-watch delivery, 221-test gate and actual passive CLI smoke"
+  - resource: /crates/workflow/src/refresh.rs
+    title: "Reviewed shared refresh, lock/read/observe/adopt ordering and late duplicate/identity validation"
+  - resource: /crates/workflow/src/watch.rs
+    title: "Reviewed actual captured-start scheduling, fairness, rescan, cancellation and refresh-policy construction"
+  - resource: /crates/workflow/src/watch/selection.rs
+    title: "Reviewed explicit-operand identity anchoring and external duplicate selection"
+  - resource: /crates/workflow/src/lock.rs
+    title: "Reviewed OS-released stable-ID locks and separate import-binding serialization"
 ---
 
 # Authoring foundation review and connected-watch join
@@ -170,6 +180,28 @@ inventory rescans/backstop, JSONL/transition reporting and `watch` CLI. This is 
 full inbound workflow slice. Its tests must exercise actual socket-to-HTTP-to-file
 adoption, source conflicts/races and cancellation. A passive real smoke can use
 an isolated fresh import; no deployed edit is assumed from a quiet session.
+
+### Connected-watch delivery review
+
+The integrated [watch receipt](connected-watch0.gpt61s.md) returned through
+`2ef13d3f`, version 0.13.0, with 221/221 tests, strict clippy/format checks, and an
+actual deployed CLI fresh-import/connection/catch-up/presence/interrupt smoke.
+Parent reviewed shared refresh, the stable-ID lock store, controller scheduling,
+selection, transport wrapper and thin CLI. Their domain separation and reported
+behavioral evidence meet the intended connected-workflow shape.
+
+One narrow final correction was commissioned back to the same Sol session:
+`watch` constructed `refresh::Policy` without forwarding the other explicit
+operands. A duplicate introduced in a second selected file outside the workspace
+during HTTP acquisition could therefore escape refresh's late duplicate scan
+before the next controller rescan. Pass the full current operand set through that
+existing policy and prove the race with held HTTP responses; do not introduce a
+new selection system. The otherwise-complete delivery awaits that correction.
+
+The deployed smoke observed no durable poke; actual event-to-file adoption is
+verified through real loopback HTTP/Phoenix controller tests, not inferred from
+a quiet deployed connection. The user's `~/l` remains untouched and old-format;
+the smoke used an isolated fresh import. Those evidence boundaries remain intact.
 
 The [build path](keyed-build-path0.gpt6a.md) remains the current direction; the
 [batch A receipt](author-create-keys0.glm53m.md) preserves the implementation
