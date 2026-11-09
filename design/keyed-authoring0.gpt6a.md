@@ -34,6 +34,10 @@ sources:
 
 # Keyed drafting: complete documents, simple native updates
 
+The [case-by-case flow supplement](keyed-edit-flows0.gpt6a.md) traces new, changed,
+dropped and reordered blocks through native identities, proposed writes and
+verification. It also gives ordering alternatives and a receiving-session map.
+
 ## 1. The implementation we are building
 
 **Keep the keyed document architecture and complete its write side.** The source
