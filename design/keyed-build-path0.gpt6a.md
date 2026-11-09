@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Grounded implementation and rebuildable formats; operator clarified persistent live watch/sync and exploratory presence, then accepted the build direction and commissioned implementation"
+    title: "Grounded and commissioned authoring/watch, reviewed delivery, then commissioned native binding/recovery and authorized two disposable unpublished verification drafts"
   - resource: /design/keyed-edit-flows0.gpt6a.md
     title: "Primary create/change/drop/reorder cases and identity obligations"
   - resource: /design/keyed-authoring0.gpt6a.md
@@ -730,3 +730,28 @@ catch-up/no-op/presence/interrupt; it observed no deployed edit. The authoring
 foundation and continuous inbound workflow are complete for their supported
 profile. Native bind/recovery and text/structure saves remain the next proposed
 build batches; complete remote drafting is not yet delivered.
+
+### Native-effect batch commissioned
+
+After accepting the 0.13.0 delivery, the operator commissioned the recommended
+next pair: **`leafbud-editor-bind` + `leafbud-editor-recovery`, Sol high**.
+Fresh session `opencode://ses_e4121e55dffeF009EbMiG1Xinz` owns the native-effect
+foundation: shared protocol types when consumed, both mint contexts, bounded
+native pushes, writer-group acknowledgments, explicit known-ID reads, typed
+compact pending state and finite recovery/settlement. Existing watch and local
+writers share the same lock and source-preservation boundary with those effects.
+
+This is batch C's internal prerequisite for complete keyed materialization.
+Bind/recovery ticket closure must respect their full completion criteria and
+compiler dependencies. A minted empty editor or a narrow transport write does
+not complete drafting. Text/structure compilation remains the next joined batch,
+with the primary flow document's complete first/revised/repeat/pull acceptance.
+
+The operator separately authorized **at most two disposable, unpublished test
+drafts**, one standalone and one in their actually configured publication, for
+real creation/save/recovery verification. Leave them unpublished, send no email,
+and confine edits to those new test objects. Do not infer a publication target
+when configuration is absent. Retain known locators privately; a lost mint response
+remains uncertain and cannot justify automatically creating another draft.
+Synthetic protocol/state fixtures precede the bounded deployed proof; report
+exactly which layers were exercised and keep private data out of committed evidence.
