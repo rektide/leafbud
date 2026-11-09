@@ -3,7 +3,7 @@ type: Review
 title: "Keyed-save integration review and terminal-recovery join"
 description: "Parent review of the complete 0.16 save loop, accepted native/text/structure boundaries, a semantic no-op follow-up and the next fresh-Sol recovery/conflict batch."
 resource: /design/keyed-save-review0.gpt6a.md
-status: accepted-with-follow-up
+status: accepted
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
@@ -12,6 +12,8 @@ sources:
     title: "Reviewed complete compiler, native execution and deployed receipt; commissioned fresh Sol for bounded no-op correction and deliberate terminal recovery/conflicts"
   - resource: /design/keyed-save0.gpt61s.md
     title: "0.16 implementation, 282-test gate, independent Yjs and actual existing-P1 CLI proof"
+  - resource: /design/terminal-recovery0.gpt61s.md
+    title: "Completed 0.17 no-op correction, explicit terminal resolution, bounded provenance and 300-test/deployed standalone proof"
   - resource: /design/keyed-edit-flows0.gpt6a.md
     title: "Primary complete drafting and native-identity cases"
   - resource: /crates/leaflet/editor/src/write.rs
@@ -121,3 +123,24 @@ original success. No additional mint, publication, email or cleanup is authorize
 The user's continuing-work instruction permits the parent to join these results
 and commission the next coherent fresh-Sol major batch. It does not remove the
 specific external-effect and identity boundaries recorded above.
+
+## Follow-up accepted; next local-authoring batch
+
+The 0.17 return through `c1a2ce11` completes this review's no-op and terminal
+recovery join. Parent read `native::resolve`, bounded `State.last_resolution`,
+the retained-block semantic skip and public prior-settlement reporting. The
+original no-op case was reproduced as seven fact writes plus one clear and is
+now an exact no-op. Explicit terminal remote/local resolution retains original
+hashes and finality; lower acknowledgments still cannot be overridden.
+
+Reported final evidence: **300/300 workspace tests**, strict clippy/formatting,
+and actual create-free standalone accept-current with `originalNotVerified`
+provenance followed by clean status and unchanged pull/repeat. P1 and both creation
+budgets stayed untouched. Parent accepts the delivery and the corresponding
+bind/recovery/conflicts child closures, with the receipt's published-lifecycle
+and original-mint-attribution boundaries intact.
+
+Fresh Sol `opencode://ses_e3d511cf0ffeKLT5XsWr37v0r6` is implementing the next
+three-ticket [local-authoring design](local-authoring-tools0.gpt6a.md): metadata,
+key rename and inventory. The user requested a durable report before compaction;
+[current ground and next fronts](next-fronts0.gpt6a.md) is the receiving handoff.

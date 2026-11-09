@@ -75,6 +75,12 @@ sources:
 
 # Building keyed authoring and continuous inbound sync
 
+**Current continuation:** [0.17 ground, next fronts and compaction handoff](next-fronts0.gpt6a.md)
+summarizes what this build path delivered and the active next Sol session.
+[Local authoring tools](local-authoring-tools0.gpt6a.md) is the concrete design
+for the now-commissioned metadata/rekey/inventory batch. This longer document
+retains the design and implementation history that led there.
+
 ## Recommendation
 
 Build **one document synchronization workflow with two directions**: explicit
