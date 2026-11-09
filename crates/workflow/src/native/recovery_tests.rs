@@ -616,3 +616,65 @@ async fn cancellation_during_resolution_observation_releases_lock_without_forget
     assert_eq!(read(&path).state.pending, Some(original));
     release.send(()).unwrap();
 }
+
+#[tokio::test]
+async fn resolution_provenance_survives_tidy_and_future_unknown_resolution_is_never_dropped() {
+    let server = Server::new(true).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = source(temp.path());
+    partial(&server, temp.path(), &path).await;
+    assert_eq!(
+        recover(&server, temp.path(), &path, true, Some(ResolutionDirection::Remote))
+            .await
+            .unwrap()
+            .outcome,
+        "accepted-remote"
+    );
+    let context = old::context(temp.path());
+    let summary = read(&path).state.last_resolution;
+    let tidy = crate::tidy::run(
+        &context,
+        crate::tidy::Request {
+            files: vec![path.clone()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(tidy.failed, 0);
+    assert_eq!(read(&path).state.last_resolution, summary);
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mut header = leafbud_mdx::header(&text).unwrap();
+    header["@leafbud"]["lastResolution"]["futureEvidence"] = json!({"keep":"unknown future state"});
+    let source = format!(
+        "---\n{}\n---\n{}",
+        serde_json::to_string(&header).unwrap(),
+        text.split_once("\n---\n").unwrap().1
+    );
+    std::fs::write(&path, &source).unwrap();
+    assert!(recover(&server, temp.path(), &path, true, Some(ResolutionDirection::Remote)).await.is_err());
+    assert_eq!(
+        server.reader().refresh_document(&context, &path, Default::default()).await.outcome,
+        crate::refresh::Outcome::Invalid
+    );
+    assert_eq!(
+        crate::status::inspect(&context, crate::status::Request { files: vec![path.clone()] }, Some(&server.reader()))
+            .await
+            .unwrap()
+            .items[0]
+            .outcome,
+        "invalid"
+    );
+    assert_eq!(
+        crate::tidy::run(
+            &context,
+            crate::tidy::Request {
+                files: vec![path.clone()],
+                ..Default::default()
+            }
+        )
+        .unwrap()
+        .failed,
+        1
+    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+}

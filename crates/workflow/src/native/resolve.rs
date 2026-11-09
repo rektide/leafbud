@@ -152,6 +152,15 @@ impl RemoteReader {
                 report.outcome = "no-attempt";
                 return Ok(());
             }
+            RecoveryOutcome::MintUncertain => {
+                report.message = Some("mint response/locator is uncertain; retain this attempt. An explicitly selected existing locator can use select_mint_locator; never guess by title/recency or mint again".into());
+                return Ok(());
+            }
+            RecoveryOutcome::SourceChanged => {
+                report.outcome = "source-changed";
+                report.message = Some("source intent or selected operands changed; evidence preserved. Reinspect the current source/attempt before any new action; no old intent was declared successful".into());
+                return Ok(());
+            }
             RecoveryOutcome::DesiredVerified | RecoveryOutcome::PreparedNotSent | RecoveryOutcome::PendingMaterialization => {
                 report.outcome = "would-settle-prior";
                 if options.yes {

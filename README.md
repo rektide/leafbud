@@ -9,7 +9,7 @@ updated:
   by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e3d6d728effe6RFnyZcrUtifT9"
-    title: "Retained native-default no-op correction and explicit terminal recovery/replanning with bounded old-attempt provenance, current-witness conflicts and recovery/follower verification"
+    title: "Retained native-default no-op correction, explicit terminal recovery/replanning, 300-test gate and create-free deployed standalone accept-current/status/pull/no-op proof"
   - resource: /design/terminal-recovery0.gpt61s.md
     title: "Version-0.17 terminal recovery API, atomic state policy, no-op correction and acceptance evidence"
   - resource: "opencode://ses_e3d96851dffeS2cPD2vPHjGklF"
@@ -162,7 +162,10 @@ No release, email, automatic cleanup or background auto-push is performed.
 Both first-mint contexts pass complete CLI/HTTP fixtures. Actual deployed
 **human-selected existing P1** passed CLI baseline → combined revision → read-back
 → unchanged pull/repeat. This made zero draft-creation calls; original lost-mint
-attribution is still unestablished, and the old standalone partial is untouched.
+attribution is still unestablished. The old standalone terminal partial subsequently
+passed deliberate accept-current, clean status, unchanged pull and empty-effect
+repeat under the recovery API, preserving its old provenance rather than claiming
+original success. P1 was untouched by that recovery proof.
 Implementation/evidence: [complete keyed save receipt](design/keyed-save0.gpt61s.md).
 
 ## Explicit save recovery
@@ -249,8 +252,9 @@ is a separate import fallback.
 
 The authorized deployed check verified **one new standalone draft**, controlled
 text/metadata writes, writer acknowledgments and explicit known-fact read-back.
-It remains resolved-partial under its original dispatched intent; the new default
-policy was not applied retroactively. The publication mint's original locator was
+It was resolved-partial under its original dispatched intent; the new default
+policy was not applied retroactively. The later [explicit recovery proof](design/terminal-recovery0.gpt61s.md#actual-existing-standalone-proof) accepted current state as a new decision.
+The publication mint's original locator was
 lost in Flight decoding. The operator subsequently selected **P1 as the existing
 recovery target**, not as a proven original result. Create-free recovery verified
 its seed/rights/context, recorded defaults, and acknowledged/observed controlled

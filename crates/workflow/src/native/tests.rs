@@ -187,6 +187,12 @@ async fn lost_mint_response_and_token_then_failed_verification_never_remint() {
                 reader.recover_native(&context, &path, Selection::default(), true).await.unwrap().outcome,
                 write::RecoveryOutcome::MintUncertain
             );
+            let public = reader
+                .recover_editor(&context, &path, Selection::default(), RecoverOptions::default())
+                .await
+                .unwrap();
+            assert_eq!(public.outcome, "pending");
+            assert!(public.message.unwrap().contains("select_mint_locator"));
         } else {
             assert!(matches!(result.outcome, BindingOutcome::LocatedUnverified));
             assert!(matches!(
@@ -329,7 +335,10 @@ async fn prepared_unsent_recovery_clears_only_attempt_and_keeps_reserved_writer_
             created_entities: vec![],
         },
     });
-    std::fs::write(&path, leafbud_mdx::patch_tracking(&source, &doc.state).unwrap()).unwrap();
+    let changed_source = leafbud_mdx::patch_tracking(&source, &doc.state)
+        .unwrap()
+        .replace("Wanted title", "Changed while definitely unsent");
+    std::fs::write(&path, changed_source).unwrap();
     let result = reader.recover_native(&context, &path, Selection::default(), true).await.unwrap();
     assert_eq!(result.outcome, write::RecoveryOutcome::PreparedNotSent);
     assert!(result.settled);
