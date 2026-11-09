@@ -69,9 +69,7 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
         .document
         .pages
         .iter()
-        .flat_map(|page| {
-            std::iter::once(page.key.clone()).chain(page.blocks.iter().map(|block| block.key.clone()))
-        })
+        .flat_map(|page| std::iter::once(page.key.clone()).chain(page.blocks.iter().map(|block| block.key.clone())))
         .filter(|key| Some(key.as_str()) != provisional_main.as_deref() && !unkeyed_contains(&unkeyed, &parsed, key))
         .collect();
     claimed.extend(parsed.document.state.nodes.keys().cloned());

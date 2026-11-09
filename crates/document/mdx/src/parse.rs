@@ -93,7 +93,11 @@ impl Reader {
     fn provisional_page(&mut self) -> String {
         let mut n = 1;
         loop {
-            let key = if n == 1 { PROVISIONAL_MAIN_PAGE.to_owned() } else { format!("{PROVISIONAL_MAIN_PAGE}-{n}") };
+            let key = if n == 1 {
+                PROVISIONAL_MAIN_PAGE.to_owned()
+            } else {
+                format!("{PROVISIONAL_MAIN_PAGE}-{n}")
+            };
             if !self.keys.contains(&key) && !self.reserved.contains(&key) {
                 self.keys.insert(key.clone());
                 return key;
@@ -112,10 +116,7 @@ impl Reader {
             }
             return match kind {
                 MDX_ATTR_LITERAL_PROP => Some(self.arena.get_str(value).to_owned()),
-                MDX_ATTR_EXPRESSION_PROP => serde_json::from_str::<Value>(self.arena.get_str(value))
-                    .ok()?
-                    .as_str()
-                    .map(str::to_owned),
+                MDX_ATTR_EXPRESSION_PROP => serde_json::from_str::<Value>(self.arena.get_str(value)).ok()?.as_str().map(str::to_owned),
                 _ => None,
             };
         }
@@ -566,11 +567,7 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
         })
         .collect();
     let keyed = order.iter().map(|&index| reader.keyed[index]).collect();
-    Ok(Parsed {
-        document,
-        spans,
-        keyed,
-    })
+    Ok(Parsed { document, spans, keyed })
 }
 
 /// One explicit named page definition.
@@ -668,7 +665,11 @@ mod tests {
             .iter()
             .flat_map(|page| page.blocks.iter().map(|block| block.key.as_str()))
             .collect();
-        assert_eq!(flattened, ["b-a", "b-auto-2", "b-about", "b-auto-1"], "main blocks first; provisional numbering follows the source walk");
+        assert_eq!(
+            flattened,
+            ["b-a", "b-auto-2", "b-about", "b-auto-1"],
+            "main blocks first; provisional numbering follows the source walk"
+        );
         assert_eq!(parsed.keyed, [true, false, true, false]);
         // Each span must address its own block's source text.
         for (text, index) in [("main A", 0usize), ("main B", 1), ("about body", 2), ("about new", 3)] {
@@ -686,9 +687,7 @@ mod tests {
         let base = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\"}";
         // A later explicit key is reserved before provisional allocation, so
         // an earlier unkeyed block does not false-collide with it.
-        let source = format!(
-            "---\nformat: leafbud-mdx/2\ntitle: T\n{base}\n---\n\nnew first\n\n<Key id=\"b-auto-1\" />\nkept\n"
-        );
+        let source = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{base}\n---\n\nnew first\n\n<Key id=\"b-auto-1\" />\nkept\n");
         let parsed = parse_with_spans(&source).unwrap();
         assert_eq!(parsed.document.pages[0].blocks[0].key, "b-auto-2", "the supplied later spelling is skipped");
         assert_eq!(parsed.document.pages[0].blocks[1].key, "b-auto-1");
@@ -699,7 +698,11 @@ mod tests {
         let parsed = parse_with_spans(&source).unwrap();
         assert_eq!(parsed.document.pages[0].blocks[0].key, "b-auto-2");
         let value = parsed.document.editor_value();
-        assert_eq!(value["main"]["blocks"][0]["association"], json!({"kind": "new", "key": "b-auto-2"}), "no hidden association adopted");
+        assert_eq!(
+            value["main"]["blocks"][0]["association"],
+            json!({"kind": "new", "key": "b-auto-2"}),
+            "no hidden association adopted"
+        );
         assert_eq!(value["retired"][0]["entity"], "e-gone", "the row stays retired");
     }
 
@@ -708,9 +711,7 @@ mod tests {
         let base = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}";
         // A named page owning the p-auto spelling forces the provisional
         // main-page key to skip it.
-        let source = format!(
-            "---\nformat: leafbud-mdx/2\ntitle: T\n{base}\n---\n\nhello\n\n<Page name=\"p-auto\" kind=\"linear\">\n\nabout\n\n</Page>\n"
-        );
+        let source = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{base}\n---\n\nhello\n\n<Page name=\"p-auto\" kind=\"linear\">\n\nabout\n\n</Page>\n");
         let parsed = parse_with_spans(&source).unwrap();
         assert_eq!(parsed.document.pages[0].key, "p-auto-2");
         assert_eq!(parsed.document.pages[1].key, "p-auto");

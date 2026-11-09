@@ -1087,12 +1087,17 @@ fn preparation_and_tidy_address_blocks_through_interleaved_definitions() {
     let prepared = apply_key_preparation(&source, &plan).unwrap();
     let parsed = parse_with_spans(&prepared).unwrap();
     assert_eq!(parsed.document.pages[0].blocks[1].key, "b-1", "main B keeps document-order assignment");
-    assert_eq!(parsed.document.pages[1].blocks[0].key, "b-2", "the definition block is not confused with main B");
+    assert_eq!(
+        parsed.document.pages[1].blocks[0].key, "b-2",
+        "the definition block is not confused with main B"
+    );
     assert!(prepared.contains("<Key id=\"b-1\" />\nmain B"));
     assert!(prepared.contains("<Key id=\"b-2\" />\nabout new"));
     // Markdown tidy spans must follow the same correspondence: normalize a
     // wrapped literal block in the definition and one after it in main.
-    let wrapped = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-a\" />\nmain A\n\n<Page name=\"p-about\" kind=\"linear\">\n\n<Key id=\"b-wrap\" />\n<Paragraph>\n<Run text={{\"about wrapped\"}} marks={{[]}} />\n</Paragraph>\n\n</Page>\n\n<Key id=\"b-main-wrap\" />\n<Paragraph>\n<Run text={{\"main wrapped\"}} marks={{[]}} />\n</Paragraph>\n");
+    let wrapped = format!(
+        "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-a\" />\nmain A\n\n<Page name=\"p-about\" kind=\"linear\">\n\n<Key id=\"b-wrap\" />\n<Paragraph>\n<Run text={{\"about wrapped\"}} marks={{[]}} />\n</Paragraph>\n\n</Page>\n\n<Key id=\"b-main-wrap\" />\n<Paragraph>\n<Run text={{\"main wrapped\"}} marks={{[]}} />\n</Paragraph>\n"
+    );
     let plan = plan_markdown_tidy(&wrapped).unwrap();
     let tidied = apply_markdown_tidy(&wrapped, &plan).unwrap();
     assert!(tidied.contains("about wrapped") && !tidied.contains("<Paragraph>\n<Run text={{\"about wrapped\"}}"));
@@ -1108,7 +1113,9 @@ fn preparation_proposals_check_page_names_and_table_rows() {
     let bound = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}";
     let unprepared = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}";
     let shape = |state: &str| {
-        format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-keep\" />\nkept\n\nadded\n\n<Page name=\"p-taken\" kind=\"linear\">\n\nabout\n\n</Page>\n")
+        format!(
+            "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\n<Key id=\"b-keep\" />\nkept\n\nadded\n\n<Page name=\"p-taken\" kind=\"linear\">\n\nabout\n\n</Page>\n"
+        )
     };
     let (bound, unprepared) = (shape(bound), shape(unprepared));
     let plan = |source: &str, block: &str, page: &str| {
@@ -1123,14 +1130,7 @@ fn preparation_proposals_check_page_names_and_table_rows() {
     };
     let (mut b, mut p) = (counter("b"), counter("p"));
     assert!(
-        prepare_keys(
-            &bound,
-            KeySource {
-                block: &mut b,
-                page: &mut p,
-            },
-        )
-        .is_ok(),
+        prepare_keys(&bound, KeySource { block: &mut b, page: &mut p },).is_ok(),
         "fresh spellings prepare"
     );
     for colliding in ["p-taken", "b-gone", "b-keep", "p-main"] {
@@ -1145,16 +1145,10 @@ fn preparation_proposals_check_page_names_and_table_rows() {
     // The main-page proposal spelling is validated too.
     let (mut b, mut p) = (counter("b"), || "1bad".to_owned());
     assert!(
-        prepare_keys(
-            &unprepared,
-            KeySource {
-                block: &mut b,
-                page: &mut p,
-            },
-        )
-        .unwrap_err()
-        .to_string()
-        .contains("spelling")
+        prepare_keys(&unprepared, KeySource { block: &mut b, page: &mut p },)
+            .unwrap_err()
+            .to_string()
+            .contains("spelling")
     );
 }
 
@@ -1191,7 +1185,12 @@ fn apply_key_preparation_rejects_stale_and_invalid_input() {
     )
     .unwrap();
     assert!(noop.is_noop());
-    assert!(apply_key_preparation(&source, &noop).unwrap_err().to_string().contains("changed since planning"));
+    assert!(
+        apply_key_preparation(&source, &noop)
+            .unwrap_err()
+            .to_string()
+            .contains("changed since planning")
+    );
     // Invalid caller-built edits fail before any splicing: out of bounds,
     // inside a multibyte character, and overlapping replacements.
     let unicode = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nhéllo\n");
@@ -1244,14 +1243,9 @@ fn apply_key_preparation_rejects_stale_and_invalid_input() {
 #[test]
 fn preparation_retargets_links_to_the_provisional_main_page() {
     let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}";
-    let literal = format!(
-        "---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nprose mentioning p-auto spelling\n\n<PageLink page=\"p-auto\" />\n"
-    );
+    let literal = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nprose mentioning p-auto spelling\n\n<PageLink page=\"p-auto\" />\n");
     let expression = literal.replace("page=\"p-auto\"", "page={\"p-auto\"}");
-    for (source, expect_link) in [
-        (literal, "<PageLink page=\"p-1\" />"),
-        (expression, "<PageLink page={\"p-1\"} />"),
-    ] {
+    for (source, expect_link) in [(literal, "<PageLink page=\"p-1\" />"), (expression, "<PageLink page={\"p-1\"} />")] {
         let (mut block, mut page) = (counter("b"), counter("p"));
         let plan = prepare_keys(
             &source,
@@ -1282,10 +1276,7 @@ fn preparation_handles_flow_blank_line_and_four_space_block_envelopes() {
     let id = "\"id\": \"00000000-0000-0000-0000-000000000000\"";
     let flow_blank = format!("---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {{{id}, \"state\": \"draft\"}}\n\n---\n\nfirst\n");
     let wide_block = format!("---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\":\n    {id}\n    \"state\": \"draft\"\n---\n\nfirst\n");
-    for (source, expect) in [
-        (flow_blank, "\"mainPage\": \"p-1\""),
-        (wide_block, "    \"mainPage\": \"p-1\"\n"),
-    ] {
+    for (source, expect) in [(flow_blank, "\"mainPage\": \"p-1\""), (wide_block, "    \"mainPage\": \"p-1\"\n")] {
         let (mut block, mut page) = (counter("b"), counter("p"));
         let plan = prepare_keys(
             &source,
@@ -1337,9 +1328,7 @@ fn preparation_keeps_retired_rows_and_existing_keys() {
 fn patch_tracking_settles_node_promotion_and_receipt_advances() {
     // An authored, fully prepared unbound draft: explicit keys, no rows yet.
     let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\"}";
-    let original = format!(
-        "---\nformat: leafbud-mdx/2\ntitle: T # author's choice\n{state}\n---\n\n<Key id=\"b-1\" />\nfirst\n\n<Key id=\"b-2\" />\nsecond\n"
-    );
+    let original = format!("---\nformat: leafbud-mdx/2\ntitle: T # author's choice\n{state}\n---\n\n<Key id=\"b-1\" />\nfirst\n\n<Key id=\"b-2\" />\nsecond\n");
     let before = parse(&original).unwrap();
     // First binding WITH node promotion: every current key gains its
     // confirmed occurrence, receipts appear.
@@ -1424,7 +1413,10 @@ fn patch_tracking_refuses_main_page_and_identity_changes() {
     assert!(patch_tracking(&original, &rekeyed).is_err());
     let mut cleared = before.state.clone();
     cleared.main_page = None;
-    assert!(patch_tracking(&original, &cleared).is_err(), "clearing main-page identity would rekey the authored body");
+    assert!(
+        patch_tracking(&original, &cleared).is_err(),
+        "clearing main-page identity would rekey the authored body"
+    );
     // Foreign identity is refused.
     let mut foreign = before.state.clone();
     foreign.id = Uuid::new_v4();
@@ -1517,22 +1509,25 @@ fn new_objects_have_explicit_source_identity() {
             key: "p-left".into(),
             blocks: vec![Block {
                 key: "b-left".into(),
-                kind: BlockKind::Paragraph { content: vec![run("left", &[])] },
+                kind: BlockKind::Paragraph {
+                    content: vec![run("left", &[])],
+                },
             }],
         },
         Page {
             key: "p-right".into(),
             blocks: vec![Block {
                 key: "b-right".into(),
-                kind: BlockKind::Paragraph { content: vec![run("right", &[])] },
+                kind: BlockKind::Paragraph {
+                    content: vec![run("right", &[])],
+                },
             }],
         },
     ];
     let base = document.editor_value();
     assert_eq!(base["main"]["blocks"][0]["content"]["page"], json!({"kind": "new", "key": "p-left"}));
     assert_ne!(
-        base["definitions"][0]["association"],
-        base["definitions"][1]["association"],
+        base["definitions"][0]["association"], base["definitions"][1]["association"],
         "two new pages have distinct identities"
     );
     // Retargeting the link to the other new page changes editor meaning.

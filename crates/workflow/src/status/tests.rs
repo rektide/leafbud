@@ -33,10 +33,7 @@ async fn bound_without_receipts_is_reachable_and_never_claimed_clean() {
     let end = source[hash_at..].find('\n').expect("line end") + hash_at + 1;
     let variants = [
         ("absent", format!("{}{}", &source[..start], &source[end..])),
-        (
-            "explicit-null",
-            format!("{}  \"sync\": null\n{}", &source[..start], &source[end..]),
-        ),
+        ("explicit-null", format!("{}  \"sync\": null\n{}", &source[..start], &source[end..])),
     ];
     for (name, source) in variants {
         assert!(leafbud_mdx::parse(&source).is_ok(), "{name}: the state is valid source");

@@ -159,8 +159,7 @@ pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
             let line = lines[envelope].clone();
             let segment = &line[start..end];
             let raw = segment.trim();
-            let mut flow: Value =
-                serde_json::from_str(raw).with_context(|| "reserved envelope is flow-style but its value is not literal JSON")?;
+            let mut flow: Value = serde_json::from_str(raw).with_context(|| "reserved envelope is flow-style but its value is not literal JSON")?;
             let Some(map) = flow.as_object_mut() else {
                 bail!("reserved envelope is flow-style but its value is not a mapping");
             };
@@ -170,10 +169,7 @@ pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
             ensure!(raw.ends_with('}'), "the flow envelope mapping does not end on its own line");
             let (separator, colon) = if segment.contains("\": ") { (", ", ": ") } else { (",", ":") };
             let inner = &raw[..raw.len() - 1];
-            let member = format!(
-                "{}{key}{colon}{member_value}",
-                if inner.trim_end().ends_with('{') { "" } else { separator },
-            );
+            let member = format!("{}{key}{colon}{member_value}", if inner.trim_end().ends_with('{') { "" } else { separator },);
             let brace_at = start + segment.trim_end().len() - 1;
             let mut updated = line[..brace_at].to_owned();
             updated.push_str(&member);
@@ -187,9 +183,7 @@ pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
         None => {
             let extent = value_extent(&lines, envelope);
             let child = lines[envelope + 1..extent].iter().find(|l| !l.trim().is_empty());
-            let indent = child
-                .map(|l| l.len() - l.trim_start().len())
-                .unwrap_or(2);
+            let indent = child.map(|l| l.len() - l.trim_start().len()).unwrap_or(2);
             if child.is_some_and(|l| l.trim_start().starts_with('\t')) {
                 bail!("envelope children use tab indentation; refusing to mix indentation");
             }
@@ -250,10 +244,7 @@ pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
     ensure!(next.state == "draft", "unsupported lifecycle");
     match (&existing.state.binding, &next.binding) {
-        (Some(before), Some(after)) => ensure!(
-            before == after,
-            "tracking settlement cannot rebind or alter an established binding"
-        ),
+        (Some(before), Some(after)) => ensure!(before == after, "tracking settlement cannot rebind or alter an established binding"),
         (Some(_), None) => bail!("tracking settlement cannot drop an established binding"),
         (None, Some(_)) | (None, None) => {}
     }
