@@ -56,16 +56,16 @@ fn attribute(text: &str) -> Result<String, String> {
 }
 
 fn directive_candidate(text: &str) -> bool {
-    text.starts_with("{/* leafspring:")
+    text.starts_with("{/* leafbud:")
 }
 
 fn directive(text: &str) -> Result<String, String> {
     let key = text
-        .strip_prefix("{/* leafspring:key ")
+        .strip_prefix("{/* leafbud:key ")
         .and_then(|s| s.strip_suffix(" */}"))
         .filter(|s| valid_key(s));
     key.map(str::to_owned)
-        .ok_or_else(|| "expected exact standalone {/* leafspring:key NAME */}, NAME matching [A-Za-z][A-Za-z0-9_.-]*".into())
+        .ok_or_else(|| "expected exact standalone {/* leafbud:key NAME */}, NAME matching [A-Za-z][A-Za-z0-9_.-]*".into())
 }
 
 #[derive(Debug)]
@@ -328,7 +328,7 @@ impl AstTransformer for BindKeys {
                 // Internal author metadata, deliberately NOT the HTML `id` attribute.
                 arena[assignment.target]
                     .attributes_mut()
-                    .insert("leafspring-key", assignment.key.clone().into());
+                    .insert("leafbud-key", assignment.key.clone().into());
                 state.assignments.push(assignment.clone());
             }
         }

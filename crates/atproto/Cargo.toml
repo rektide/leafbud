@@ -1,6 +1,6 @@
 [package]
-name = "leafspring-atproto"
-description = "Generic ATProto client surface for leafspring (XRPC, sessions, records, blobs)"
+name = "leafbud-atproto"
+description = "Generic ATProto client surface for leafbud (XRPC, sessions, records, blobs)"
 version.workspace = true
 edition.workspace = true
 

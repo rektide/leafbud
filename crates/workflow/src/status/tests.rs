@@ -1,7 +1,7 @@
 use super::*;
 use crate::import::tests::testserver;
 use crate::{import, pull::tests::*};
-use leafspring_web::parse_pull;
+use leafbud_web::parse_pull;
 use serde_json::json;
 use std::{
     collections::BTreeMap,
@@ -69,10 +69,9 @@ async fn isolated_remote_body_mark_and_move_changes_and_local_only_intent_have_c
     let (server, current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
-    let source =
-        std::fs::read_to_string(&path)
-            .unwrap()
-            .replacen("\n\"@leafspring\":", "\ncustom: {keep: true}\npublishedAt: '2030-01-01'\n\"@leafspring\":", 1);
+    let source = std::fs::read_to_string(&path)
+        .unwrap()
+        .replacen("\n\"@leafbud\":", "\ncustom: {keep: true}\npublishedAt: '2030-01-01'\n\"@leafbud\":", 1);
     std::fs::write(&path, &source).unwrap();
     let baseline = snapshot(&path);
     let reader = reader(&server);
@@ -104,11 +103,11 @@ async fn legacy_current_correspondence_and_unknown_profiles_are_not_silently_acc
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let source = std::fs::read_to_string(&path).unwrap();
-    let mut legacy = leafspring_mdx::parse(&source).unwrap();
+    let mut legacy = leafbud_mdx::parse(&source).unwrap();
     legacy.state.sync.profile = PROFILE.into();
     legacy.state.sync.local_hash = import::hash(&legacy.semantic_value());
     legacy.state.sync.remote_hash = import::remote_hash(&data(&fixture()), &parse_pull(fixture()["response"].clone()).unwrap(), PROFILE);
-    let source = leafspring_mdx::update(&source, &legacy).unwrap();
+    let source = leafbud_mdx::update(&source, &legacy).unwrap();
     std::fs::write(&path, &source).unwrap();
     let baseline = snapshot(&path);
     let reader = reader(&server);
@@ -121,7 +120,7 @@ async fn legacy_current_correspondence_and_unknown_profiles_are_not_silently_acc
     set_paragraph_text(current.write().unwrap().get_mut(TOKEN).unwrap(), &yrs_payload("Remote changed", None));
     assert_eq!(one(temp.path(), &path, Some(&reader)).await.outcome, "unverified");
     assert_eq!(snapshot(&path), baseline);
-    let source = source.replacen("\n\"@leafspring\":", "\ncustom: true\n\"@leafspring\":", 1);
+    let source = source.replacen("\n\"@leafbud\":", "\ncustom: true\n\"@leafbud\":", 1);
     std::fs::write(&path, &source).unwrap();
     assert_eq!(one(temp.path(), &path, None).await.local, Change::Unknown);
     std::fs::write(&path, source.replace(PROFILE, "future/99")).unwrap();
@@ -137,13 +136,13 @@ async fn workspace_selection_keeps_malformed_unbound_and_duplicate_identities_ac
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let duplicate = temp.path().join("duplicate.mdx");
     std::fs::copy(&path, &duplicate).unwrap();
-    std::fs::write(temp.path().join("broken.mdx"), "---\n\"@leafspring\": [unclosed\n---\nprivate prose\n").unwrap();
+    std::fs::write(temp.path().join("broken.mdx"), "---\n\"@leafbud\": [unclosed\n---\nprivate prose\n").unwrap();
     std::fs::write(
         temp.path().join("bad-token.mdx"),
-        "---\n\"@leafspring\": {binding: {baseUrl: 'https://leaflet.pub', token: invalid}, sync: {profile: leaflet-editor/2}, state: draft}\n---\n",
+        "---\n\"@leafbud\": {binding: {baseUrl: 'https://leaflet.pub', token: invalid}, sync: {profile: leaflet-editor/2}, state: draft}\n---\n",
     )
     .unwrap();
-    std::fs::write(temp.path().join("unbound.mdx"), "---\n\"@leafspring\": {id: local}\n---\n").unwrap();
+    std::fs::write(temp.path().join("unbound.mdx"), "---\n\"@leafbud\": {id: local}\n---\n").unwrap();
     std::fs::write(temp.path().join("ignored.mdx"), "just prose").unwrap();
     let report = inspect(&context(temp.path()), Request::default(), Some(&reader(&server))).await.unwrap();
     assert_eq!((report.selected, report.failed, report.ignored_unmanaged), (5, 4, 1));
@@ -171,8 +170,8 @@ async fn duplicate_document_id_is_ambiguous_even_when_native_bindings_differ() {
     let a = seed(&server, temp.path(), TOKEN, "a.mdx").await;
     let b = seed(&server, temp.path(), TOKEN2, "b.mdx").await;
     let source = std::fs::read_to_string(&b).unwrap();
-    let a_id = leafspring_mdx::parse(&std::fs::read_to_string(&a).unwrap()).unwrap().state.id;
-    let b_id = leafspring_mdx::parse(&source).unwrap().state.id;
+    let a_id = leafbud_mdx::parse(&std::fs::read_to_string(&a).unwrap()).unwrap().state.id;
+    let b_id = leafbud_mdx::parse(&source).unwrap().state.id;
     std::fs::write(&b, source.replace(&b_id.to_string(), &a_id.to_string())).unwrap();
     let report = inspect(&context(temp.path()), Request::default(), None).await.unwrap();
     assert_eq!(report.items.iter().filter(|i| i.outcome == "ambiguous").count(), 2);
@@ -248,7 +247,7 @@ async fn foreign_origins_and_unknown_owned_state_do_not_fetch_or_retarget() {
     let (other, _) = server_current().await;
     assert_eq!(one(temp.path(), &path, Some(&reader(&other))).await.outcome, "unsupported");
     assert_eq!(other.request_count("/api/rpc/get_leaflet_data"), 0);
-    let source = source.replace("\"@leafspring\":\n", "\"@leafspring\":\n  futurePolicy: {secret: 'never print'}\n");
+    let source = source.replace("\"@leafbud\":\n", "\"@leafbud\":\n  futurePolicy: {secret: 'never print'}\n");
     std::fs::write(&path, &source).unwrap();
     let calls = server.request_count("/api/rpc/get_leaflet_data");
     let report = inspect(&context(temp.path()), Request::default(), Some(&reader(&server))).await.unwrap();
@@ -257,13 +256,13 @@ async fn foreign_origins_and_unknown_owned_state_do_not_fetch_or_retarget() {
     assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), calls);
     assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
     let original = snapshot(&path);
-    let mut header = leafspring_mdx::header(&source).unwrap();
-    header["@leafspring"].as_object_mut().unwrap().remove("futurePolicy");
-    header["@leafspring"]["binding"].as_object_mut().unwrap().remove("publication");
+    let mut header = leafbud_mdx::header(&source).unwrap();
+    header["@leafbud"].as_object_mut().unwrap().remove("futurePolicy");
+    header["@leafbud"]["binding"].as_object_mut().unwrap().remove("publication");
     let body = source.split_once("---\n\n").unwrap().1;
     let missing_association = format!("---\n{}\n---\n\n{body}", serde_json::to_string(&header).unwrap());
     assert!(
-        leafspring_mdx::parse(&missing_association)
+        leafbud_mdx::parse(&missing_association)
             .unwrap_err()
             .to_string()
             .contains("association is unknown")
@@ -278,8 +277,8 @@ async fn legacy_project_namespace_is_reported_not_ignored_migrated_or_duplicated
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let source = std::fs::read_to_string(&path)
         .unwrap()
-        .replace("@leafspring", "@springleaf")
-        .replace("leafspring-mdx/1", "springleaf-mdx/1");
+        .replace("@leafbud", "@springleaf")
+        .replace("leafbud-mdx/1", "springleaf-mdx/1");
     std::fs::write(&path, &source).unwrap();
     let before = snapshot(&path);
     let calls = server.request_count("/api/rpc/get_leaflet_data");

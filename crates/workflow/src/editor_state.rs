@@ -2,8 +2,8 @@
 //! No change tree, historical base, mutation plan or automatic receipt writes.
 use crate::{RemoteReader, import};
 use anyhow::{Result, ensure};
-use leafspring_document::{Block, BlockKind, Document, EDITOR_OWNED_EXTRA, EDITOR_PROFILE, Node, Page, State, Sync};
-use leafspring_web::{LeafletData, LeafletState};
+use leafbud_document::{Block, BlockKind, Document, EDITOR_OWNED_EXTRA, EDITOR_PROFILE, Node, Page, State, Sync};
+use leafbud_web::{LeafletData, LeafletState};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -134,8 +134,8 @@ impl RemoteReader {
         let token = existing.state.binding.token;
         let data = self.client.get(token).await.map_err(|e| {
             error(
-                if matches!(e, leafspring_web::Error::NotFound) { "missing" } else { "failed" },
-                if matches!(e, leafspring_web::Error::NotFound) {
+                if matches!(e, leafbud_web::Error::NotFound) { "missing" } else { "failed" },
+                if matches!(e, leafbud_web::Error::NotFound) {
                     "remote object missing or inaccessible (token not found); local file preserved".into()
                 } else {
                     format!("fetching remote metadata: {e}")

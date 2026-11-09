@@ -15,7 +15,7 @@ sources:
     title: "Independent stage-one design and probes, followed by authorized review of g's committed initial draft, wire/replay probe and separately committed revised stance; original argument preserved"
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "User authority via parent commission: low-volume product, bounded complexity, independent Astra/g drafts then cross-review; separate external human diff; subsequent Leafbud rename steering"
-  - resource: https://github.com/rektide/leafspring/blob/ff2f4a7b858e99625d3496e55aa97f32559bde0c/design/native-edit0.glm53m.md
+  - resource: https://github.com/rektide/leafbud/blob/ff2f4a7b858e99625d3496e55aa97f32559bde0c/design/native-edit0.glm53m.md
     title: "Stage-two review target: g's initial independent draft, read through git show at this exact commit, not its concurrent cross-review addendum"
   - resource: /AGENTS.md
     title: "Current product-fit and collaboration instructions read before inquiry"
@@ -34,7 +34,7 @@ sources:
   - resource: /experiments/14-satteri-authoring-attributes/REPORT.md
     title: "Key/compiler equivalence and source adapter boundaries, not an editing engine"
   - resource: /Cargo.toml
-    title: "Inspected production 0.8.0 dependencies at Leafspring revision 39814abe57645e88583e2ca1c7f5ba16ee46b4d3"
+    title: "Inspected production 0.8.0 dependencies at Leafbud revision 39814abe57645e88583e2ca1c7f5ba16ee46b4d3"
   - resource: /crates/document/model/src/lib.rs
     title: "Existing current Document, associations, scoped editor value and receipt types"
   - resource: /crates/document/mdx/src/lib.rs
@@ -82,7 +82,7 @@ unchanged blocks exactly. Add straightforward native fact operations afterward;
 whole-body staging/switch is a genuine alternative, but not the smallest next
 step from today's imported, bound documents.
 
-The incoming product name is **Leafbud**. Inspection began in Leafspring 0.8.0
+The incoming product name is **Leafbud**. Inspection began in Leafbud 0.8.0
 at `39814abe57645e88583e2ca1c7f5ba16ee46b4d3`; historical package/profile spellings
 below identify that inspected revision. Another session owns renaming and data
 conversion. This proposal neither performs those changes nor infers their
@@ -90,7 +90,7 @@ completion. It owns only this document and isolated synthetic scratch.
 
 This is **stage one**, independently written without the same-wave peer draft.
 The parent must join the two committed drafts before commissioning cross-review.
-Ticket: `leafspring-editor-plan-design`; this proposal does not select an
+Ticket: `leafbud-editor-plan-design`; this proposal does not select an
 architecture on the user's behalf.
 
 ## 1. What controls a save
@@ -439,8 +439,8 @@ property-level source mapping and formatter improvements are not prerequisites.
 
 ## 8. Acceptance fixtures and next coherent slices
 
-**First batch: `leafspring-editor-text` with the necessary part of
-`leafspring-editor-conflicts`.** Recommend Sol high for this first write boundary:
+**First batch: `leafbud-editor-text` with the necessary part of
+`leafbud-editor-conflicts`.** Recommend Sol high for this first write boundary:
 the new judgment is native execution/uncertainty, not parser work. Deliver only
 existing bound draft text; the current production workflow explicitly refuses
 published editors. Add native writer transport, small pending marker, scoped
@@ -464,8 +464,8 @@ Required fixtures, using synthetic data and the independent Yjs consumer:
    write, lost response and restart-pending state. No automatic destructive replan;
    never mark failure/partial as synchronized. No release or unrelated file writes.
 
-**Next: `leafspring-editor-recovery`, then the bounded part of
-`leafspring-editor-structure`.** Recommend Sol high for completing observation-
+**Next: `leafbud-editor-recovery`, then the bounded part of
+`leafbud-editor-structure`.** Recommend Sol high for completing observation-
 based recovery; g is suitable for the subsequently specified native move/simple
 fact slice. Exercise move-all-in-order, detach-only deletion, staging a new block,
 explicit target reads, shared-page references and repeat/no duplicate behavior.
@@ -511,7 +511,7 @@ text-edit helper and supported block mappings, not a new general planning system
 ## 10. Cross-review and revised stance — after the independent join
 
 **Review target:** g's initial draft at
-[`ff2f4a7b858e99625d3496e55aa97f32559bde0c`](https://github.com/rektide/leafspring/blob/ff2f4a7b858e99625d3496e55aa97f32559bde0c/design/native-edit0.glm53m.md),
+[`ff2f4a7b858e99625d3496e55aa97f32559bde0c`](https://github.com/rektide/leafbud/blob/ff2f4a7b858e99625d3496e55aa97f32559bde0c/design/native-edit0.glm53m.md),
 read with `git show`, compared with my initial `4ab29da3`. This addendum preserves
 sections 1–9 as independent evidence. I have not read g's stage-two addendum.
 The stance below controls my recommendation where it narrows the original.
@@ -699,7 +699,7 @@ need explicit handling regardless of which order algorithm wins.
 
 ### E. Concrete revised first slice and flat explanation
 
-Join `leafspring-editor-text` with its essential conflict/read-back protections
+Join `leafbud-editor-text` with its essential conflict/read-back protections
 in one coherent end-to-end delivery, rather than first building a general planner
 for create/delete/move/type-change. Preconditions:
 

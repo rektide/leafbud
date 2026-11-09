@@ -32,9 +32,9 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                         continue;
                     }
                 };
-                let header = match leafspring_mdx::header(&source) {
-                    Ok(header) if header.get("@leafspring").is_some() || header.get("@springleaf").is_some() => header,
-                    _ if !source.contains("@leafspring") && !source.contains("@springleaf") => {
+                let header = match leafbud_mdx::header(&source) {
+                    Ok(header) if header.get("@leafbud").is_some() || header.get("@springleaf").is_some() => header,
+                    _ if !source.contains("@leafbud") && !source.contains("@springleaf") => {
                         inventory.unmanaged += 1;
                         continue;
                     }
@@ -43,7 +43,7 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                         continue;
                     }
                 };
-                let state = &header["@leafspring"];
+                let state = &header["@leafbud"];
                 let origin = state["binding"]["baseUrl"].as_str();
                 if let Some(id) = state["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
                     inventory.ids.entry(id).or_default().push(path.clone());
@@ -75,10 +75,10 @@ impl Inventory {
     /// new directory tree or inventing a managed-file lifecycle.
     pub fn include_operands(&mut self, paths: &[PathBuf]) {
         for path in paths.iter().filter(|p| !self.paths.contains(p)) {
-            let Some(header) = std::fs::read_to_string(path).ok().and_then(|s| leafspring_mdx::header(&s).ok()) else {
+            let Some(header) = std::fs::read_to_string(path).ok().and_then(|s| leafbud_mdx::header(&s).ok()) else {
                 continue;
             };
-            let state = &header["@leafspring"];
+            let state = &header["@leafbud"];
             if let (Some(base), Some(token)) = (
                 state["binding"]["baseUrl"].as_str(),
                 state["binding"]["token"].as_str().and_then(|s| Uuid::parse_str(s).ok()),

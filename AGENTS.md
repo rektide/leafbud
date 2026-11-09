@@ -1,6 +1,6 @@
 ---
 type: Context
-title: Leafspring work-session cadence
+title: Leafbud work-session cadence
 description: Project-local agent selection, session sizing and rolling ticket previews requested by the operator.
 resource: /AGENTS.md
 status: active
@@ -12,11 +12,11 @@ sources:
     title: "Operator set narrative batch previews, agent/session cadence and low-volume product fit: bounded conceptual complexity, existing tools, modest structural ambition"
 ---
 
-# Leafspring work-session cadence
+# Leafbud work-session cadence
 
 ## Product fit and complexity
 
-- Leafspring is a low-volume tool with few expected users. Prioritize bounded
+- Leafbud is a low-volume tool with few expected users. Prioritize bounded
   conceptual complexity, correctness and useful authoring over minimizing every
   structural edit or remote operation. Prefer existing tools and verified Yrs
   capabilities to a parallel bespoke comparison/planning model.
@@ -71,4 +71,4 @@ sources:
 
 Current capabilities and documentation map: [README](README.md).
 Accepted product contract: [authoring interface](design/authoring-interface0.gpt6a.md).
-Beads (`leafspring-*`) owns the roadmap, priorities and dependencies.
+Beads (`leafbud-*`) owns the roadmap, priorities and dependencies.

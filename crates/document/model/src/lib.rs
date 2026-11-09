@@ -101,7 +101,7 @@ pub struct Document {
     pub theme: Option<Theme>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
-    #[serde(rename = "@leafspring")]
+    #[serde(rename = "@leafbud")]
     pub state: State,
     #[serde(skip)]
     pub pages: Vec<Page>,

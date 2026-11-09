@@ -1,6 +1,6 @@
 [package]
-name = "leafspring-records"
-description = "Generated pinned Leaflet lexicon record types, validation, and wire-shape helpers for leafspring"
+name = "leafbud-records"
+description = "Generated pinned Leaflet lexicon record types, validation, and wire-shape helpers for leafbud"
 version.workspace = true
 edition.workspace = true
 
@@ -18,5 +18,5 @@ jacquard-derive.workspace = true
 jacquard-lexicon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-leafspring-atproto.workspace = true
+leafbud-atproto.workspace = true
 thiserror.workspace = true

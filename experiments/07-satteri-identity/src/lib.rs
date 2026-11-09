@@ -201,22 +201,22 @@ fn lower_keys(arena: &mut Arena<Mdast>, diagnostics: &mut Vec<Diagnostic>) {
         } else {
             let id = ids[0];
             let mut metadata = data(arena, id);
-            metadata["leafspringKey"] = key.into();
+            metadata["leafbudKey"] = key.into();
             arena.set_node_data(id, serde_json::to_vec(&metadata).unwrap());
         }
     }
 }
 
 fn reserved_directive(value: &str) -> Option<Result<&str, &'static str>> {
-    if !value.trim_start().starts_with("/* leafspring:") {
+    if !value.trim_start().starts_with("/* leafbud:") {
         return None;
     }
     Some(
         value
-            .strip_prefix("/* leafspring:key ")
+            .strip_prefix("/* leafbud:key ")
             .and_then(|v| v.strip_suffix(" */"))
             .filter(|key| valid_key(key))
-            .ok_or("expected one comment: {/* leafspring:key NAME */}; NAME matches [A-Za-z][A-Za-z0-9_.-]*"),
+            .ok_or("expected one comment: {/* leafbud:key NAME */}; NAME matches [A-Za-z][A-Za-z0-9_.-]*"),
     )
 }
 
@@ -279,8 +279,8 @@ fn bind_comments(arena: &mut Arena<Mdast>, parent: u32, diagnostics: &mut Vec<Di
             continue;
         }
         let mut metadata = data(arena, target);
-        metadata["leafspringKey"] = key.into();
-        metadata["leafspringKeySpan"] = serde_json::to_value(span(arena, id)).unwrap();
+        metadata["leafbudKey"] = key.into();
+        metadata["leafbudKeySpan"] = serde_json::to_value(span(arena, id)).unwrap();
         arena.set_node_data(target, serde_json::to_vec(&metadata).unwrap());
     }
     arena.set_children(parent, &keep);
@@ -366,8 +366,8 @@ fn project(arena: &Arena<Mdast>, id: u32) -> Node {
         id,
         kind,
         span: span(arena, id),
-        key: metadata.get("leafspringKey").and_then(Value::as_str).map(str::to_owned),
-        key_span: metadata.get("leafspringKeySpan").map(|value| serde_json::from_value(value.clone()).unwrap()),
+        key: metadata.get("leafbudKey").and_then(Value::as_str).map(str::to_owned),
+        key_span: metadata.get("leafbudKeySpan").map(|value| serde_json::from_value(value.clone()).unwrap()),
         value,
         details,
         data: metadata,
@@ -427,11 +427,11 @@ fn literal_gate(node: &mut Node, diagnostics: &mut Vec<Diagnostic>) {
                     fail("key-collision", "component has both comment annotation and key property".into());
                     node.key = None;
                     node.key_span = None;
-                    node.data.as_object_mut().unwrap().remove("leafspringKey");
-                    node.data.as_object_mut().unwrap().remove("leafspringKeySpan");
+                    node.data.as_object_mut().unwrap().remove("leafbudKey");
+                    node.data.as_object_mut().unwrap().remove("leafbudKeySpan");
                 } else {
                     node.key = Some(key.into());
-                    node.data["leafspringKey"] = key.into();
+                    node.data["leafbudKey"] = key.into();
                 }
             } else {
                 fail("invalid-key", "component key must be an author-key string".into());
@@ -462,8 +462,8 @@ fn reject_duplicates(node: &mut Node, duplicates: &HashMap<String, Vec<Span>>, d
         });
         node.key = None;
         node.key_span = None;
-        node.data.as_object_mut().unwrap().remove("leafspringKey");
-        node.data.as_object_mut().unwrap().remove("leafspringKeySpan");
+        node.data.as_object_mut().unwrap().remove("leafbudKey");
+        node.data.as_object_mut().unwrap().remove("leafbudKeySpan");
     }
     for child in &mut node.children {
         reject_duplicates(child, duplicates, diagnostics);

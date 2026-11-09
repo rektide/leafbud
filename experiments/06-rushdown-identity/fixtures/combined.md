@@ -3,7 +3,7 @@
 Ordinary **paragraph**.
 {#central-argument}
 
-{/* leafspring:key whole-list */}
+{/* leafbud:key whole-list */}
 - First item.
   {#first-item-prose}
 - Second item.

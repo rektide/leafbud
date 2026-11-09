@@ -28,7 +28,7 @@ sources:
 
 ## Outcome and checkpoints
 
-`leafspring diff FILE [--edge editor]` now invokes a trusted user-selected
+`leafbud diff FILE [--edge editor]` now invokes a trusted user-selected
 foreground diff/viewer with two transient normalized Markdown views. It reads
 the current authored source and current **bound native editor**, not public output,
 an ancestor or saved body. Different content is a successfully displayed comparison,
@@ -77,7 +77,7 @@ for the delivered capability. Receiving seams:
   `config set diff-args` uses JSON-array input; it does not parse shell syntax.
 - [CLI](../crates/cli/src/diff.rs): foreground adapter, help/example and a short
   stderr execution summary. No `--json`: arbitrary inherited tool output cannot
-  truthfully be a structured Leafspring diff report.
+  truthfully be a structured Leafbud diff report.
 
 The entire tool envelope, source labels and local-only dates/delivery/naming/custom
 fields are absent from **both** views. They survive unchanged in the source.
@@ -105,9 +105,9 @@ Exit modes are deliberately explicit:
 
 - `success` (default): tool exit 0 accepted; useful for interactive viewers.
 - `diff`: POSIX diff convention 0/1 accepted, meaning equal/different in that tool.
-- Other tool codes, signal, spawn/wait or cleanup errors: Leafspring exit 1.
-- Either accepted tool code yields Leafspring exit 0; CLI usage errors give 2.
-  Leafspring's own equality summary is based on rendered strings, not tool exits.
+- Other tool codes, signal, spawn/wait or cleanup errors: Leafbud exit 1.
+- Either accepted tool code yields Leafbud exit 0; CLI usage errors give 2.
+  Leafbud's own equality summary is based on rendered strings, not tool exits.
 
 There is no default executable. Configure one or supply `--tool`; help demonstrates
 `diff -u`. `--tool-arg` replaces saved args when present; changing only `--tool`
@@ -159,13 +159,13 @@ runtime configuration.
 ## Parent review and road ahead
 
 First review the small human view/tool contract independently from edit architecture.
-For **`leafspring-editor-plan-design`**, join the commissioned Astra-high/g independent
+For **`leafbud-editor-plan-design`**, join the commissioned Astra-high/g independent
 drafts and cross-reviews before selecting or commissioning native-write work; no
 recommendation here presumes their result. After that choice,
-**`leafspring-editor-text`** is the first small existing-block write seam, proposed
+**`leafbud-editor-text`** is the first small existing-block write seam, proposed
 Sol high if identity/Yrs policy remains unresolved, otherwise g for a concrete
-approved slice. Pairing it later with **`leafspring-editor-conflicts`** would equip
+approved slice. Pairing it later with **`leafbud-editor-conflicts`** would equip
 guarded preview/read-back rather than silently broadening this comparison API.
-Separately, **`leafspring-inspect-list`** is a bounded g task reusing local inventory,
+Separately, **`leafbud-inspect-list`** is a bounded g task reusing local inventory,
 useful without any native-write decision. These are recommendations, not new
 implementation commissions; live rename integration remains owned elsewhere.

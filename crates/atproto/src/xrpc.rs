@@ -1,6 +1,6 @@
 //! XRPC over reqwest: a stateless client bound to one PDS endpoint.
 //!
-//! Methods cover leafspring's read surface plus the app-password session
+//! Methods cover leafbud's read surface plus the app-password session
 //! lifecycle. Writes (`putRecord`, `uploadBlob`) are stage 4 — see the
 //! crate docs. The client holds no secrets; authenticated calls take the
 //! [`Session`] explicitly, and neither the session JWTs nor any password
@@ -82,7 +82,7 @@ pub struct PutRecordOutput {
 
 /// XRPC client bound to one PDS base URL.
 ///
-/// `Debug` prints only the base URL (mirrors leafspring-drafts' client).
+/// `Debug` prints only the base URL (mirrors leafbud-drafts' client).
 #[derive(Clone)]
 pub struct XrpcClient {
     http: reqwest::Client,
@@ -106,9 +106,7 @@ impl XrpcClient {
         {
             return Err(Error::BadInput(format!("PDS url must be https (got {base:?})")));
         }
-        let http = reqwest::Client::builder()
-            .user_agent(concat!("leafspring/", env!("CARGO_PKG_VERSION")))
-            .build()?;
+        let http = reqwest::Client::builder().user_agent(concat!("leafbud/", env!("CARGO_PKG_VERSION"))).build()?;
         Ok(Self {
             http,
             base_url: base.to_string(),
@@ -222,7 +220,7 @@ impl XrpcClient {
 
     /// `com.atproto.identity.resolveHandle` against this endpoint (usually
     /// an appview or a bsky.social host). Cross-check helper — the identity
-    /// chain in [`crate::identity`] is authoritative for leafspring.
+    /// chain in [`crate::identity`] is authoritative for leafbud.
     pub async fn resolve_handle(&self, handle: &str) -> Result<String, Error> {
         let value = self.query("com.atproto.identity.resolveHandle", &[("handle", handle.to_string())]).await?;
         value.get("did").and_then(Value::as_str).map(str::to_string).ok_or_else(|| Error::Identity {
@@ -363,7 +361,7 @@ mod tests {
 
     #[test]
     fn rkey_acceptance() {
-        for ok in ["leafspring-protocol-probe", "3molsbwkh522o", "a.b_c~d:e-f", "x"] {
+        for ok in ["leafbud-protocol-probe", "3molsbwkh522o", "a.b_c~d:e-f", "x"] {
             crate::validate_rkey(ok).unwrap_or_else(|e| panic!("{ok}: {e}"));
         }
         for bad in ["", "has space", "a/b", "a/b/c", "üñî"] {

@@ -177,7 +177,7 @@ The Satteri pulldown fixture is:
 
 ````text
 Code `first
-{/* leafspring:key literal */}
+{/* leafbud:key literal */}
 last`.
 ````
 
@@ -228,10 +228,10 @@ container adjacency and code-shaped component keys belong in the next small corp
 Recommended selected-block syntax:
 
 ```mdx
-{/* leafspring:key introduction */}
+{/* leafbud:key introduction */}
 ## Introduction
 
-{/* leafspring:key central-argument */}
+{/* leafbud:key central-argument */}
 Ordinary **formatted** prose.
 
 <Poll key="topic" options={["Gardens", "Maps"]} />

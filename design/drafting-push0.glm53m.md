@@ -57,13 +57,13 @@ sources:
     title: "Read in the 1.1 correction: GET /new is a plain force-dynamic GET route calling createNewLeaflet with redirectUser: true"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/actions/createNewLeaflet.ts"
     title: "Read in the 1.1 correction: createLeaflet seed shape, auth_token homepage-link CTE that inserts nothing when the cookie is invalid, and the 307 Location carrying the fresh permission token id"
-  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs
+  - resource: https://github.com/rektide/leafbud/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs
     title: "Pre-reset mint client read in the 1.1 correction: GET /new with redirects disabled, liberal 3xx/Location harvest, auth-before-mint gating, offline loopback tests; live probe remained open"
   - resource: /design/draft-extraction.glm53m.md
     title: "Prior new-draft gap analysis: option (d) GET /new harvest verified in source; pre-reset client shipped it; live mint probe never executed"
   - resource: /design/frontmatter0.gpt61s.md
     title: "Accepted envelope shape checked in the 1.1 correction: flat author fields, state plus optional binding group; tagged binding.kind was the rejected alternative my first sketch wrongly copied"
-  - resource: https://github.com/rektide/leafspring/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md
+  - resource: https://github.com/rektide/leafbud/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md
     title: "Stage-2 review target: peer Astra initial corrected draft, read via git show at this exact commit before any peer addendum"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/actions/createPublicationDraft.ts"
     title: "Read in stage 2: owner/confirmed-contributor check, text-seeded mint, leaflets_in_publications insert with doc null, contributor default, plain return"
@@ -97,10 +97,10 @@ the default path; `--recreate-body` remains an explicitly separate future
 escape.
 
 This is stage one, written without reading the same-wave peer draft. Ticket:
-`leafspring-editor-plan-design` (parent owns coordination). Revision
+`leafbud-editor-plan-design` (parent owns coordination). Revision
 bindings: inspected working copy at parent checkpoint `9a3a0dbb`
 (`qqumsozq`, "Commission fresh whole-document drafting and push designs");
-crate/CLI names below are that revision's `leafspring-*` spellings. The
+crate/CLI names below are that revision's `leafbud-*` spellings. The
 incoming **Leafbud** rename/config/data conversion is owned by a separate
 session; nothing here performs or assumes it. This document owns only
 itself.
@@ -152,7 +152,7 @@ Read directly this session, not assumed from prior waves:
   updates on new entities, duplicate-payload idempotency, and the two
   concurrency hazards (child removal can hide concurrent inserts; two
   independently compiled stale-base edits merge into duplicated text).
-- **No write transport exists.** `leafspring-web` has reads only.
+- **No write transport exists.** `leafbud-web` has reads only.
 
 New this session, from the archived Leaflet checkout (`600c7b5f`):
 
@@ -189,7 +189,7 @@ source keys are minted once as `b-<uuidv4>` (human names still available via
 ### Story 1 — start on disk
 
 ```sh
-leafspring create drafts/garden.mdx --title "Garden notes"
+leafbud create drafts/garden.mdx --title "Garden notes"
 ```
 
 writes an unbound file — no binding, nodes, or sync rows; `publication:
@@ -198,11 +198,11 @@ association intent):
 
 ```mdx
 ---
-format: leafspring-mdx/1
+format: leafbud-mdx/1
 title: Garden notes
 publication: null
 
-"@leafspring":
+"@leafbud":
   id: 9af05c1e-…
   state: draft
 ---
@@ -232,12 +232,12 @@ hand-obtained native IDs is a required part of this milestone, not an
 enhancement.** The ordinary command is:
 
 ```sh
-leafspring push drafts/garden.mdx --yes
+leafbud push drafts/garden.mdx --yes
 ```
 
 Creation route: the **`GET /new` harvest**, verified in upstream source and
 previously implemented with offline loopback tests in the pre-reset client
-([create.rs at `80436b61`](https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs),
+([create.rs at `80436b61`](https://github.com/rektide/leafbud/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs),
 per the [new-draft gap analysis](draft-extraction.glm53m.md#the-new-draft-gap)
 option (d)):
 
@@ -584,13 +584,13 @@ through batch 3**; batch 4 hardens story 6. Each batch = one agent session
 (160–350k), committed code + fixtures + ticket notes; internal checkpoints
 are never presented as the product.
 
-- **Batch 1 — source authoring foundation** (`leafspring-author-create`,
-  `leafspring-author-keys`; agent g): `create`, unbound envelope, authoring
+- **Batch 1 — source authoring foundation** (`leafbud-author-create`,
+  `leafbud-author-keys`; agent g): `create`, unbound envelope, authoring
   parse profile, key mint/insert, pending-node model, profile refusals.
   All offline; fixtures: create/parse/assign/re-parse identity, unkeyed
   docs, split/join parse shapes, list refusal, implicit-page round-trip.
-- **Batch 2 — write transport + first generation** (`leafspring-editor-bind`
-  + creation half of `leafspring-editor-structure`; Sol high recommended —
+- **Batch 2 — write transport + first generation** (`leafbud-editor-bind`
+  + creation half of `leafbud-editor-structure`; Sol high recommended —
   first native write boundary, identity/protocol judgment): web push
   transport + loopback tests; mint transport ported from the pre-reset
   client with auth-before-mint; fresh-text encoder promotion; fact builder
@@ -599,14 +599,14 @@ are never presented as the product.
   resolution rules). **Gated live probe #1** on an operator-authorized
   throwaway run completes it: browser-free `push --yes` from an unbound
   local file through mint, generation and verified read-back.
-- **Batch 3 — revision engine** (`leafspring-editor-text` + remainder of
-  `leafspring-editor-structure` + essential `leafspring-editor-conflicts`;
+- **Batch 3 — revision engine** (`leafbud-editor-text` + remainder of
+  `leafbud-editor-structure` + essential `leafbud-editor-conflicts`;
   g or Sol high): `edit_text` splice path with degradation seam, per-block
   compare + op builder, ordering pass, type/scalar/reference ops, conflict
   gate + `--take local`, atomic scope refusal, full verification.
   **Gated live probe #2**: second push exercising insert-before-first,
   split, join, delete, reorder, pull agreement, repeat no-op.
-- **Batch 4 — uncertainty hardening** (`leafspring-editor-recovery` +
+- **Batch 4 — uncertainty hardening** (`leafbud-editor-recovery` +
   remainder of conflicts; g): pending marker lifecycle, exact-bytes retry,
   resolution-from-observation repair, acknowledgment reads, failure
   fixtures (lost response, restart-pending, stale preflight, local race,

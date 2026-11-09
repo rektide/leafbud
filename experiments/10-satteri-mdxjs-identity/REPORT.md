@@ -164,7 +164,7 @@ the smaller strict-JSON document property policy.
    in JSX-retaining mode. Initial tests wrongly expected preservation and failed;
    corrected controls retain this discovery. Our binder removes those nodes before
    conversion. Stock compilation is not identity extraction.
-4. Prose `leafspringKey` metadata **does not survive** tested heading conversion
+4. Prose `leafbudKey` metadata **does not survive** tested heading conversion
    to HAST, while JSX node metadata does. Generated JavaScript is not a transport
    for internal prose identity. Do not key via HTML `id` just to recover it.
 5. Stock compilation accepts and emits an unresolved import, `danger()` and spread
@@ -181,10 +181,10 @@ the smaller strict-JSON document property policy.
 The optional syntax selected is the user's permitted comment alternative:
 
 ```mdx
-{/* leafspring:key introduction */}
+{/* leafbud:key introduction */}
 ## Introduction
 
-{/* leafspring:key central-argument */}
+{/* leafbud:key central-argument */}
 An ordinary paragraph with **formatting**.
 ```
 

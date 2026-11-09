@@ -19,10 +19,10 @@ fn punctuation_still_depends_on_javascript_grammar() {
 
 #[test]
 fn comments_are_positioned_native_flow_expressions() {
-    let tree = stock("{/* leafspring:key intro */}\n## Heading\n").unwrap();
+    let tree = stock("{/* leafbud:key intro */}\n## Heading\n").unwrap();
     let children = tree.children().unwrap();
     let Node::MdxFlowExpression(comment) = &children[0] else { panic!("{tree:?}") };
-    assert_eq!(comment.value, "/* leafspring:key intro */");
+    assert_eq!(comment.value, "/* leafbud:key intro */");
     assert_eq!(comment.position.as_ref().unwrap().start.offset, 0);
     assert!(matches!(children[1], Node::Heading(_)));
 }
@@ -50,7 +50,7 @@ fn negative_observation_flow_comment_still_breaks_multiline_inline_code() {
 
 #[test]
 fn quoted_flow_interruption_is_not_fixed_either() {
-    let tree = stock("> Code `first\n> {/* leafspring:key accidental */}\n> last`.\n").unwrap();
+    let tree = stock("> Code `first\n> {/* leafbud:key accidental */}\n> last`.\n").unwrap();
     let quoted = tree.children().unwrap()[0].children().unwrap();
     assert_eq!(quoted.len(), 3);
     assert!(matches!(quoted[1], Node::MdxFlowExpression(_)));
@@ -58,7 +58,7 @@ fn quoted_flow_interruption_is_not_fixed_either() {
 
 #[test]
 fn negative_observation_indentation_does_not_protect_code() {
-    let tree = stock("    {/* leafspring:key accidental */}\n\nAfter.\n").unwrap();
+    let tree = stock("    {/* leafbud:key accidental */}\n\nAfter.\n").unwrap();
     assert!(matches!(tree.children().unwrap()[0], Node::MdxFlowExpression(_)));
     let tree = stock("    <Poll key=\"accidental\" />\n").unwrap();
     assert!(matches!(tree.children().unwrap()[0], Node::MdxJsxFlowElement(_)));

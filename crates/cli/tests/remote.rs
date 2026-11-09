@@ -12,7 +12,7 @@ const DRAFT: &str = include_str!("../../../experiments/02-draft-internals/fixtur
 const ID: &str = "01999000-0000-7aaa-8000-000000000001";
 
 fn cli(base: &str) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_leafspring"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_leafbud"));
     command
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env_remove("LEAFLET_BASE_URL")
@@ -111,7 +111,7 @@ async fn flag_env_and_xdg_credentials_have_proven_precedence() {
         );
     }
     // URL fallback really works when the flag is absent; no user env is used.
-    let output = Command::new(env!("CARGO_BIN_EXE_leafspring"))
+    let output = Command::new(env!("CARGO_BIN_EXE_leafbud"))
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env("LEAFLET_BASE_URL", &server.base_url)
         .env("XDG_CONFIG_HOME", file_dir)
@@ -180,19 +180,19 @@ async fn uncommissioned_commands_remain_unimplemented_and_usage_is_two() {
 async fn restored_config_cli_preserves_settings_and_routes_workspace() {
     let temp = tempfile::tempdir().unwrap();
     let xdg = temp.path().join("config");
-    let global = xdg.join("leafspring/leafspring.toml");
+    let global = xdg.join("leafbud/leafbud.toml");
     std::fs::create_dir_all(global.parent().unwrap()).unwrap();
     let ws = temp.path().join("workspace");
     std::fs::create_dir(&ws).unwrap();
     std::fs::write(&global, "# retained\npublication = 'global-pub'\nunknown-secret = 'synthetic-do-not-show'\n").unwrap();
     let command = || {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_leafspring"));
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_leafbud"));
         cmd.env("XDG_CONFIG_HOME", &xdg).env_remove("LEAFLET_AUTH_TOKEN");
         cmd
     };
     let output = command().args(["config", "set", "workspace", ws.to_str().unwrap()]).output().await.unwrap();
     assert!(output.status.success());
-    std::fs::write(ws.join("leafspring.toml"), "publication = 'workspace-pub' # publication\n").unwrap();
+    std::fs::write(ws.join("leafbud.toml"), "publication = 'workspace-pub' # publication\n").unwrap();
     let output = command().args(["config", "show", "--json"]).output().await.unwrap();
     assert!(output.status.success());
     let shown: Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -214,6 +214,6 @@ async fn restored_config_cli_preserves_settings_and_routes_workspace() {
         .await
         .unwrap();
     assert!(output.status.success());
-    assert!(std::fs::read_to_string(ws.join("leafspring.toml")).unwrap().contains("# publication"));
+    assert!(std::fs::read_to_string(ws.join("leafbud.toml")).unwrap().contains("# publication"));
     assert!(std::fs::read_to_string(global).unwrap().contains("publication = 'global-pub'"));
 }

@@ -75,16 +75,13 @@ impl RemoteReader {
             std::fs::canonicalize(if file.is_absolute() { file.to_path_buf() } else { root.join(file) }).context("diff operand not found or inaccessible")?;
         let original = std::fs::read(&path).context("reading diff operand")?;
         let source = std::str::from_utf8(&original).context("diff operand is not UTF-8")?;
-        let header = leafspring_mdx::header(source).map_err(|_| anyhow::anyhow!("invalid local frontmatter; use check to diagnose"))?;
+        let header = leafbud_mdx::header(source).map_err(|_| anyhow::anyhow!("invalid local frontmatter; use check to diagnose"))?;
         ensure!(
             header.get("@springleaf").is_none(),
             "legacy springleaf namespace requires deliberate conversion; diff never migrates files"
         );
-        ensure!(
-            header.get("@leafspring").is_some(),
-            "not a managed document; import establishes a native binding"
-        );
-        let existing = leafspring_mdx::parse(source)
+        ensure!(header.get("@leafbud").is_some(), "not a managed document; import establishes a native binding");
+        let existing = leafbud_mdx::parse(source)
             .map_err(|_| anyhow::anyhow!("invalid or unsupported local format/content/binding/lifecycle; use check; no partial comparison produced"))?;
         let mut inventory = inventory::scan(&root, None)?;
         inventory.include_operands(std::slice::from_ref(&path));
@@ -114,15 +111,15 @@ impl RemoteReader {
             std::fs::read(&path).ok().as_deref() == Some(original.as_slice()),
             "local file changed during observation; rerun diff; nothing was written"
         );
-        let local = leafspring_mdx::render_comparison(&existing).context("rendering local comparison view")?;
-        let editor = leafspring_mdx::render_comparison(&observed.merged).context("rendering editor comparison view")?;
+        let local = leafbud_mdx::render_comparison(&existing).context("rendering local comparison view")?;
+        let editor = leafbud_mdx::render_comparison(&observed.merged).context("rendering editor comparison view")?;
         Ok((local, editor))
     }
 }
 
 async fn run_tool(root: &Path, tool: &Tool, local: &str, editor: &str) -> Result<Report> {
     let dir = tempfile::Builder::new()
-        .prefix("leafspring-diff-")
+        .prefix("leafbud-diff-")
         .tempdir()
         .context("creating private comparison directory")?;
     let directory = std::fs::canonicalize(dir.path()).context("resolving private comparison directory")?;

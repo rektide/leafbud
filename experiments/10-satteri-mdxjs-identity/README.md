@@ -43,7 +43,7 @@ cargo run --locked --offline -- check fixtures/multiline-code.mdx # exit 2, guar
 cargo run --locked --offline -- stock fixtures/attributes.mdx # exit 2, native grammar conflict
 ```
 
-Optional identities use preceding `{/* leafspring:key NAME */}` or component
+Optional identities use preceding `{/* leafbud:key NAME */}` or component
 `key="NAME"`, in one document-wide namespace. Binding is immediate-next-sibling,
 container-local. A blank line is required **before** a marker after an earlier
 sibling; blank lines after it are allowed. Duplicate/malformed/unbound keys diagnose.

@@ -6,7 +6,7 @@ use crate::{
     inventory,
 };
 use anyhow::{Context, Result};
-use leafspring_document::{EDITOR_PROFILE, PROFILE};
+use leafbud_document::{EDITOR_PROFILE, PROFILE};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -127,9 +127,9 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         item.detail = "local source is not UTF-8";
         return item;
     };
-    let header = match leafspring_mdx::header(source) {
+    let header = match leafbud_mdx::header(source) {
         Ok(header) => header,
-        Err(_) if !source.contains("@leafspring") && !source.contains("@springleaf") => {
+        Err(_) if !source.contains("@leafbud") && !source.contains("@springleaf") => {
             item.outcome = "untracked";
             item.detail = "not a managed document; import establishes a native binding";
             return item;
@@ -146,7 +146,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
             "legacy springleaf format/namespace; explicit namespace conversion required before interpreting editor evidence; status never migrates files";
         return item;
     }
-    let Some(state) = header.get("@leafspring") else {
+    let Some(state) = header.get("@leafbud") else {
         item.outcome = "untracked";
         item.detail = "not a managed document; import establishes a native binding";
         return item;
@@ -162,7 +162,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         item.detail = "unsupported receipt profile or lifecycle; no historical editor agreement inferred";
         return item;
     }
-    let existing = match leafspring_mdx::parse(source) {
+    let existing = match leafbud_mdx::parse(source) {
         Ok(existing) => existing,
         Err(_) => {
             item.outcome = "invalid";

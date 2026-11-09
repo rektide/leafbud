@@ -1,6 +1,6 @@
 ---
 type: Index
-title: Leafspring experiments
+title: Leafbud experiments
 description: "Reading map for protocol evidence, parser alternatives, and the source-authoritative Satteri/Leaflet compiler experiments."
 resource: /experiments/README.md
 status: maintained
@@ -28,7 +28,7 @@ sources:
     title: "Optional brace-key syntax composed with the same compiler"
 ---
 
-# Leafspring experiments
+# Leafbud experiments
 
 Tracked, reproducible evidence for protocol and architecture decisions. Reports
 state what ran, which source/dependency revisions were used, what failed, and
@@ -110,7 +110,7 @@ Follow each experiment's own README or report for dependency setup and exact
 pins. Later Rust experiments are isolated workspaces; root `cargo test` does
 not run them. Dependency downloads are setup traffic; their ordinary tests are
 offline after setup. The independent JS consumer is a test oracle, not a proposed
-JavaScript runtime dependency for leafspring.
+JavaScript runtime dependency for leafbud.
 
 From the repository root, a useful first run is:
 

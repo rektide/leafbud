@@ -15,7 +15,7 @@ sources:
   - resource: /design/yrs-conversion0.gpt6a.md
     title: "Earlier identity-preserving conversion proposal; substantial machinery is unnecessary for this new direction"
   - resource: /design/document-sync1.gpt61s.md
-    title: "Prior lifecycle/native publication research and existing leafspring-mdx work reference"
+    title: "Prior lifecycle/native publication research and existing leafbud-mdx work reference"
   - resource: /design/document-sync1.gpt6a.md
     title: "Prior native identity, slug and compact-metadata findings"
   - resource: "https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/mutations.ts"
@@ -55,7 +55,7 @@ This proposal responds to the user's new objective: “author locally on a compu
 and make it so.” **Source-authoritative replacement of web edits is the proposed
 policy, not an already accepted revocation of earlier drift-aware proposals.**
 Use explicit replacement commands so that policy is visible without a recurring
-conflict-resolution workflow. Existing work reference: **`leafspring-mdx`**.
+conflict-resolution workflow. Existing work reference: **`leafbud-mdx`**.
 
 ## 1. One authoritative source
 
@@ -68,7 +68,7 @@ Minimal new file, `essay.mdx`:
 
 ````mdx
 ---
-format: leafspring-mdx/1
+format: leafbud-mdx/1
 title: A small essay
 description: An example authored locally
 tags: [notes]
@@ -127,7 +127,7 @@ HTML/code text, inline mentions/footnotes and theme slots can be represented
 without executing a program. Inline names/references are resolved within each
 build; flattened publication facets are generated output, not the stored model.
 
-Use frontmatter as authoring data plus a CLI-owned `@leafspring` section. After
+Use frontmatter as authoring data plus a CLI-owned `@leafbud` section. After
 binding, the latter contains only:
 
 ```text
@@ -154,10 +154,10 @@ not turn it into a second draft. Filenames/directories are convenient placement.
 Proposed surface, not existing implemented commands:
 
 ```sh
-leafspring create essay.mdx --title "A small essay"  # local file only
-leafspring check essay.mdx                         # compile/validate; no writes
-leafspring save essay.mdx --replace                # create once, then replace body
-leafspring publish essay.mdx --replace             # ensure body, then publish/update
+leafbud create essay.mdx --title "A small essay"  # local file only
+leafbud check essay.mdx                         # compile/validate; no writes
+leafbud save essay.mdx --replace                # create once, then replace body
+leafbud publish essay.mdx --replace             # ensure body, then publish/update
 ```
 
 `publish --replace` includes save when needed; the normal short path is therefore
@@ -409,4 +409,4 @@ useful for complete block/inline mappings, but its fine-grained reconciliation
 is optional future work for a different product goal. The two round-one designs
 ([Sol](document-sync1.gpt61s.md), [Astra](document-sync1.gpt6a.md)) preserve native
 lifecycle research; this recommendation selects a simpler proposed save/release
-flow for the new local-authoring objective. It belongs with `leafspring-mdx`.
+flow for the new local-authoring objective. It belongs with `leafbud-mdx`.

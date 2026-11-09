@@ -1,4 +1,4 @@
-//! leafspring — thin parsing/rendering for native reads/imports, bounded
+//! leafbud — thin parsing/rendering for native reads/imports, bounded
 //! offline check, and layered configuration.
 //!
 //! The command tree below mirrors the **accepted** authoring interface
@@ -22,7 +22,7 @@
 //!
 //! Other commands report `not implemented` on stderr and exit `1`.
 //! Business policy lives in
-//! `leafspring-workflow`; this binary stays a thin Clap/rendering layer.
+//! `leafbud-workflow`; this binary stays a thin Clap/rendering layer.
 //! The pre-reset stage-5 client (auth status, drafts list/export/author,
 //! publish build/run, sync, config) is recoverable at revision
 //! `80436b61`.
@@ -31,7 +31,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use leafspring_workflow::{LeafletState, RemoteOptions};
+use leafbud_workflow::{LeafletState, RemoteOptions};
 
 mod config;
 mod diff;
@@ -43,7 +43,7 @@ mod tidy;
 
 #[derive(Parser)]
 #[command(
-    name = "leafspring",
+    name = "leafbud",
     version,
     about = "Local-first MDX authoring for leaflet.pub (native reads, draft import, status, guarded pull, check and config)"
 )]
@@ -62,7 +62,7 @@ struct Cli {
     /// Leaflet origin (LEAFLET_BASE_URL; default https://leaflet.pub)
     #[arg(long, global = true, value_name = "URL")]
     base_url: Option<String>,
-    /// auth_token cookie value (LEAFLET_AUTH_TOKEN; else XDG leafspring/auth-token).
+    /// auth_token cookie value (LEAFLET_AUTH_TOKEN; else XDG leafbud/auth-token).
     /// Prefer env/file to avoid shell history/process-list exposure.
     #[arg(long, global = true, value_name = "TOKEN")]
     token: Option<String>,
@@ -144,7 +144,7 @@ enum Command {
     },
     /// Compare readable current local/editor Markdown through a foreground tool
     #[command(
-        after_help = "Example: leafspring diff essay.mdx --tool diff --tool-arg=-u --tool-exit diff\nOr configure: leafspring config set diff-program diff\n              leafspring config set diff-args '[\"-u\"]'\n              leafspring config set diff-exit diff\nTool receives ARG... LOCAL.md EDITOR.md; no shell. GUI tools must wait until closed.\nStdio/TTY is inherited; --json is intentionally unsupported. names/release are not implemented."
+        after_help = "Example: leafbud diff essay.mdx --tool diff --tool-arg=-u --tool-exit diff\nOr configure: leafbud config set diff-program diff\n              leafbud config set diff-args '[\"-u\"]'\n              leafbud config set diff-exit diff\nTool receives ARG... LOCAL.md EDITOR.md; no shell. GUI tools must wait until closed.\nStdio/TTY is inherited; --json is intentionally unsupported. names/release are not implemented."
     )]
     Diff {
         file: PathBuf,
@@ -158,7 +158,7 @@ enum Command {
         tool_arg: Vec<String>,
         /// success: only exit 0; diff: 0 equal/1 different are successful reports
         #[arg(long, value_name = "success|diff")]
-        tool_exit: Option<leafspring_workflow::diff::ExitMode>,
+        tool_exit: Option<leafbud_workflow::diff::ExitMode>,
     },
     /// Plan/execute identity-preserving editor updates and first binding
     /// (save; publish releases)
@@ -363,7 +363,7 @@ enum ConfigCommand {
     },
     /// Write one key to the layered config
     Set {
-        key: leafspring_workflow::config::Key,
+        key: leafbud_workflow::config::Key,
         value: String,
         #[arg(long)]
         workspace_file: bool,
@@ -377,7 +377,7 @@ async fn main() -> ExitCode {
         base_url: cli.base_url,
         token: cli.token,
     };
-    let mut flags = leafspring_workflow::config::Config {
+    let mut flags = leafbud_workflow::config::Config {
         handle: cli.handle,
         pds: cli.pds,
         publication: cli.publication,
@@ -392,7 +392,7 @@ async fn main() -> ExitCode {
     } = &cli.command
     {
         if *edge != Edge::Editor {
-            eprintln!("leafspring: diff --edge names/release is not implemented; only current local/editor content is compared");
+            eprintln!("leafbud: diff --edge names/release is not implemented; only current local/editor content is compared");
             return ExitCode::FAILURE;
         }
         flags.diff_program = tool.clone();
@@ -401,7 +401,7 @@ async fn main() -> ExitCode {
         return match diff::run(options, cli.root.as_deref(), &flags, file).await {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
-                eprintln!("leafspring: {error}");
+                eprintln!("leafbud: {error}");
                 ExitCode::FAILURE
             }
         };
@@ -411,7 +411,7 @@ async fn main() -> ExitCode {
             options,
             cli.root.as_deref(),
             &flags,
-            leafspring_workflow::status::Request { files: files.clone() },
+            leafbud_workflow::status::Request { files: files.clone() },
             *offline,
             *json,
         )
@@ -419,7 +419,7 @@ async fn main() -> ExitCode {
         {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("leafspring: {error}");
+                eprintln!("leafbud: {error}");
                 ExitCode::FAILURE
             }
         };
@@ -429,7 +429,7 @@ async fn main() -> ExitCode {
             options,
             cli.root.as_deref(),
             &flags,
-            leafspring_workflow::import::Request {
+            leafbud_workflow::import::Request {
                 locator: locator.clone(),
                 to: to.clone(),
                 all: *all,
@@ -444,7 +444,7 @@ async fn main() -> ExitCode {
         {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("leafspring: {error}");
+                eprintln!("leafbud: {error}");
                 ExitCode::FAILURE
             }
         };
@@ -462,7 +462,7 @@ async fn main() -> ExitCode {
             options,
             cli.root.as_deref(),
             &flags,
-            leafspring_workflow::pull::Request {
+            leafbud_workflow::pull::Request {
                 all: *all,
                 files: files.clone(),
                 state: state.map(|s| match s {
@@ -478,7 +478,7 @@ async fn main() -> ExitCode {
         {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("leafspring: {error}");
+                eprintln!("leafbud: {error}");
                 ExitCode::FAILURE
             }
         };
@@ -499,14 +499,14 @@ async fn main() -> ExitCode {
         // settles naming silently.
         if *keys {
             eprintln!(
-                "leafspring: tidy --keys (missing source identity assignment) is not implemented yet; \
+                "leafbud: tidy --keys (missing source identity assignment) is not implemented yet; \
                  this build only normalizes Markdown bodies"
             );
             return ExitCode::FAILURE;
         }
         if from.is_some() || *accept {
             eprintln!(
-                "leafspring: tidy --from/--accept (naming reconciliation) is not implemented yet; \
+                "leafbud: tidy --from/--accept (naming reconciliation) is not implemented yet; \
                  this build only normalizes Markdown bodies"
             );
             return ExitCode::FAILURE;
@@ -514,7 +514,7 @@ async fn main() -> ExitCode {
         return match tidy::run(
             cli.root.as_deref(),
             &flags,
-            leafspring_workflow::tidy::Request {
+            leafbud_workflow::tidy::Request {
                 all: *all,
                 files: files.clone(),
                 dry_run: *dry_run,
@@ -523,16 +523,16 @@ async fn main() -> ExitCode {
         ) {
             Ok(code) => code,
             Err(error) => {
-                eprintln!("leafspring: {error}");
+                eprintln!("leafbud: {error}");
                 ExitCode::FAILURE
             }
         };
     }
     if let Command::Check { files } = &cli.command {
-        let context = match leafspring_workflow::config::load(cli.root.as_deref(), &flags, None) {
+        let context = match leafbud_workflow::config::load(cli.root.as_deref(), &flags, None) {
             Ok(context) => context,
             Err(e) => {
-                eprintln!("leafspring: {e}");
+                eprintln!("leafbud: {e}");
                 return ExitCode::FAILURE;
             }
         };
@@ -543,7 +543,7 @@ async fn main() -> ExitCode {
             } else {
                 context.workspace_root.join(file)
             };
-            match leafspring_workflow::import::check(&path) {
+            match leafbud_workflow::import::check(&path) {
                 Ok((blocks, changed)) => println!("valid {} ({blocks} blocks; local changes: {changed})", path.display()),
                 Err(error) => {
                     failed += 1;
@@ -581,7 +581,7 @@ async fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("leafspring: {error}");
+            eprintln!("leafbud: {error}");
             ExitCode::FAILURE
         }
     }
@@ -594,7 +594,7 @@ async fn main() -> ExitCode {
 fn not_implemented(command: &Command) -> ExitCode {
     let name = command_name(command);
     eprintln!(
-        "leafspring: '{name}' is not implemented — this is the post-reset scaffold; \
+        "leafbud: '{name}' is not implemented — this is the post-reset scaffold; \
          see design/authoring-interface0.gpt6a.md and design/scaffold-reset0.glm53m.md"
     );
     ExitCode::FAILURE

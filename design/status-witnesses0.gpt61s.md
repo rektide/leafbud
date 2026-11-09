@@ -134,9 +134,9 @@ routing and actual online classifications are covered synthetically.
 ## Parent join and road ahead
 
 **Subsequent operator steering:** the sequential Astra-medium design schedule
-below is superseded. `leafspring-inspect-diff` now commissions Sol high to build
+below is superseded. `leafbud-inspect-diff` now commissions Sol high to build
 comparable Markdown views handed to a user-provided diff program.
-`leafspring-editor-plan-design` commissions independent Astra high and g designs
+`leafbud-editor-plan-design` commissions independent Astra high and g designs
 for a right-sized CRDT/fact editing strategy, followed by each author's
 cross-review addendum after both drafts are available. Coarse operations are
 acceptable candidates; bounded conceptual complexity and tool reuse take
@@ -144,11 +144,11 @@ precedence over structural efficiency. Parent/user assess that join before
 selecting the edit architecture. The live rename gap remains separate.
 
 Review the receipt boundary and the live rename gap first. The commissioned
-sequence remains **`leafspring-inspect-compare-design`**, a fresh Astra medium
+sequence remains **`leafbud-inspect-compare-design`**, a fresh Astra medium
 design grounded in the actual receiving code, then **another fresh Astra
-medium** for **`leafspring-inspect-operation-design`** using that design as
+medium** for **`leafbud-inspect-operation-design`** using that design as
 input. Join their outcomes with the user before selecting further architecture.
-Neither is delegated or designed here; `leafspring-inspect-diff` remains
+Neither is delegated or designed here; `leafbud-inspect-diff` remains
 deferred. Current typed content, native association rows, raw witnesses and
 `Agreement` booleans are evidence available to those designers—not a mandate
 for structural diff or a new parallel planning representation.

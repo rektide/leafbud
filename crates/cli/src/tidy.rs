@@ -1,5 +1,5 @@
 //! Thin rendering for the local Markdown tidy pass (no network).
-use leafspring_workflow::{
+use leafbud_workflow::{
     config::{self, Config},
     tidy::Request,
 };
@@ -9,7 +9,7 @@ use std::{path::Path, process::ExitCode};
 /// failure, 4 partial batch execution.
 pub fn run(root: Option<&Path>, flags: &Config, request: Request, json: bool) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let context = config::load(root, flags, None)?;
-    let report = leafspring_workflow::tidy::run(&context, request)?;
+    let report = leafbud_workflow::tidy::run(&context, request)?;
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {

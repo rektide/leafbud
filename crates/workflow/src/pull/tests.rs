@@ -1,7 +1,7 @@
 use super::*;
 use crate::import;
-use leafspring_document::BlockKind;
-use leafspring_web::{LeafletClient, LeafletData, parse_pull, parse_rpc};
+use leafbud_document::BlockKind;
+use leafbud_web::{LeafletClient, LeafletData, parse_pull, parse_rpc};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, RwLock};
@@ -157,7 +157,7 @@ fn request(files: Vec<PathBuf>) -> Request {
 }
 
 fn keys_of(source: &str) -> BTreeSet<String> {
-    leafspring_mdx::parse(source).unwrap().state.nodes.keys().cloned().collect()
+    leafbud_mdx::parse(source).unwrap().state.nodes.keys().cloned().collect()
 }
 
 #[tokio::test]
@@ -166,10 +166,10 @@ async fn local_only_intent_and_key_spelling_never_conflict_with_remote_editor_ed
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let source = std::fs::read_to_string(&path).unwrap();
-    let old_key = leafspring_mdx::parse(&source).unwrap().pages[0].blocks[0].key.clone();
+    let old_key = leafbud_mdx::parse(&source).unwrap().pages[0].blocks[0].key.clone();
     let source = source.replace(&format!("\"{old_key}\""), "\"friendly-key\"").replacen(
-        "\n\"@leafspring\":",
-        "\n# preserve intent\npublishedAt: '2030-01-01'\ncustomField: {nested: [1, 2]}\n\"@leafspring\":",
+        "\n\"@leafbud\":",
+        "\n# preserve intent\npublishedAt: '2030-01-01'\ncustomField: {nested: [1, 2]}\n\"@leafbud\":",
         1,
     );
     std::fs::write(&path, &source).unwrap();
@@ -189,17 +189,17 @@ async fn local_only_intent_and_key_spelling_never_conflict_with_remote_editor_ed
 
 #[tokio::test]
 async fn legacy_receipts_require_current_agreement_to_settle_and_unknown_profiles_never_mutate() {
-    use leafspring_document::{EDITOR_PROFILE, PROFILE};
+    use leafbud_document::{EDITOR_PROFILE, PROFILE};
     let (server, current) = server_current().await;
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let source = std::fs::read_to_string(&path).unwrap();
-    let mut legacy = leafspring_mdx::parse(&source).unwrap();
+    let mut legacy = leafbud_mdx::parse(&source).unwrap();
     legacy.state.sync.profile = PROFILE.into();
     legacy.state.sync.local_hash = import::hash(&legacy.semantic_value());
     let fixture = fixture();
     legacy.state.sync.remote_hash = import::remote_hash(&data(&fixture), &parse_pull(fixture["response"].clone()).unwrap(), PROFILE);
-    let source = leafspring_mdx::update(&source, &legacy).unwrap();
+    let source = leafbud_mdx::update(&source, &legacy).unwrap();
     std::fs::write(&path, &source).unwrap();
     set_paragraph_text(
         current.write().unwrap().get_mut(TOKEN).unwrap(),
@@ -214,7 +214,7 @@ async fn legacy_receipts_require_current_agreement_to_settle_and_unknown_profile
     assert_eq!(report.converged, 1);
     let after = std::fs::read_to_string(&path).unwrap();
     assert_eq!(after.split_once("---\n\n").unwrap().1, source.split_once("---\n\n").unwrap().1);
-    assert_eq!(leafspring_mdx::parse(&after).unwrap().state.sync.profile, EDITOR_PROFILE);
+    assert_eq!(leafbud_mdx::parse(&after).unwrap().state.sync.profile, EDITOR_PROFILE);
     assert_eq!(
         reader(&server)
             .pull(&context(temp.path()), request(vec![path.clone()]))
@@ -246,12 +246,12 @@ async fn swapped_author_labels_follow_native_associations_not_deterministic_key_
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let source = std::fs::read_to_string(&path).unwrap();
-    let before = leafspring_mdx::parse(&source).unwrap();
+    let before = leafbud_mdx::parse(&source).unwrap();
     let a = &before.pages[0].blocks[0].key;
     let b = &before.pages[0].blocks[1].key;
     let source = source.replace(a, "SWAP-TEMPORARY").replace(b, a).replace("SWAP-TEMPORARY", b);
     std::fs::write(&path, &source).unwrap();
-    let existing = leafspring_mdx::parse(&source).unwrap();
+    let existing = leafbud_mdx::parse(&source).unwrap();
     assert_eq!(existing.editor_value(), before.editor_value());
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
     assert_eq!(report.unchanged, 1);
@@ -262,7 +262,7 @@ async fn swapped_author_labels_follow_native_associations_not_deterministic_key_
     );
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
     assert_eq!(report.updated, 1);
-    let after = leafspring_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(after.state.nodes, existing.state.nodes);
     assert_eq!(
         after.pages[0].blocks.iter().map(|b| &b.key).collect::<Vec<_>>(),
@@ -304,7 +304,7 @@ async fn pull_adopts_link_bodies_as_markdown_and_repeat_is_exact_noop() {
     assert_eq!((report.updated, report.failed), (1, 0), "{}", serde_json::to_string(&report).unwrap());
     let after = std::fs::read_to_string(&path).unwrap();
     assert!(after.contains("see the [docs](https://e.org/docs) now"), "ordinary link spelling");
-    assert_eq!(leafspring_mdx::parse(&after).unwrap(), leafspring_mdx::parse(&after).unwrap());
+    assert_eq!(leafbud_mdx::parse(&after).unwrap(), leafbud_mdx::parse(&after).unwrap());
     // No-op repeat: bytes and mtimes identical.
     let metadata = std::fs::symlink_metadata(&path).unwrap().modified().unwrap();
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
@@ -331,7 +331,7 @@ async fn pull_adopts_remote_text_mark_move_and_metadata_preserving_identities() 
     let after = std::fs::read_to_string(&path).unwrap();
     // Same source-key set: refresh never rekeys existing files.
     assert_eq!(keys_of(&before), keys_of(&after));
-    let document = leafspring_mdx::parse(&after).unwrap();
+    let document = leafbud_mdx::parse(&after).unwrap();
     assert_eq!(document.title, "New remote title");
     let runs: Vec<_> = document.pages[0]
         .blocks
@@ -342,9 +342,9 @@ async fn pull_adopts_remote_text_mark_move_and_metadata_preserving_identities() 
         })
         .collect();
     assert!(
-        runs.contains(&&leafspring_document::Inline::Run {
+        runs.contains(&&leafbud_document::Inline::Run {
             text: "remote".into(),
-            marks: vec![leafspring_document::Mark::Strong],
+            marks: vec![leafbud_document::Mark::Strong],
         }),
         "{runs:?}"
     );
@@ -397,7 +397,7 @@ async fn pull_witness_only_change_settles_receipts_without_content_rewrite() {
     assert_eq!(changed.len(), 1, "only the remote receipt line changes: {changed:?}");
     assert!(changed[0].1.contains("remoteHash"));
     assert!(after.contains("visible current code"));
-    let document = leafspring_mdx::parse(&after).unwrap();
+    let document = leafbud_mdx::parse(&after).unwrap();
     assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
 }
 
@@ -434,7 +434,7 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
     let temp = tempfile::tempdir().unwrap();
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     let imported = std::fs::read_to_string(&path).unwrap();
-    let old_key = leafspring_mdx::parse(&imported)
+    let old_key = leafbud_mdx::parse(&imported)
         .unwrap()
         .state
         .nodes
@@ -445,8 +445,8 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
     let mut renamed = imported.replace(&format!("\"{old_key}\""), "\"my-renamed-block\"");
     assert_ne!(renamed, imported, "key appears in body and envelope");
     renamed = renamed.replacen(
-        "\n\"@leafspring\":",
-        "\n# author note\ncustomField: {\"meaning\": \"retained\"}\n\n\"@leafspring\":",
+        "\n\"@leafbud\":",
+        "\n# author note\ncustomField: {\"meaning\": \"retained\"}\n\n\"@leafbud\":",
         1,
     );
     renamed = renamed.replace("Synthetic body copy", "Genuine local editor edit");
@@ -477,7 +477,7 @@ async fn pull_conflict_needs_take_remote_which_preserves_local_metadata_and_rena
     assert!(!after.contains(&format!("\"{old_key}\"")), "manual rename survives, no rekeying");
     assert!(after.contains("# author note"));
     assert!(after.contains("customField: {\"meaning\": \"retained\"}"));
-    let document = leafspring_mdx::parse(&after).unwrap();
+    let document = leafbud_mdx::parse(&after).unwrap();
     assert_eq!(document.extra["customField"], json!({"meaning": "retained"}));
     assert!(document.state.nodes.contains_key("my-renamed-block"));
 }
@@ -500,7 +500,7 @@ async fn pull_converged_settles_receipts_without_body_rewrite() {
     let (after_fm, after_body) = after.split_once("---\n\n").unwrap();
     assert_eq!(before_body, after_body, "converged endpoints never rewrite the body");
     assert_ne!(before_fm, after_fm, "receipts settle");
-    let document = leafspring_mdx::parse(&after).unwrap();
+    let document = leafbud_mdx::parse(&after).unwrap();
     assert_eq!(document.state.sync.local_hash, import::hash(&document.editor_value()));
     // A repeat is now an exact no-op.
     let report = reader(&server).pull(&context(temp.path()), request(vec![path.clone()])).await.unwrap();
@@ -600,7 +600,7 @@ async fn pull_all_selects_bound_files_only_with_loud_broken_and_state_filter() {
     let path = seed(&server, temp.path(), TOKEN, "doc.mdx").await;
     std::fs::write(temp.path().join("unmanaged.mdx"), "just local prose\n").unwrap();
     std::fs::write(temp.path().join("notes.txt"), "not a document\n").unwrap();
-    std::fs::write(temp.path().join("broken.mdx"), "---\n@leafspring: [unclosed\n---\nbody\n").unwrap();
+    std::fs::write(temp.path().join("broken.mdx"), "---\n@leafbud: [unclosed\n---\nbody\n").unwrap();
     let report = reader(&server)
         .pull(
             &context(temp.path()),
@@ -621,7 +621,7 @@ async fn pull_all_selects_bound_files_only_with_loud_broken_and_state_filter() {
     assert_eq!(std::fs::read_to_string(temp.path().join("unmanaged.mdx")).unwrap(), "just local prose\n");
     assert_eq!(
         std::fs::read_to_string(temp.path().join("broken.mdx")).unwrap(),
-        "---\n@leafspring: [unclosed\n---\nbody\n"
+        "---\n@leafbud: [unclosed\n---\nbody\n"
     );
     let report = reader(&server)
         .pull(

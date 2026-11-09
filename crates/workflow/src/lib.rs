@@ -14,21 +14,21 @@ pub mod tidy;
 
 use std::path::PathBuf;
 
-use leafspring_web::{DEFAULT_BASE_URL, LeafletClient};
-pub use leafspring_web::{DiscoveredLeaflet, Identity, LeafletData, LeafletState};
+use leafbud_web::{DEFAULT_BASE_URL, LeafletClient};
+pub use leafbud_web::{DiscoveredLeaflet, Identity, LeafletData, LeafletState};
 use serde::Serialize;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Web(#[from] leafspring_web::Error),
+    Web(#[from] leafbud_web::Error),
     #[error("cannot locate auth-token file: set XDG_CONFIG_HOME or HOME, or supply --token/LEAFLET_AUTH_TOKEN")]
     NoConfigHome,
     #[error("{0} is not valid UTF-8")]
     Environment(&'static str),
     #[error("auth token from {0} is empty")]
     EmptyToken(&'static str),
-    #[error("cannot read leafspring auth-token file")]
+    #[error("cannot read leafbud auth-token file")]
     TokenFile(#[source] std::io::Error),
 }
 
@@ -61,7 +61,7 @@ impl RemoteOptions {
                 Some(token) => Some(clean_token(token, "LEAFLET_AUTH_TOKEN")?),
                 None => {
                     let dir = config_home(std::env::var_os("XDG_CONFIG_HOME"), std::env::var_os("HOME"))?;
-                    read_token_file(dir.join("leafspring/auth-token")).await?
+                    read_token_file(dir.join("leafbud/auth-token")).await?
                 }
             },
         };
@@ -169,7 +169,7 @@ pub struct RemoteShow {
     pub data: LeafletData,
 }
 
-fn select_discovery(discovery: leafspring_web::Discovery, state: Option<LeafletState>) -> RemoteList {
+fn select_discovery(discovery: leafbud_web::Discovery, state: Option<LeafletState>) -> RemoteList {
     let discovered_count = discovery.leaflets.len();
     let leaflets: Vec<_> = discovery
         .leaflets
@@ -208,7 +208,7 @@ mod tests {
     fn filtering_is_exclusive_and_keeps_discovery_coverage() {
         let fixture = include_str!("../../../experiments/01-draft-list/fixture-home.html");
         for (filter, count) in [(None, 5), (Some(LeafletState::Draft), 3), (Some(LeafletState::Published), 2)] {
-            let list = select_discovery(leafspring_web::parse_home(fixture).unwrap(), filter);
+            let list = select_discovery(leafbud_web::parse_home(fixture).unwrap(), filter);
             assert_eq!(list.count, count);
             assert_eq!(list.discovered_count, 5);
             assert_eq!(list.coverage.completeness, "unknown");

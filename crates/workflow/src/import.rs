@@ -3,8 +3,8 @@
 //! equal observations are no-ops, differing files are preserved for explicit pull.
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, bail, ensure};
-use leafspring_document::{Binding, Document, EDITOR_PROFILE, PROFILE, State, Sync};
-use leafspring_web::{LeafletData, LeafletState, PullSnapshot};
+use leafbud_document::{Binding, Document, EDITOR_PROFILE, PROFILE, State, Sync};
+use leafbud_web::{LeafletData, LeafletState, PullSnapshot};
 use serde::Serialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -89,7 +89,7 @@ pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot, profile: &str
     if profile == PROFILE {
         return hash(&legacy_witness(data, pull));
     }
-    hash(&leafspring_editor::witness(
+    hash(&leafbud_editor::witness(
         &pull.facts,
         &pull.extras,
         json!({"root":data.metadata.root_entity,"title":data.metadata.title,"description":data.metadata.description,
@@ -101,7 +101,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     ensure!(data.observed_state() == LeafletState::Draft, "published object is outside draft import profile");
     let root = data.metadata.root_entity.as_deref().context("missing native root entity")?;
     let id = Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("{base}/{}", data.metadata.id).as_bytes());
-    let content = leafspring_editor::observe(&pull.facts, root, id)?;
+    let content = leafbud_editor::observe(&pull.facts, root, id)?;
     let entity_sets: BTreeSet<_> = data
         .metadata
         .permission_token_rights
@@ -147,7 +147,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         .or(content.derived_title)
         .unwrap_or_else(|| "Untitled".into());
     let mut document = Document {
-        format: "leafspring-mdx/1".into(),
+        format: "leafbud-mdx/1".into(),
         title,
         description: string("publication_description")?.or_else(|| data.metadata.description.clone()),
         tags,
@@ -188,17 +188,17 @@ fn local_index(root: &Path, base: &str) -> Result<BTreeMap<Uuid, Vec<PathBuf>>> 
                 visit(&path, base, index)?;
             } else if kind.is_file() && path.extension().is_some_and(|e| e == "mdx") {
                 let source = std::fs::read_to_string(&path)?;
-                let header = match leafspring_mdx::header(&source) {
+                let header = match leafbud_mdx::header(&source) {
                     Ok(header) => header,
-                    Err(_) if !source.contains("@leafspring") && !source.contains("@springleaf") => continue,
+                    Err(_) if !source.contains("@leafbud") && !source.contains("@springleaf") => continue,
                     Err(error) => return Err(error).with_context(|| format!("cannot safely index managed file {}", path.display())),
                 };
                 ensure!(
                     header.get("@springleaf").is_none(),
                     "legacy springleaf managed source requires explicit namespace conversion before import (duplicate checkout refused)"
                 );
-                if header["@leafspring"]["binding"]["baseUrl"] == base {
-                    let token = header["@leafspring"]["binding"]["token"].as_str().context("managed file token missing")?;
+                if header["@leafbud"]["binding"]["baseUrl"] == base {
+                    let token = header["@leafbud"]["binding"]["token"].as_str().context("managed file token missing")?;
                     index
                         .entry(Uuid::parse_str(token).context("managed file token invalid")?)
                         .or_default()
@@ -218,7 +218,7 @@ pub(crate) mod tests;
 
 pub fn check(path: &Path) -> Result<(usize, bool)> {
     let source = std::fs::read_to_string(path).context("reading MDX source")?;
-    let document = leafspring_mdx::parse(&source)?;
+    let document = leafbud_mdx::parse(&source)?;
     let blocks = document.pages.iter().map(|p| p.blocks.len()).sum();
     let value = if document.state.sync.profile == EDITOR_PROFILE {
         document.editor_value()
@@ -310,7 +310,7 @@ impl RemoteReader {
                         );
                     }
                     let source = std::fs::read_to_string(path)?;
-                    let existing = leafspring_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
+                    let existing = leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
                     ensure!(
                         existing.state.sync.remote_hash == remote_hash(&data, &pull, &existing.state.sync.profile),
                         "remote changed since import; explicit pull/refresh support required (existing file preserved)"
@@ -328,7 +328,7 @@ impl RemoteReader {
                     return Ok(Some((path.clone(), outcome)));
                 }
                 let path = destination(&root, &document.title, id, request.to.as_deref())?;
-                let source = leafspring_mdx::render(&document)?;
+                let source = leafbud_mdx::render(&document)?;
                 // Recheck native identity/association after content acquisition; no
                 // promise of a remote transaction/CAS, and no files overwritten.
                 let verified = self.client.get(id).await?;

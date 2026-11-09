@@ -189,7 +189,7 @@ impl LeafletClient {
         }
         let http = reqwest::Client::builder()
             .default_headers(headers)
-            .user_agent(concat!("leafspring/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("leafbud/", env!("CARGO_PKG_VERSION")))
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(30))
             .build()

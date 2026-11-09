@@ -1,5 +1,5 @@
 //! Thin rendering for reusable workflow configuration.
-use leafspring_workflow::config::{self, Config, Key};
+use leafbud_workflow::config::{self, Config, Key};
 use std::path::Path;
 
 pub fn show(root: Option<&Path>, flags: &Config, json: bool) -> Result<(), Box<dyn std::error::Error>> {

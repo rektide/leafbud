@@ -149,7 +149,7 @@ Rules actually selected and tested:
 - Multiple suffix keys on a heading or marker lines on a paragraph produce
   `key-collision`; none wins. Document-wide `duplicate-key` invalidates every
   occurrence. Malformed/unbound/misplaced errors include source-byte ranges.
-- Requested `{/* leafspring:key introduction */}` is visible prose in baseline
+- Requested `{/* leafbud:key introduction */}` is visible prose in baseline
   CommonMark. Attribute/strict modes diagnose the unescaped reserved opening as
   `unsupported-comment`, not as identity. Ordinary HTML comments stay raw HTML.
   Uniform preceding annotations for lists/quotes/code are **not implemented**.
@@ -217,7 +217,7 @@ separately from source retention.
 | `<Poll key="topic" options={["Gardens", "Maps"]} />` | Paragraph containing several Text events; no component/JSON-property structure |
 | `<Poll key="topic" />` | HtmlBlock with raw HTML payload |
 | `Text with <Image src="x" /> and {expression}.` | Paragraph containing InlineHtml and ordinary expression-shaped text |
-| `{/* leafspring:key introduction */}` | Visible paragraph text, not native MDX comment |
+| `{/* leafbud:key introduction */}` | Visible paragraph text, not native MDX comment |
 
 No component is executed, but **pulldown-cmark's HTML renderer passes raw HTML
 through**, unlike Rushdown's default renderer in experiment 06. HTML output here

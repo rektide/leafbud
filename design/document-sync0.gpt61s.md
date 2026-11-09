@@ -1,6 +1,6 @@
 ---
 type: Proposal
-title: "Document-centered leafspring — Sol's independent option"
+title: "Document-centered leafbud — Sol's independent option"
 description: "A file-first lifecycle with one active remote, two reconciliation edges, embedded witnesses, and alternative document encodings."
 resource: design/document-sync0.gpt61s.md
 status: draft
@@ -30,7 +30,7 @@ sources:
     title: "Read only after the independent Sol option was committed; comparison and revised leans below"
 ---
 
-# Document-centered leafspring — Sol's independent option
+# Document-centered leafbud — Sol's independent option
 
 ## Standing and intent
 
@@ -83,7 +83,7 @@ remain unbuilt and must be established before advertising that lifecycle.
 
 ## Local document and lifecycle
 
-JSON contains the complete logical document plus a reserved `@leafspring`
+JSON contains the complete logical document plus a reserved `@leafbud`
 object. Record-only serialization removes that object explicitly; test the
 outbound object rather than relying on server rejection of unknown properties.
 Metadata editing preserves unknown document fields rather than reconstructing
@@ -104,7 +104,7 @@ repair placement. There is never a second active copy maintained in both dirs.
 Suggested metadata responsibilities, not a frozen wire schema:
 
 ```text
-@leafspring
+@leafbud
   version
   id                         stable local identity, independent of all names
   state                      draft | published (tagged, mutually exclusive)
@@ -207,18 +207,18 @@ available, with the result checked against a fresh remote observation on push.
 Illustrative command grammar, not a decided CLI specification:
 
 ```sh
-leafspring create my-post                 # local file, no remote required
-leafspring status [FILE]                  # both edges, no baseline mutation
-leafspring diff FILE --edge remote
-leafspring pull FILE                      # active remote -> document
-leafspring push FILE                      # document -> active remote
-leafspring tidy FILE --from path          # path -> filename
-leafspring tidy FILE --from filename      # filename -> path
-leafspring resolve FILE --edge remote --take local
-leafspring resolve FILE --edge remote --take remote
-leafspring publish FILE                   # Leaflet transition, not bare put
-leafspring edit FILE --published-at TIME
-leafspring edit FILE --now
+leafbud create my-post                 # local file, no remote required
+leafbud status [FILE]                  # both edges, no baseline mutation
+leafbud diff FILE --edge remote
+leafbud pull FILE                      # active remote -> document
+leafbud push FILE                      # document -> active remote
+leafbud tidy FILE --from path          # path -> filename
+leafbud tidy FILE --from filename      # filename -> path
+leafbud resolve FILE --edge remote --take local
+leafbud resolve FILE --edge remote --take remote
+leafbud publish FILE                   # Leaflet transition, not bare put
+leafbud edit FILE --published-at TIME
+leafbud edit FILE --now
 ```
 
 Draft/post groups can expose the same verbs as scoped entrypoints. Ordinary
@@ -279,14 +279,14 @@ distinct from a fully publishable wire record's required-field validation.
 Scheduling is separate; the native action currently clamps future dates.
 
 JSON is the full-fidelity encoding. Markdown is an alternative encoding of the
-same logical document, with document fields and `@leafspring` in frontmatter.
+same logical document, with document fields and `@leafbud` in frontmatter.
 One chosen file is maintained, never a Markdown source plus synchronized JSON
 output. Converters can create outputs for inspection, but do not establish a
 third sync edge. Before conversion, report unrepresentable fields/blocks;
 `--force-downconvert` authorizes the named loss. JSON formatting is irrelevant
 to change detection; Markdown text/facet semantics are not.
 
-Future ticket `leafspring-mdx` explores declarative rich/unknown-block escapes
+Future ticket `leafbud-mdx` explores declarative rich/unknown-block escapes
 and lossless markup. It is not required to ship this architecture. Linkage in
 local files is accepted by the user; account credentials remain in config.
 Record-only export strips the envelope. No sidecar migration, editor merge

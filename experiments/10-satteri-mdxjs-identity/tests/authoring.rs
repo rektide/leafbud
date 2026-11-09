@@ -43,7 +43,7 @@ fn real_block_metadata_and_inline_structure() {
     assert_eq!(
         reachable(&arena, 0)
             .iter()
-            .filter(|&&id| metadata(&arena, id)["leafspringKey"].is_string())
+            .filter(|&&id| metadata(&arena, id)["leafbudKey"].is_string())
             .count(),
         6
     );
@@ -53,16 +53,16 @@ fn real_block_metadata_and_inline_structure() {
 
 #[test]
 fn nested_native_container_attachment_and_blank_after() {
-    let p = good("> > {/* leafspring:key nested */}\n> >\n> > Deep prose.\n\n- Parent.\n  - {/* leafspring:key child */}\n    Child.\n");
+    let p = good("> > {/* leafbud:key nested */}\n> >\n> > Deep prose.\n\n- Parent.\n  - {/* leafbud:key child */}\n    Child.\n");
     assert_eq!(keyed(&p).iter().map(|n| n.key.as_deref().unwrap()).collect::<Vec<_>>(), ["nested", "child"]);
 }
 
 #[test]
 fn no_escape_from_quote_item_or_component() {
     for source in [
-        "> {/* leafspring:key lost */}\n\nRoot.\n",
-        "- {/* leafspring:key lost */}\n- Other.\n",
-        "<Page>\n{/* leafspring:key lost */}\n</Page>\n\nRoot.\n",
+        "> {/* leafbud:key lost */}\n\nRoot.\n",
+        "- {/* leafbud:key lost */}\n- Other.\n",
+        "<Page>\n{/* leafbud:key lost */}\n</Page>\n\nRoot.\n",
     ] {
         has(source, "unbound-key");
         assert!(keyed(&check(source)).is_empty());
@@ -71,29 +71,29 @@ fn no_escape_from_quote_item_or_component() {
 
 #[test]
 fn barriers_malformed_misplaced_and_duplicate_keys() {
-    has("{/* leafspring:key a */}\n{/* leafspring:key b */}\nText.\n", "unsupported-target");
-    has("{/* leafspring:key a */}\n[ref]: https://example.com\n\nText.\n", "unsupported-target");
+    has("{/* leafbud:key a */}\n{/* leafbud:key b */}\nText.\n", "unsupported-target");
+    has("{/* leafbud:key a */}\n[ref]: https://example.com\n\nText.\n", "unsupported-target");
     for marker in [
-        "{/* leafspring:key 123 */}",
-        "{/* leafspring:key é */}",
-        "{/* leafspring:other a */}",
-        "{/* leafspring:key two words */}",
+        "{/* leafbud:key 123 */}",
+        "{/* leafbud:key é */}",
+        "{/* leafbud:other a */}",
+        "{/* leafbud:key two words */}",
     ] {
         has(&format!("{marker}\nText.\n"), "malformed-key");
     }
-    has("Text {/* leafspring:key a */}.\n", "misplaced-key");
-    has("{/* leafspring:key unfinished", "parse");
-    let p = check("{/* leafspring:key same */}\n## One\n\n<Poll key=\"same\" />\n");
+    has("Text {/* leafbud:key a */}.\n", "misplaced-key");
+    has("{/* leafbud:key unfinished", "parse");
+    let p = check("{/* leafbud:key same */}\n## One\n\n<Poll key=\"same\" />\n");
     assert_eq!(p.diagnostics.iter().filter(|d| d.code == "duplicate-key").count(), 2);
     assert!(keyed(&p).is_empty());
-    let p = check("{/* leafspring:key one */}\n<Poll key=\"two\" />\n");
+    let p = check("{/* leafbud:key one */}\n<Poll key=\"two\" />\n");
     assert!(p.diagnostics.iter().any(|d| d.code == "key-collision"));
     assert!(keyed(&p).is_empty());
 }
 
 #[test]
 fn code_escape_and_fences_are_not_scanned() {
-    let p = good("Inline `{/* leafspring:key inline */}`.\n\n```mdx\n{/* leafspring:key fence */}\n{#literal}\n```\n\n\\{/* leafspring:key escaped */}\n");
+    let p = good("Inline `{/* leafbud:key inline */}`.\n\n```mdx\n{/* leafbud:key fence */}\n{#literal}\n```\n\n\\{/* leafbud:key escaped */}\n");
     assert!(keyed(&p).is_empty());
     assert_eq!(nodes(&p.tree).iter().filter(|n| n.kind == "inlineCode").count(), 1);
     assert_eq!(nodes(&p.tree).iter().filter(|n| n.kind == "code").count(), 1);
@@ -111,23 +111,23 @@ fn multiline_code_counterexample_rejected_not_repaired() {
 
 #[test]
 fn indented_comment_still_interpreted_as_key_not_code_limitation() {
-    let p = good("    {/* leafspring:key indented */}\n\nFollowing.\n");
+    let p = good("    {/* leafbud:key indented */}\n\nFollowing.\n");
     assert_eq!(keyed(&p)[0].key.as_deref(), Some("indented"));
     assert!(!nodes(&p.tree).iter().any(|n| n.kind == "code"));
 }
 
 #[test]
 fn prior_sibling_requires_blank_but_target_does_not() {
-    has("Before.\n{/* leafspring:key after */}\nAfter.\n", "key-boundary");
+    has("Before.\n{/* leafbud:key after */}\nAfter.\n", "key-boundary");
     assert_eq!(
-        keyed(&good("Before.\n\n{/* leafspring:key after */}\nAfter.\n"))[0].key.as_deref(),
+        keyed(&good("Before.\n\n{/* leafbud:key after */}\nAfter.\n"))[0].key.as_deref(),
         Some("after")
     );
 }
 
 #[test]
 fn unicode_crlf_bom_byte_ranges_and_noop_source() {
-    let source = "\u{feff}{/* leafspring:key intro */}\r\n## Café 🦀\r\n\r\n> {/* leafspring:key quote */}\r\n> naïve.\r\n";
+    let source = "\u{feff}{/* leafbud:key intro */}\r\n## Café 🦀\r\n\r\n> {/* leafbud:key quote */}\r\n> naïve.\r\n";
     let p = good(source);
     assert_eq!(p.original_source.as_bytes(), source.as_bytes());
     assert_eq!(p.position_source_start, 3);
@@ -137,17 +137,17 @@ fn unicode_crlf_bom_byte_ranges_and_noop_source() {
     let heading = keyed(&p)[0];
     assert_eq!(&source[3 + heading.span.start as usize..3 + heading.span.end as usize], "## Café 🦀");
     assert_eq!(heading.span.end_column, 11);
-    let s = &heading.data["leafspringKeySpan"];
+    let s = &heading.data["leafbudKeySpan"];
     assert_eq!(
         &source[3 + s["start"].as_u64().unwrap() as usize..3 + s["end"].as_u64().unwrap() as usize],
-        "{/* leafspring:key intro */}"
+        "{/* leafbud:key intro */}"
     );
 }
 
 #[test]
 fn reorder_changes_spans_not_keys() {
-    let a = good("{/* leafspring:key one */}\n## One\n\n{/* leafspring:key two */}\nTwo.\n");
-    let b = good("{/* leafspring:key two */}\nTwo.\n\n{/* leafspring:key one */}\n## One\n");
+    let a = good("{/* leafbud:key one */}\n## One\n\n{/* leafbud:key two */}\nTwo.\n");
+    let b = good("{/* leafbud:key two */}\nTwo.\n\n{/* leafbud:key one */}\n## One\n");
     assert_eq!(keyed(&a)[0].key, keyed(&b)[1].key);
     assert_ne!(keyed(&a)[0].span, keyed(&b)[1].span);
 }
@@ -198,7 +198,7 @@ fn literal_gate_rejects_javascript_and_recursive_duplicate_json_keys() {
 
 #[test]
 fn expression_strings_are_not_global_directive_replacements() {
-    let p = good("<Run text={\"{/* leafspring:key fake */} {#fake}\"} />\n");
+    let p = good("<Run text={\"{/* leafbud:key fake */} {#fake}\"} />\n");
     assert!(keyed(&p).is_empty());
-    assert_eq!(p.tree.children[0].data["literalProps"]["text"], "{/* leafspring:key fake */} {#fake}");
+    assert_eq!(p.tree.children[0].data["literalProps"]["text"], "{/* leafbud:key fake */} {#fake}");
 }

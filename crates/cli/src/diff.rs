@@ -1,5 +1,5 @@
 //! Foreground viewer adapter. Deliberately no --json: the tool owns stdio/TTY.
-use leafspring_workflow::{RemoteOptions, config, diff::Tool};
+use leafbud_workflow::{RemoteOptions, config, diff::Tool};
 use std::path::Path;
 
 pub async fn run(options: RemoteOptions, root: Option<&Path>, flags: &config::Config, file: &Path) -> Result<(), Box<dyn std::error::Error>> {

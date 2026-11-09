@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only Leaflet draft-internals probe (experiment 02).
 
-Token is read at runtime from ~/.config/leafspring/auth-token (or $LEAFLET_TOKEN)
+Token is read at runtime from ~/.config/leafbud/auth-token (or $LEAFLET_TOKEN)
 and is never printed or written anywhere. All requests are GETs or the
 documented read RPCs; no push/mutations are issued.
 
@@ -20,7 +20,7 @@ import urllib.request
 import uuid
 
 BASE = "https://leaflet.pub"
-TOKEN_PATH = os.path.expanduser("~/.config/leafspring/auth-token")
+TOKEN_PATH = os.path.expanduser("~/.config/leafbud/auth-token")
 
 
 def token() -> str:
@@ -86,7 +86,7 @@ def cmd_facts(*roots: str):
     print(json.dumps(rpc("getFactsForRoots", {"roots": list(roots)}), indent=1))
 
 
-def cmd_pull(token_id: str, group: str = "leafspring-probe"):
+def cmd_pull(token_id: str, group: str = "leafbud-probe"):
     # PullRequestV1, cookie=null -> legacy full-snapshot response
     # (the CVR path needs a Redis-backed cookie we don't have; null always
     # yields the full patch -- src/replicache/cvr.ts buildPullResponse).

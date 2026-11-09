@@ -108,7 +108,7 @@ edit likewise requires an explicit choice, not a silent normalization.
 ## File and compact metadata
 
 The JSON body is the complete record-shaped logical document plus reserved
-`@leafspring`. Draft validation permits fields such as path/date to be absent
+`@leafbud`. Draft validation permits fields such as path/date to be absent
 before publication. Record-only export explicitly removes the envelope; every
 outbound conversion starts from that stripped object. Credentials stay in config.
 
@@ -116,7 +116,7 @@ Illustrative published metadata; hashes and identifiers are placeholders:
 
 ```json
 {
-  "@leafspring": {
+  "@leafbud": {
     "version": 1,
     "id": "local-uuid",
     "target": {
@@ -212,7 +212,7 @@ classification pattern, not a shared baseline:
 - No usable witness: unbased; inspect current endpoints and explicitly establish
   correspondence. Missing/unlinked/unknown are separate states.
 
-The local hash is versioned deterministic logical JSON, excluding `@leafspring`,
+The local hash is versioned deterministic logical JSON, excluding `@leafbud`,
 preserving array order and unknown fields. Semantic projection compares editable
 meaning: regenerated entity IDs and CRDT byte encodings are not content changes.
 Do not erase meaningful reference topology when normalizing IDs.
@@ -318,7 +318,7 @@ queues cleanup of still-used image objects.
 
 Read-only draft pull must not require remote uploads to express media. Retain
 content-addressed blob descriptors in the logical record and compact source
-locators under `@leafspring.assets` when bytes are still in Leaflet/local storage;
+locators under `@leafbud.assets` when bytes are still in Leaflet/local storage;
 resolve bytes in memory to construct/verify those descriptors. Poll references
 and other external resources likewise need resolvable targets; never claim a
 made-up AT-URI is a published object. Newly authored resources require their
@@ -330,24 +330,24 @@ an acceptance condition, not a permanent `--force` bypass for unfinished work.
 ## Commands, dates, and encodings
 
 ```sh
-leafspring create essay                    # defaults to drafts/essay.json
-leafspring create --file notes/essay.json   # equally valid placement
-leafspring import SOURCE --to FILE
-leafspring status FILE
-leafspring diff FILE
-leafspring pull FILE
-leafspring push FILE                       # draft save; published save + update
-leafspring publish FILE --now              # first native publication
-leafspring resolve FILE --take local       # pin reviewed overwrite choice
-leafspring resolve FILE --take remote      # guarded current-remote pull
-leafspring tidy FILE --from filename
-leafspring tidy FILE --from path
-leafspring tidy FILE --accept
-leafspring edit FILE --published-at TIME
-leafspring drafts push FILE                # scoped entry to the same operation
-leafspring drafts append TOKEN --from FILE # low-level additive primitive
-leafspring convert FILE --to markdown --force-downconvert
-leafspring export FILE --record-only
+leafbud create essay                    # defaults to drafts/essay.json
+leafbud create --file notes/essay.json   # equally valid placement
+leafbud import SOURCE --to FILE
+leafbud status FILE
+leafbud diff FILE
+leafbud pull FILE
+leafbud push FILE                       # draft save; published save + update
+leafbud publish FILE --now              # first native publication
+leafbud resolve FILE --take local       # pin reviewed overwrite choice
+leafbud resolve FILE --take remote      # guarded current-remote pull
+leafbud tidy FILE --from filename
+leafbud tidy FILE --from path
+leafbud tidy FILE --accept
+leafbud edit FILE --published-at TIME
+leafbud drafts push FILE                # scoped entry to the same operation
+leafbud drafts append TOKEN --from FILE # low-level additive primitive
+leafbud convert FILE --to markdown --force-downconvert
+leafbud export FILE --record-only
 ```
 
 `posted/` is the default destination for new published imports; `drafts/` for
@@ -370,7 +370,7 @@ Lossless conversion preserves logical hashes. Genuine downconversion requires
 Markdown file. Keep compact loss status and divergent local/remote hashes so a
 lossy pull cannot masquerade as full equality or authorize later silent deletion.
 Switching to lossless JSON is available without a second maintained document.
-Rich declarative markup is future work under `leafspring-mdx`.
+Rich declarative markup is future work under `leafbud-mdx`.
 
 ## Boundaries and next evidence
 

@@ -31,11 +31,11 @@ sources:
 The user commissioned g implementation of
 [the approved design](markdown-roundtrip0.gpt6a.md) after the guarded-pull
 build returned and the parent reviewed its seams. All work stayed in
-`~/src/leafspring`; `~/l` (the document workspace) was only ever read.
+`~/src/leafbud`; `~/l` (the document workspace) was only ever read.
 
 - `qtzmvxtw` — **Correction (parent code review)**: `State` gained
   `deny_unknown_fields` (like `Binding`/`Node`/`Sync`). Unknown top-level
-  `@leafspring` fields were previously **silently dropped** by typed
+  `@leafbud` fields were previously **silently dropped** by typed
   reserialization in `mdx::update` — a real data-loss path the guarded-pull
   handoff had misreported as already blocked. Regression: a synthetic
   `futurePolicy` field makes full parse and `update` refuse while untyped
@@ -47,7 +47,7 @@ build returned and the parent reviewed its seams. All work stayed in
   `plan_markdown_tidy`/`apply_markdown_tidy`.
 - `wsulwwrx` — **tidy workflow + CLI**: `workflow::tidy` (operands or
   `--all`, dry-run, atomic original-byte writes, reason-code reports) and
-  `leafspring tidy FILE.../--all [--markdown] [--dry-run] [--json]` with
+  `leafbud tidy FILE.../--all [--markdown] [--dry-run] [--json]` with
   honest exit-1 rejection of the unimplemented `--keys/--from/--accept`
   selectors.
 - `roswolus` — **Pull adoption proof**: real-Yrs link-mark regression — a

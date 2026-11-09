@@ -67,8 +67,8 @@ fn exact_text_is_literal_data_not_jsx_whitespace_guessing() {
 
 #[test]
 fn key_shaped_text_inside_expression_strings_is_not_rewritten() {
-    let parsed = good("<Run text={\"{#literal} {/* leafspring:key string */}\"} />\n\n<Poll options={[\"{#id}\", \"{/* leafspring:key id */}\"]} />\n");
-    assert_eq!(property(&parsed.tree.children[0], "text"), &json!("{#literal} {/* leafspring:key string */}"));
+    let parsed = good("<Run text={\"{#literal} {/* leafbud:key string */}\"} />\n\n<Poll options={[\"{#id}\", \"{/* leafbud:key id */}\"]} />\n");
+    assert_eq!(property(&parsed.tree.children[0], "text"), &json!("{#literal} {/* leafbud:key string */}"));
     assert!(parsed.tree.children.iter().all(|n| n.key.is_none()));
 }
 
@@ -146,9 +146,9 @@ fn unknown_components_are_preserved_with_a_compilation_diagnostic() {
 
 #[test]
 fn component_comments_are_container_local_and_do_not_cross_closing_tags() {
-    let parsed = good("<Canvas>\n{/* leafspring:key inner */}\nInner.\n</Canvas>\n");
+    let parsed = good("<Canvas>\n{/* leafbud:key inner */}\nInner.\n</Canvas>\n");
     assert_eq!(parsed.tree.children[0].children[0].key.as_deref(), Some("inner"));
-    let parsed = parse("<Canvas>\n{/* leafspring:key lost */}\n</Canvas>\n\nOutside.\n").unwrap();
+    let parsed = parse("<Canvas>\n{/* leafbud:key lost */}\n</Canvas>\n\nOutside.\n").unwrap();
     assert_eq!(parsed.diagnostics[0].code, "unbound-key");
     assert!(parsed.tree.children[1].key.is_none());
 }
@@ -156,10 +156,10 @@ fn component_comments_are_container_local_and_do_not_cross_closing_tags() {
 #[test]
 fn comment_and_component_key_collide_and_document_duplicates_cross_kinds() {
     assert_eq!(
-        diagnostics("{/* leafspring:key first */}\n<Poll key=\"second\" />\n"),
+        diagnostics("{/* leafbud:key first */}\n<Poll key=\"second\" />\n"),
         ["key-collision", "key-collision"]
     );
-    let parsed = parse("{/* leafspring:key same */}\nProse.\n\n<Poll key=\"same\" />\n").unwrap();
+    let parsed = parse("{/* leafbud:key same */}\nProse.\n\n<Poll key=\"same\" />\n").unwrap();
     assert_eq!(
         parsed.diagnostics.iter().map(|d| d.code).collect::<Vec<_>>(),
         ["duplicate-key", "duplicate-key"]

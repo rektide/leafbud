@@ -11,7 +11,7 @@
 use crate::inventory::Inventory as Bound;
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, ensure};
-use leafspring_web::LeafletState;
+use leafbud_web::LeafletState;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -163,13 +163,13 @@ impl RemoteReader {
             Ok(source) => source,
             Err(error) => return fail(error),
         };
-        if !source.contains("@leafspring") {
+        if !source.contains("@leafbud") {
             if source.contains("@springleaf") {
                 return Outcome::Failure("legacy springleaf namespace requires explicit conversion; do not reimport a duplicate binding".into());
             }
             return Outcome::Failure("not a managed document; import creates bindings".into());
         }
-        let existing = match leafspring_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved") {
+        let existing = match leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved") {
             Ok(existing) => existing,
             Err(error) => return fail(error),
         };
@@ -233,7 +233,7 @@ impl RemoteReader {
         if verified.metadata.root_entity != data.metadata.root_entity || verified.observed_state() != LeafletState::Draft || !association_ok {
             return fail(anyhow::anyhow!("remote identity/lifecycle/association changed during pull; file preserved"));
         }
-        let next = match leafspring_mdx::update(&source, &merged).context("composing guarded refresh") {
+        let next = match leafbud_mdx::update(&source, &merged).context("composing guarded refresh") {
             Ok(next) => next,
             Err(error) => return fail(error),
         };

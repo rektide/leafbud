@@ -126,7 +126,7 @@ report can expose web differences without requiring a merge engine.
 
 ````mdx
 ---
-format: leafspring-mdx/1
+format: leafbud-mdx/1
 title: An essay
 tags: [notes]
 ---

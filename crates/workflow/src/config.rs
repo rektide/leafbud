@@ -8,7 +8,7 @@ use figment2::{
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-pub const FILE_NAME: &str = "leafspring.toml";
+pub const FILE_NAME: &str = "leafbud.toml";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Config {
@@ -121,7 +121,7 @@ pub struct Context {
 
 pub fn global_path() -> Result<PathBuf> {
     let home = crate::config_home(std::env::var_os("XDG_CONFIG_HOME"), std::env::var_os("HOME"))?;
-    Ok(home.join("leafspring").join(FILE_NAME))
+    Ok(home.join("leafbud").join(FILE_NAME))
 }
 
 fn read(path: &Path) -> Result<Option<(Config, Vec<u8>)>> {

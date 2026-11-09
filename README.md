@@ -1,4 +1,4 @@
-# leafspring
+# leafbud
 
 Local-first MDX authoring for [leaflet.pub](https://leaflet.pub)
 documents, in Rust: one MDX file per document, durable identities,
@@ -16,10 +16,10 @@ destination shape. Implemented versus pending:
 
 | implemented | not implemented |
 | --- | --- |
-| `leafspring-atproto` — retained identity resolution, XRPC, app-password sessions; `leafspring-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
-| `leafspring-web` — cookie-authenticated discovery, metadata and full editor pull; `leafspring-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
-| `leafspring-document` + `leafspring-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
-| `leafspring-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
+| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
+| `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; `leafbud-editor` — raw-fact scanning and strict Yrs text decoding | canvas, lists, interactive/other unsupported editor content |
+| `leafbud-document` + `leafbud-mdx` — bounded current-document model, durable bindings, real Satteri/YAML parse, loss-checked keyed MDX writer with Markdown-first rich blocks and block-local exact fallback, source-preserving updates and parser-derived Markdown tidy planning | generalized authoring model; key assignment and naming tidy passes |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, imported-profile `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, `tidy FILE.../--all` with `--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `create`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --keys/--from/--accept` selectors (rejected honestly until built) |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -32,22 +32,22 @@ what was kept, what was reset, and where each piece re-homes.
 ```
 crates/
   document/
-    model/     leafspring-document: pure document model — current content,
+    model/     leafbud-document: pure document model — current content,
                 stable source IDs and compact bindings (bounded import profile)
-    mdx/       leafspring-mdx: Satteri parsing, YAML frontmatter,
+    mdx/       leafbud-mdx: Satteri parsing, YAML frontmatter,
                 loss-checked initial keyed MDX writing and validation
   leaflet/
-    editor/    leafspring-editor: fact graph, Yrs text state, bindings,
+    editor/    leafbud-editor: fact graph, Yrs text state, bindings,
                 bounded pure observation; write planning still pending
-    web/       leafspring-web: cookie auth, discovery, RPC/actions,
+    web/       leafbud-web: cookie auth, discovery, RPC/actions,
                 read-only discovery/metadata/content pulls; writes pending
-    records/   leafspring-records: generated pinned lexicon record types,
+    records/   leafbud-records: generated pinned lexicon record types,
                validation, wire-shape helpers — see LEAFLET-PIN.md
-  atproto/     leafspring-atproto: hand-rolled ATProto surface — handle→DID→PDS
+  atproto/     leafbud-atproto: hand-rolled ATProto surface — handle→DID→PDS
                identity resolution, XRPC client, sessions, public reads
-  workflow/    leafspring-workflow: local files, config, inventory,
+  workflow/    leafbud-workflow: local files, config, inventory,
                 layered config, native reads, guarded draft import and pull
-  cli/         leafspring (binary): thin Clap/rendering layer;
+  cli/         leafbud (binary): thin Clap/rendering layer;
                  reads/import/check/status/pull/config implemented; native writes pending
 design/        architecture, accepted interface, and format designs
 experiments/   protocol probes and evidence (tracked, load-bearing)
@@ -61,16 +61,16 @@ adds no crate dependency edges that no code uses yet.
 ## Remote reads
 
 ```sh
-cargo run -p leafspring -- remote list --state draft
-cargo run -p leafspring -- remote list --json
-cargo run -p leafspring -- remote show 01999000-0000-7aaa-8000-000000000001
-cargo run -p leafspring -- remote show https://leaflet.pub/01999000-0000-7aaa-8000-000000000001 --json
+cargo run -p leafbud -- remote list --state draft
+cargo run -p leafbud -- remote list --json
+cargo run -p leafbud -- remote show 01999000-0000-7aaa-8000-000000000001
+cargo run -p leafbud -- remote show https://leaflet.pub/01999000-0000-7aaa-8000-000000000001 --json
 ```
 
 The examples use a synthetic UUID; replace it with a real permission-token ID.
 Credentials: `--token` > `LEAFLET_AUTH_TOKEN` >
-`$XDG_CONFIG_HOME/leafspring/auth-token` (else
-`~/.config/leafspring/auth-token`). Prefer env/file to keep tokens out of
+`$XDG_CONFIG_HOME/leafbud/auth-token` (else
+`~/.config/leafbud/auth-token`). Prefer env/file to keep tokens out of
 shell history and process listings. Tokens are trimmed; explicit empty
 credentials and unreadable/empty files are errors. A missing file permits
 anonymous requests, which may fail authentication. Login remains unimplemented;
@@ -101,15 +101,15 @@ Implementation receipt and next seam:
 ## Document workspace and publication defaults
 
 ```sh
-cargo run -p leafspring -- config set workspace /home/rektide/l
-cargo run -p leafspring -- config show --json
-cargo run -p leafspring -- config set publication AT_URI --workspace-file
+cargo run -p leafbud -- config set workspace /home/rektide/l
+cargo run -p leafbud -- config show --json
+cargo run -p leafbud -- config set publication AT_URI --workspace-file
 ```
 
 Workspace root: `--root DIR` > global TOML `workspace` > cwd. Global config is
-`$XDG_CONFIG_HOME/leafspring/leafspring.toml` (else
-`~/.config/leafspring/leafspring.toml`); relative global workspace paths resolve
-from that file's directory. `<root>/leafspring.toml` supplies workspace defaults.
+`$XDG_CONFIG_HOME/leafbud/leafbud.toml` (else
+`~/.config/leafbud/leafbud.toml`); relative global workspace paths resolve
+from that file's directory. `<root>/leafbud.toml` supplies workspace defaults.
 Figment2 resolves explicit flag > unbound document intent > workspace > global
 for `handle`, `pds`, `publication`; `config show` reports per-key provenance.
 `config set` edits only the chosen key, preserves comments/unknown settings,
@@ -123,9 +123,9 @@ retargeting a binding from ambient defaults or inventing publication dates.
 ## Checkout drafts as editable MDX
 
 ```sh
-cargo run -p leafspring -- import --all --state draft --root /home/rektide/l
-cargo run -p leafspring -- import EDITOR_URL --to drafts/chosen.mdx --json
-cargo run -p leafspring -- --root /home/rektide/l check drafts/chosen.mdx
+cargo run -p leafbud -- import --all --state draft --root /home/rektide/l
+cargo run -p leafbud -- import EDITOR_URL --to drafts/chosen.mdx --json
+cargo run -p leafbud -- --root /home/rektide/l check drafts/chosen.mdx
 ```
 
 This fetches native editor content, unlike metadata-only `remote show`.
@@ -167,9 +167,9 @@ Current implementation/verification handoff:
 ## Read-only local/editor status
 
 ```sh
-cargo run -p leafspring -- status                         # configured workspace
-cargo run -p leafspring -- --root /home/rektide/l status --offline --json
-cargo run -p leafspring -- status drafts/chosen.mdx --json
+cargo run -p leafbud -- status                         # configured workspace
+cargo run -p leafbud -- --root /home/rektide/l status --offline --json
+cargo run -p leafbud -- status drafts/chosen.mdx --json
 ```
 
 No operands selects local managed MDX files, not remote discovery or a new
@@ -238,13 +238,13 @@ Implementation/verification handoff:
 ## Human local/editor diff
 
 ```sh
-leafspring diff drafts/chosen.mdx --tool diff --tool-arg=-u --tool-exit diff
+leafbud diff drafts/chosen.mdx --tool diff --tool-arg=-u --tool-exit diff
 
 # Or persist trusted viewer configuration (global, or add --workspace-file):
-leafspring config set diff-program diff
-leafspring config set diff-args '["-u"]'
-leafspring config set diff-exit diff
-leafspring diff drafts/chosen.mdx                 # --edge editor is the default
+leafbud config set diff-program diff
+leafbud config set diff-args '["-u"]'
+leafbud config set diff-exit diff
+leafbud diff drafts/chosen.mdx                 # --edge editor is the default
 ```
 
 This compares **current local authored content → current bound native editor**,
@@ -297,24 +297,24 @@ workspace > global. `--tool PROGRAM` overrides only the program; repeatable
 set `diff-args` to `[]`. `config show` includes each setting's provenance.
 
 `success` (default) accepts only tool exit **0**; `diff` explicitly supports the
-POSIX diff convention **0 equal, 1 different**, with both successful Leafspring
+POSIX diff convention **0 equal, 1 different**, with both successful Leafbud
 reports (exit **0**). Neither the executable's name nor its exit code determines
-Leafspring's own normalized-view equality report. Other codes, a signal or a
-spawn/wait/cleanup failure give Leafspring exit **1**; usage errors give **2**.
+Leafbud's own normalized-view equality report. Other codes, a signal or a
+spawn/wait/cleanup failure give Leafbud exit **1**; usage errors give **2**.
 `--edge names/release` is explicitly unimplemented (exit 1). There is deliberately
 **no `--json`**: stdin/stdout/stderr/TTY are inherited for CLI or interactive tools;
-the tool owns stdout and Leafspring emits only a short execution summary on stderr.
+the tool owns stdout and Leafbud emits only a short execution summary on stderr.
 
 Use a **foreground/waiting viewer**. For example, Vim's diff mode can use
 `--tool vim --tool-arg=-d --tool-exit success`; a GUI launcher needs its documented
-wait option. Leafspring owns a private temporary directory until that process
+wait option. Leafbud owns a private temporary directory until that process
 exits, then removes both files on success or tool failure. Drop cleanup also covers
 ordinary spawn/wait errors; hard process termination can leave temporary files
 (no automatic pruning or secure-erasure promise). Detached viewers are unsupported:
 their paths disappear when the launcher exits. Editing a view never edits the source
 or editor. Treat configured programs/workspace config as trusted code: the child
 receives private writing and the normal inherited environment, and its own backups,
-caches, rendering, resource access or side effects are outside Leafspring's control.
+caches, rendering, resource access or side effects are outside Leafbud's control.
 
 Implementation and verification: [human diff handoff](design/human-diff0.gpt61s.md).
 The [last verified live rename gap](#read-only-localeditor-status) remains a separate
@@ -326,9 +326,9 @@ does not perform or promise that migration.
 ## Refresh bound drafts from their editors (guarded pull)
 
 ```sh
-cargo run -p leafspring -- pull --all --root /home/rektide/l
-cargo run -p leafspring -- pull drafts/chosen.mdx --dry-run --json
-cargo run -p leafspring -- pull drafts/chosen.mdx --take remote
+cargo run -p leafbud -- pull --all --root /home/rektide/l
+cargo run -p leafbud -- pull drafts/chosen.mdx --dry-run --json
+cargo run -p leafbud -- pull drafts/chosen.mdx --take remote
 ```
 
 `pull` refreshes **existing bound local files** from their current native
@@ -371,9 +371,9 @@ Current implementation/verification handoff:
 ## Markdown-first rich text and deliberate tidy
 
 ```sh
-cargo run -p leafspring -- tidy --all --markdown --dry-run --json --root /home/rektide/l
-cargo run -p leafspring -- tidy drafts/chosen.mdx            # default: all implemented passes
-cargo run -p leafspring -- tidy drafts/chosen.mdx --markdown # this pass alone
+cargo run -p leafbud -- tidy --all --markdown --dry-run --json --root /home/rektide/l
+cargo run -p leafbud -- tidy drafts/chosen.mdx            # default: all implemented passes
+cargo run -p leafbud -- tidy drafts/chosen.mdx --markdown # this pass alone
 ```
 
 Import and genuinely changed pull bodies now emit ordinary Markdown
@@ -413,8 +413,8 @@ Current implementation/verification handoff:
 
 ```
 cargo build
-cargo run -p leafspring -- --version
-cargo run -p leafspring -- push essay.mdx   # -> "not implemented", exit 1
+cargo run -p leafbud -- --version
+cargo run -p leafbud -- push essay.mdx   # -> "not implemented", exit 1
 ```
 
 Checks: `cargo fmt`, `cargo clippy --workspace --all-targets`,

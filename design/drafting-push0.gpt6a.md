@@ -13,9 +13,9 @@ updated:
 sources:
   - resource: "opencode://ses_e435692e7ffeGsnomW6T3dcfwp"
     title: "Independent first draft and authorized revision-bound peer cross-review; retained generation default, corrected inactive-data eligibility and verified publication/metadata/recovery distinctions; initial accidental search exposure disclosed"
-  - resource: https://github.com/rektide/leafspring/blob/7c0e6f9501bf8ae52280aef9f37932804703902c/design/drafting-push0.glm53m.md
+  - resource: https://github.com/rektide/leafbud/blob/7c0e6f9501bf8ae52280aef9f37932804703902c/design/drafting-push0.glm53m.md
     title: "Authorized stage-two review of g's corrected independent draft, read with git show; no evolving peer cross-review read"
-  - resource: https://github.com/rektide/leafspring/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md
+  - resource: https://github.com/rektide/leafbud/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md
     title: "Preserved independent first argument; the appended cross-review states subsequent changes"
   - resource: /design/draft-checkout0.gpt61s.md
     title: "Actual imported-corpus receipt, including mixed JSX/inactive-text blockers resolved before 27-draft success"
@@ -44,7 +44,7 @@ sources:
   - resource: /design/human-diff0.gpt61s.md
     title: "Implemented external human comparison, kept independent of mutation authority"
   - resource: /Cargo.toml
-    title: "Production Leafspring 0.9.0 dependencies at parent checkpoint 9a3a0dbb"
+    title: "Production Leafbud 0.9.0 dependencies at parent checkpoint 9a3a0dbb"
   - resource: /crates/document/model/src/lib.rs
     title: "Current bound-only State/Node and association-bearing editor_value"
   - resource: /crates/document/mdx/src/lib.rs
@@ -71,7 +71,7 @@ sources:
     title: "Pinned Yrs fresh materialization and independent-consumer conventions"
   - resource: /experiments/13-satteri-authoring/fixtures/garden.mdx
     title: "Previously executed native Key spelling inside a Markdown list item"
-  - resource: https://github.com/rektide/leafspring/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs
+  - resource: https://github.com/rektide/leafbud/blob/80436b61cf69a2e41d157684b24c6cf2fd4674da/crates/drafts/src/create.rs
     title: "Recovered pre-reset GET /new transport; source-derived and loopback tested, not deployment proof"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/actions/createPublicationDraft.ts
     title: "Inspected publication draft action: permission check, mint, association and contributor defaults; not public release"
@@ -132,15 +132,15 @@ already accepted this identity trade. If retained block/page anchors are require
 choose the complete keyed-block alternative in §9 instead; do not return to an
 existing-text-only deliverable.
 
-Inspection started in `/home/rektide/src/leafspring`, version **0.9.0**, clean
+Inspection started in `/home/rektide/src/leafbud`, version **0.9.0**, clean
 working copy `5571f343` on parent checkpoint **`9a3a0dbb`**. The incoming name is
 **Leafbud**; another session owns the rename, configuration and existing-data
-conversion. Code names cited here describe the inspected Leafspring revision;
+conversion. Code names cited here describe the inspected Leafbud revision;
 example commands use the incoming name. Archived Leaflet HEAD was independently
 checked as **`600c7b5f1f7b31b66fb626c293cc104312a12caf`**. No remote writes, live
 user-file reads/transformations or production edits were performed for this design.
 
-This is the independent **first draft** for `leafspring-editor-plan-design`.
+This is the independent **first draft** for `leafbud-editor-plan-design`.
 Only previous-wave designs informed the proposal. **Independence note:** after
 this draft and its recommendation were written and checked, a broad corpus search
 unintentionally returned two creation-related lines from the concurrently appearing
@@ -591,7 +591,7 @@ Use one outstanding write request at a time. Keep exact bytes/IDs in memory for
 an exact retry. Advance the durable phase/request high-water mark before sending
 its effects; a crash there conservatively means “may have been sent.” Pull must
 accept the attempt's client group and expose typed `lastMutationIDChanges`, instead
-of always using `leafspring-read-only` as it does now.
+of always using `leafbud-read-only` as it does now.
 
 | Observed interruption/outcome | Behavior |
 | --- | --- |
@@ -742,8 +742,8 @@ diagnostic technique, not an acceptable replacement for the commissioned first p
 
 ### C — Complete the generated-body save
 
-Recast the body implementation scope behind `leafspring-editor-structure` together
-with the needed fresh-text work formerly associated with `leafspring-editor-text`.
+Recast the body implementation scope behind `leafbud-editor-structure` together
+with the needed fresh-text work formerly associated with `leafbud-editor-text`.
 Build the full profile emitter, native append ordering, staged verification and
 entry activation. Include title/metadata ownership. **Recommend g** once B has
 verified wire shapes; parent reviews staging/ownership before remote execution.
@@ -752,7 +752,7 @@ deletion, order and PageLink/list handling must land in this same delivery arc.
 
 ### D — Close the lifecycle and demonstrate the product
 
-Join `leafspring-editor-conflicts` and `leafspring-editor-recovery` with the push
+Join `leafbud-editor-conflicts` and `leafbud-editor-recovery` with the push
 workflow/CLI, source-preserving binding/receipt settlement, pull integration and
 the complete acceptance matrix. **Recommend Sol high** for the uncertainty and
 receipt boundary, with g suitable for specified CLI/rendering fixtures if assigned
@@ -807,13 +807,13 @@ live result or peer consensus.
 ## 12. Authorized cross-review and revised stance
 
 **Review target:** g's corrected independent draft at
-[`7c0e6f9501bf8ae52280aef9f37932804703902c`](https://github.com/rektide/leafspring/blob/7c0e6f9501bf8ae52280aef9f37932804703902c/design/drafting-push0.glm53m.md),
+[`7c0e6f9501bf8ae52280aef9f37932804703902c`](https://github.com/rektide/leafbud/blob/7c0e6f9501bf8ae52280aef9f37932804703902c/design/drafting-push0.glm53m.md),
 read through `git show`, compared with my first draft at
-[`b5e66475c66a36363d47e4f0c9e198287d59fcf9`](https://github.com/rektide/leafspring/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md).
+[`b5e66475c66a36363d47e4f0c9e198287d59fcf9`](https://github.com/rektide/leafbud/blob/b5e66475c66a36363d47e4f0c9e198287d59fcf9/design/drafting-push0.gpt6a.md).
 The peer's browser-creation requirement was already corrected before this review;
 I assess its corrected automatic `/new` path, not that superseded requirement.
 No parallel evolving peer addendum was read. The checkout still resolved as
-`/home/rektide/src/leafspring` during this review. Sections 1–11 remain the original
+`/home/rektide/src/leafbud` during this review. Sections 1–11 remain the original
 argument; **this addendum controls where it changes that argument**.
 
 ### 12.1 Revised verdict: keep generation; correct corpus eligibility
@@ -1204,23 +1204,23 @@ make the review's substantive differences executable:
 Keep four coherent batches, with essential failure handling integrated rather than
 deferred as post-delivery hardening. Parent owns actual ticket updates/assignment:
 
-- **A — local authorship and model**, under `leafspring-author-create` and
-  `leafspring-author-keys` if retained in the tracker: g implements optional coherent
+- **A — local authorship and model**, under `leafbud-author-create` and
+  `leafbud-author-keys` if retained in the tracker: g implements optional coherent
   binding/sync, intent presence, local-ID stability, precise key preparation and the
   complete chosen source/read-back profile, including flat lists. This makes normal
   structural drafts valid before remote execution.
 - **B — native first binding and write boundary**, under
-  `leafspring-editor-bind`: recommend Sol high for publication-action invocation,
+  `leafbud-editor-bind`: recommend Sol high for publication-action invocation,
   standalone mint, exact protocol shapes, pending-token lifecycle and typed ack/
   explicit-root reads. Essential lost/uncertain mint and request handling ships here.
   Resolve actual publication context; don't accept a standalone substitute.
-- **C — full generated-body save**, under `leafspring-editor-structure` with the
-  fresh-text work from `leafspring-editor-text`: g can implement the now-specified
+- **C — full generated-body save**, under `leafbud-editor-structure` with the
+  fresh-text work from `leafbud-editor-text`: g can implement the now-specified
   emitter, helper-driven ordering, staged verification, entry activation, context-
   correct metadata and known-inactive retirement policy. It includes source-byte
   guards and read-back; no independently executable “safe later” write shortcut.
 - **D — joined conflict/recovery/product proof**, under
-  `leafspring-editor-conflicts` and `leafspring-editor-recovery`: recommend Sol high
+  `leafbud-editor-conflicts` and `leafbud-editor-recovery`: recommend Sol high
   for the final receipt/uncertainty integration and complete matrix. This completes
   stop/settle recovery, guarded pull and the authorized full two-save native loop.
   Extensive autonomous repair is optional; the required workflow is not declared

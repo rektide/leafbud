@@ -1878,12 +1878,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
-name = "leafspring"
+name = "leafbud"
 version = "0.9.0"
 dependencies = [
  "base64 0.22.1",
  "clap",
- "leafspring-workflow",
+ "leafbud-workflow",
  "serde_json",
  "tempfile",
  "tokio",
@@ -1891,7 +1891,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "leafspring-atproto"
+name = "leafbud-atproto"
 version = "0.9.0"
 dependencies = [
  "base64 0.22.1",
@@ -1905,7 +1905,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "leafspring-document"
+name = "leafbud-document"
 version = "0.9.0"
 dependencies = [
  "serde",
@@ -1914,23 +1914,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "leafspring-editor"
+name = "leafbud-editor"
 version = "0.9.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
- "leafspring-document",
+ "leafbud-document",
  "serde_json",
  "uuid",
  "yrs",
 ]
 
 [[package]]
-name = "leafspring-mdx"
+name = "leafbud-mdx"
 version = "0.9.0"
 dependencies = [
  "anyhow",
- "leafspring-document",
+ "leafbud-document",
  "satteri-arena",
  "satteri-ast",
  "satteri-pulldown-cmark",
@@ -1941,20 +1941,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "leafspring-records"
+name = "leafbud-records"
 version = "0.9.0"
 dependencies = [
  "jacquard-common",
  "jacquard-derive",
  "jacquard-lexicon",
- "leafspring-atproto",
+ "leafbud-atproto",
  "serde",
  "serde_json",
  "thiserror",
 ]
 
 [[package]]
-name = "leafspring-web"
+name = "leafbud-web"
 version = "0.9.0"
 dependencies = [
  "jiff",
@@ -1968,16 +1968,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "leafspring-workflow"
+name = "leafbud-workflow"
 version = "0.9.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "figment2",
- "leafspring-document",
- "leafspring-editor",
- "leafspring-mdx",
- "leafspring-web",
+ "leafbud-document",
+ "leafbud-editor",
+ "leafbud-mdx",
+ "leafbud-web",
  "serde",
  "serde_json",
  "sha2",

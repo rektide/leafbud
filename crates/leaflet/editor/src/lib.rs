@@ -1,7 +1,7 @@
 //! Pure native fact observation → bounded, loss-checked current content.
 //! Raw observations stay with the caller; no transport or local file effects.
 use anyhow::{Context, Result, bail, ensure};
-use leafspring_document::{Block, BlockKind, Inline, Node, Page, Theme};
+use leafbud_document::{Block, BlockKind, Inline, Node, Page, Theme};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
@@ -26,7 +26,7 @@ pub fn witness(facts: &[Value], extras: &BTreeMap<String, Value>, metadata: Valu
         })
         .collect();
     facts.sort_by_key(Value::to_string);
-    serde_json::json!({"profile":leafspring_document::EDITOR_PROFILE,"facts":facts,"extras":extras,"metadata":metadata})
+    serde_json::json!({"profile":leafbud_document::EDITOR_PROFILE,"facts":facts,"extras":extras,"metadata":metadata})
 }
 
 pub struct Content {

@@ -99,7 +99,7 @@ never silently switch management mode or mint a duplicate on publication.
 
 ## 2. Storage and identity
 
-JSON is a full record-shaped document plus top-level `@leafspring`. Local
+JSON is a full record-shaped document plus top-level `@leafbud`. Local
 drafts need not satisfy final wire-required publication fields before they
 exist. Unknown document fields survive ordinary edits. Strip the envelope
 explicitly for remote record serialization and record-only export.
@@ -131,7 +131,7 @@ Use one tagged binding, not simultaneous `draft` and `post` management sections.
 An illustrative outline (exact names remain open):
 
 ```text
-@leafspring
+@leafbud
   version, localId
   binding: unlinked-draft | leaflet-draft | leaflet-post
     baseUrl, token, rootEntity          where linked
@@ -314,7 +314,7 @@ A deliberate published path edit does not change the actual binding; warn that
 the native publisher resets it. Offer explicit acknowledgment of normalization
 or refuse a request that requires exact path preservation. There is no silent
 PDS fallback. PDS-managed operations with chosen rkeys are separate future
-tickets `leafspring-pds-publish` and `leafspring-pds-sync`.
+tickets `leafbud-pds-publish` and `leafbud-pds-sync`.
 
 ## 7. Dates, alternate encodings, and commands
 
@@ -326,30 +326,30 @@ push must not silently reset publication dates. Native future-date clamping
 is reported; scheduling remains separate.
 
 Markdown is an alternative serialization of the same document with metadata
-and `@leafspring` in frontmatter. No second maintained JSON output, conversion
+and `@leafbud` in frontmatter. No second maintained JSON output, conversion
 baseline, or Markdown sync edge. Conversion loses nothing it can preserve;
 report actual unsupported content and require `--force-downconvert` for lossy
 conversion, including pull into a limited Markdown representation. A lossy
 result must not be called a fully faithful sync. Rich/unknown-block markup
-is future work in `leafspring-mdx`.
+is future work in `leafbud-mdx`.
 
 Illustrative surface:
 
 ```sh
-leafspring create drafts/essay.json --title "An essay"
-leafspring import LEAFLET-LOCATOR          # picks default layout unless --to
-leafspring status [FILE]                   # both edges and release evidence
-leafspring diff FILE --edge names|leaflet
-leafspring pull FILE                       # current working editor state
-leafspring push FILE --yes                 # save to Leaflet, never publish
-leafspring publish FILE --yes              # save + publish / republish
-leafspring resolve FILE --take local|remote
-leafspring tidy FILE --from filename|path
-leafspring tidy FILE --accept
-leafspring edit FILE --now
-leafspring drafts append TOKEN --from FILE # additive low-level operation
-leafspring convert FILE --to json|markdown
-leafspring export FILE --record-only
+leafbud create drafts/essay.json --title "An essay"
+leafbud import LEAFLET-LOCATOR          # picks default layout unless --to
+leafbud status [FILE]                   # both edges and release evidence
+leafbud diff FILE --edge names|leaflet
+leafbud pull FILE                       # current working editor state
+leafbud push FILE --yes                 # save to Leaflet, never publish
+leafbud publish FILE --yes              # save + publish / republish
+leafbud resolve FILE --take local|remote
+leafbud tidy FILE --from filename|path
+leafbud tidy FILE --accept
+leafbud edit FILE --now
+leafbud drafts append TOKEN --from FILE # additive low-level operation
+leafbud convert FILE --to json|markdown
+leafbud export FILE --record-only
 ```
 
 Kind-specific groups may scope the same implementation. Bulk discovery/import

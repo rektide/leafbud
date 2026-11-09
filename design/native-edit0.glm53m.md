@@ -80,8 +80,8 @@ remote entities, structure explicit in the source. Its *mechanism ambition*
 from the first build. Character-identity continuity inside an edited block is
 the specific thing we trade, honestly and reversibly.
 
-Revision bindings: all `leafspring-*` crate names and `@leafspring` field
-spellings refer to leafspring at commit **`39814abe5764`** (inspected working
+Revision bindings: all `leafbud-*` crate names and `@leafbud` field
+spellings refer to leafbud at commit **`39814abe5764`** (inspected working
 copy; the operator's in-flight rename to Leafbud is owned by a separate
 session and changes names, not this design's substance). Leaflet source
 claims bind to `600c7b5f1f7b31b66fb626c293cc104312a12caf`; Yrs claims bind to
@@ -225,7 +225,7 @@ executes it. The loop:
 4. **Recover:** any interruption re-pulls and replans from current state;
    the same plan converges (operations are idempotent by explicit ID, text
    deltas converge rather than append). A compact pending receipt (input
-   hash + phase) is the separate `leafspring-editor-recovery` ticket's
+   hash + phase) is the separate `leafbud-editor-recovery` ticket's
    seam; this design adds no persistent plan or generation store.
 
 Concurrency honesty: the server's token-scoped advisory lock is not caller
@@ -304,17 +304,17 @@ No new crate, no new model types beyond the plan enum. The engine lives at
 the existing seams:
 
 ```text
-leafspring-editor (crates/leaflet/editor):
+leafbud-editor (crates/leaflet/editor):
   edit_text(base_update: &str, desired: &[Inline]) -> Result<TextEdit>
     // TextEdit::Fresh(full_initial_update) for new entities
     // TextEdit::Delta(cumulative_v1)       for existing entities
     // (no-op handled earlier by typed comparison)
 
-leafspring-workflow (crates/workflow), new plan.rs alongside editor_state.rs:
+leafbud-workflow (crates/workflow), new plan.rs alongside editor_state.rs:
   plan_push(desired: &Document, observed: &Content) -> Result<PushPlan>
     // PushPlan: Vec<ScopeOp> + expected effects + per-block preview lines
 
-leafspring-web (crates/leaflet/web):
+leafbud-web (crates/leaflet/web):
   push(root_entity, mutations, client_id) -> PushReceipt   // new transport;
     // shape per experiment 02; port deliberately from 80436b61, re-verify
 
@@ -357,7 +357,7 @@ refactor is proposed.
   votes).
 - **Publish vs save:** push touches the editor edge only; publish/release,
   delivery and released-state tracking are the separate release domain.
-- **Human display diff:** Sol's `leafspring-inspect-diff` Markdown views +
+- **Human display diff:** Sol's `leafbud-inspect-diff` Markdown views +
   user-provided external tool are independent of this engine. Push previews
   are structured operation lists; optionally they may later reuse the same
   Markdown renderer for per-block before/after display, as presentation
@@ -374,7 +374,7 @@ refactor is proposed.
 
 Sequenced coherent slices (capability gates, not authorization):
 
-1. **Plan engine (offline).** `edit_text` in leafspring-editor; `plan_push`
+1. **Plan engine (offline).** `edit_text` in leafbud-editor; `plan_push`
    in workflow; pure fixtures → plans. *Fixtures:* per-block no-op/change/
    create/delete/move/type-change; split (two paragraphs, one key + one
    auto-key) and join (author merged in source) cases; anchor-loss preview

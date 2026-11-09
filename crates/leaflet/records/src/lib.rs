@@ -1,13 +1,13 @@
-//! leafspring-records — the Leaflet public-record vocabulary for leafspring.
+//! leafbud-records — the Leaflet public-record vocabulary for leafbud.
 //!
 //! Destination ownership (accepted design,
 //! [`design/authoring-interface0.gpt6a.md`](../../../design/authoring-interface0.gpt6a.md) §2):
 //! generated public types, validation, and the document-to-public record
 //! projection. Editor facts and Yjs text state are **not** public records;
-//! they belong to `leafspring-editor`. This crate parses no MDX, touches no
+//! they belong to `leafbud-editor`. This crate parses no MDX, touches no
 //! filesystem, and performs no network effects; the one public-read helper
 //! that used to live beside these types (publication-record lookup) resets
-//! with the old lifecycle and re-homes under `leafspring-web` when
+//! with the old lifecycle and re-homes under `leafbud-web` when
 //! publication discovery is implemented.
 //!
 //! Two layers:

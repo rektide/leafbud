@@ -1,6 +1,6 @@
 [package]
-name = "leafspring-web"
-description = "Leaflet web effects for leafspring: cookie auth, discovery, RPC/actions, uploads, native publication"
+name = "leafbud-web"
+description = "Leaflet web effects for leafbud: cookie auth, discovery, RPC/actions, uploads, native publication"
 version.workspace = true
 edition.workspace = true
 

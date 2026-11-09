@@ -1,6 +1,6 @@
 [package]
-name = "leafspring-document"
-description = "Pure document model for leafspring: current content, stable source IDs, diagnostics, tracking types"
+name = "leafbud-document"
+description = "Pure document model for leafbud: current content, stable source IDs, diagnostics, tracking types"
 version.workspace = true
 edition.workspace = true
 

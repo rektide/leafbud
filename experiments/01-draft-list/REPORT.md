@@ -1,7 +1,7 @@
 ---
 type: Report
 title: "Experiment 01 — draft list extraction from /home"
-description: Characterizes the leaflet.pub /home draft-list surface (href ids, UUIDv7 timestamps, RSC flight payload), the get_leaflet_data RPC, and recommends the algorithm + output schema for `leafspring drafts list`.
+description: Characterizes the leaflet.pub /home draft-list surface (href ids, UUIDv7 timestamps, RSC flight payload), the get_leaflet_data RPC, and recommends the algorithm + output schema for `leafbud drafts list`.
 resource: experiments/01-draft-list/REPORT.md
 status: draft
 generated:
@@ -10,8 +10,8 @@ generated:
 sources:
   - resource: "opencode://ses_e4caf9f73ffess4fRaY41iD9XH"
     title: "Session that probed /home and get_leaflet_data, derived the extraction algorithm and schema, and built the fixture + prototype extractor"
-  - resource: "file:///home/rektide/src/leafspring/design/leafspring.glm53m.md"
-    title: "Leafspring design doc — experiment brief and ground truth being verified"
+  - resource: "file:///home/rektide/src/leafbud/design/leafbud.glm53m.md"
+    title: "Leafbud design doc — experiment brief and ground truth being verified"
   - resource: "https://leaflet.pub/home"
     title: "Production home page (live probe, 2026-11-07; raw HTML kept uncommitted in scratch)"
 ---
@@ -19,11 +19,11 @@ sources:
 # Experiment 01 — draft list extraction from `/home`
 
 Mission: prove a headless "list my drafts" path and specify extraction
-algorithm + output schema for `leafspring drafts list`.
+algorithm + output schema for `leafbud drafts list`.
 
 Probed 2026-11-07 with the `auth_token` cookie (read at runtime from
 `~/.config/leaflet/auth-token`; value never printed, logged, or committed).
-Raw evidence lives in scratch only (`/tmp/opencode/leafspring-01/`); everything
+Raw evidence lives in scratch only (`/tmp/opencode/leafbud-01/`); everything
 below and in this directory is synthetic or redacted.
 
 ## 1. The `/home` HTML surface
@@ -252,7 +252,7 @@ whether the homepage truncates at some N. Nothing headless enumerates beyond
 
 ## 5. Output schema
 
-`leafspring drafts list --json` (schema `version: 1`):
+`leafbud drafts list --json` (schema `version: 1`):
 
 ```json
 {

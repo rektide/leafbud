@@ -56,12 +56,12 @@ fn native_orphan_is_empty_paragraph_and_duplicate_ids_last_wins() {
 
 #[test]
 fn native_mdx_comment_is_typed_expression_not_prose() {
-    let (arena, errors) = native("{/* leafspring:key intro */}\n## Heading\n", Mode::Mdx);
+    let (arena, errors) = native("{/* leafbud:key intro */}\n## Heading\n", Mode::Mdx);
     assert!(errors.is_empty());
     let blocks = arena.get_children(0);
     assert_eq!(arena.get_node(blocks[0]).node_type, MdastNodeType::MdxFlowExpression as u8);
     let value = decode_expression_data(arena.get_type_data(blocks[0])).value;
-    assert_eq!(arena.get_str(value), "/* leafspring:key intro */");
+    assert_eq!(arena.get_str(value), "/* leafbud:key intro */");
     assert_eq!(arena.get_node(blocks[1]).node_type, MdastNodeType::Heading as u8);
 }
 
@@ -93,7 +93,7 @@ fn native_mdx_is_not_literal_only_and_carries_arbitrary_javascript() {
 
 #[test]
 fn native_mdx_intentionally_disables_indented_code() {
-    let source = "    {/* leafspring:key looks-like-code */}\n\nFollowing prose.\n";
+    let source = "    {/* leafbud:key looks-like-code */}\n\nFollowing prose.\n";
     let (plain, _) = native(source, Mode::Plain);
     let (mdx, errors) = native(source, Mode::Mdx);
     assert!(errors.is_empty());

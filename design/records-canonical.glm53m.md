@@ -1,7 +1,7 @@
 ---
 type: Design
 title: Canonical on-disk format — the ATProto record is the document
-description: Leafspring stores posts as pure site.standard.document record JSON whether posted or not; drafts/ and posted/ directories with sidecar state, and sync semantics against the PDS.
+description: Leafbud stores posts as pure site.standard.document record JSON whether posted or not; drafts/ and posted/ directories with sidecar state, and sync semantics against the PDS.
 resource: design/records-canonical.glm53m.md
 status: draft
 generated:
@@ -10,7 +10,7 @@ generated:
 sources:
   - resource: "opencode://ses_e4ceef2e9ffeMaBQB1Yc3bcyMD"
     title: "Session holding the protocol map; operator's canonical-format direction recorded here"
-  - resource: "file:///home/rektide/src/leafspring/experiments/03-post-builder/REPORT.md"
+  - resource: "file:///home/rektide/src/leafbud/experiments/03-post-builder/REPORT.md"
     title: "Proof that a lexicon-valid record + putRecord posting path works"
 ---
 
@@ -56,7 +56,7 @@ Evidence: social-cli posts this exact shape today; Leaflet's appview ingests
   posted/                     # records as actually written
     <slug>.json               # pure record, byte-faithful to the last put
     <slug>.meta.json          # sidecar state (below)
-  leafspring.toml             # identity defaults: handle, pds, publication at-uri
+  leafbud.toml             # identity defaults: handle, pds, publication at-uri
 ```
 
 Rules:
@@ -74,7 +74,7 @@ Rules:
    filename) → move file to posted/ → write sidecar. This is a move, not a
    copy: a slug lives in exactly one place.
 
-## Sync semantics (`leafspring sync`)
+## Sync semantics (`leafbud sync`)
 
 Reconcile posted/ against `com.atproto.repo.listRecords` (public read, no
 auth) on the resolved PDS, by rkey:
@@ -94,7 +94,7 @@ sidecar without `remoteCid`, cannot be classified — they report as explicit
 `no-sidecar`/drift rows rather than guessed clean; `--force` resolves by
 re-putting. Session-store hardening is file 0600 + **parent dir 0700** (a
 0600 directory is untraversable). The `workspace` key lives in the XDG
-config `leafspring.toml` (a toml inside the workspace cannot be found before
+config `leafbud.toml` (a toml inside the workspace cannot be found before
 the root is known); a workspace-local toml may supply `handle`/`pds`/
 `publication`.
 
@@ -120,10 +120,10 @@ Location header for a fresh token id (one gated write probe).
 
 ## Open items
 
-- `leafspring.toml` shape and whether publication default belongs there
+- `leafbud.toml` shape and whether publication default belongs there
   (yes, per experiment 03's pick-first-publication lesson).
 - Whether `drafts/` may hold records targeted at multiple publications
   (sidecar `publication` defaulting to the toml value).
 - Ordering of `sync` vs `publish` flags in the CLI surface; see
-  `design/leafspring.glm53m.md` §CLI surface for the current command set —
+  `design/leafbud.glm53m.md` §CLI surface for the current command set —
   `publish run` and `sync` will extend it.

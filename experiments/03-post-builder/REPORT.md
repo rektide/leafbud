@@ -10,8 +10,8 @@ generated:
 sources:
   - resource: "opencode://ses_e4caf9f70ffeNzpcr75XIKbdG6"
     title: "Session that resolved identity, inventoried publications, built and validated the record"
-  - resource: "file:///home/rektide/src/leafspring/design/leafspring.glm53m.md"
-    title: "Leafspring design: auth, post records, slug rule, staged build plan"
+  - resource: "file:///home/rektide/src/leafbud/design/leafbud.glm53m.md"
+    title: "Leafbud design: auth, post records, slug rule, staged build plan"
   - resource: "file:///home/rektide/archive/letta-ai/social-cli/src/commands/publish.ts"
     title: "Exemplar implementation: slug=rkey rule, byte-offset facets, URL derivation"
   - resource: "file:///home/rektide/archive/hyperlink-academy/leaflet/lexicons/"
@@ -47,7 +47,7 @@ Handle: `jauntywunderkind.bsky.social`
 `listRecords` against the PDS, both collections, cursor followed to exhaustion:
 
 - **`pub.leaflet.publication`: 0 records.** The legacy collection has nothing
-  from this account — leafspring only needs to read it for compat, not write.
+  from this account — leafbud only needs to read it for compat, not write.
 
 - **`site.standard.publication`: 3 records** (all carry `$type`):
 
@@ -177,7 +177,7 @@ general code needs real grapheme segmentation.
 ## 6. Derivation
 
 - **rkey (default rule):** `slugify(title)` → from frontmatter slug →
-  `leafspring-protocol-probe`. social-cli's rule: default rkey = slug, TID
+  `leafbud-protocol-probe`. social-cli's rule: default rkey = slug, TID
   only on explicit opt-out. Observed counter-evidence: the leaflet.pub web
   app itself uses TID rkeys with `path=/\{rkey\}` — both work because
   Leaflet's middleware rewrites `{domain}/{path}` →
@@ -187,10 +187,10 @@ general code needs real grapheme segmentation.
   `"key": "tid"` in the lexicon — PDSs don't enforce keyType and Leaflet
   ingests them fine.
 - **Fallback URL:**
-  `https://leaflet.pub/lish/did:plc:zjbq26wybii5ojoypkso2mso/3molsbwkh522o/leafspring-protocol-probe`
+  `https://leaflet.pub/lish/did:plc:zjbq26wybii5ojoypkso2mso/3molsbwkh522o/leafbud-protocol-probe`
 - **Publication-domain URL:** publication `url` =
   `https://technautical.leaflet.pub` →
-  `https://technautical.leaflet.pub/leafspring-protocol-probe`
+  `https://technautical.leaflet.pub/leafbud-protocol-probe`
   (trailing-slash stripped per social-cli `fetchPublicationUrl` flow).
 
 ## 7. putRecord.sh — NOT EXECUTED

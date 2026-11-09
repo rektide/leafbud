@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Prototype of `leafspring drafts list` extraction (experiment 01).
+"""Prototype of `leafbud drafts list` extraction (experiment 01).
 
 Reads /home HTML (from file, or fetched live with the cookie from
-~/.config/leafspring/auth-token), parses the RSC flight payload, and emits the
+~/.config/leafbud/auth-token), parses the RSC flight payload, and emits the
 draft list as JSON (schema v1, see REPORT.md) or a human table.
 
 Read-only. The auth token is read at runtime and never printed or logged.
@@ -22,7 +22,7 @@ import urllib.request
 
 HOME_URL = "https://leaflet.pub/home"
 RPC_URL = "https://leaflet.pub/api/rpc/get_leaflet_data"
-TOKEN_PATH = __import__("pathlib").Path.home() / ".config/leafspring/auth-token"
+TOKEN_PATH = __import__("pathlib").Path.home() / ".config/leafbud/auth-token"
 UUID_HREF = re.compile(r'href="/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"')
 PUSH = re.compile(r"self\.__next_f\.push\((\[.*?\])\)</script>", re.S)
 KNOWN_ROUTES = {
@@ -199,7 +199,7 @@ def main():
     if a.live:
         req = urllib.request.Request(HOME_URL, headers={
             "Cookie": "auth_token=" + TOKEN_PATH.read_text().strip(),
-            "user-agent": "leafspring-experiment/0"})
+            "user-agent": "leafbud-experiment/0"})
         with urllib.request.urlopen(req) as r:
             html = r.read().decode()
         source = "home-rsc"

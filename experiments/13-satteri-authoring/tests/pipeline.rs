@@ -214,7 +214,7 @@ fn source_edit_gets_fresh_body_and_prose_ids_but_retains_author_keys_and_poll() 
 
 #[test]
 fn reordering_keyed_prose_preserves_author_name_not_array_path_or_crdt_identity() {
-    let source = "---\nformat: leafspring-mdx/1\ntitle: T\n---\n\n<Key id=\"a\" />\nAlpha.\n\n<Key id=\"b\" />\nBeta.\n";
+    let source = "---\nformat: leafbud-mdx/1\ntitle: T\n---\n\n<Key id=\"a\" />\nAlpha.\n\n<Key id=\"b\" />\nBeta.\n";
     let moved = source.replace(
         "<Key id=\"a\" />\nAlpha.\n\n<Key id=\"b\" />\nBeta.",
         "<Key id=\"b\" />\nBeta.\n\n<Key id=\"a\" />\nAlpha.",

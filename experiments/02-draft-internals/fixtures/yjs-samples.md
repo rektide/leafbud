@@ -88,5 +88,5 @@ Byte-level bits worth knowing:
 Some empty text blocks on live drafts store the 3-byte value `b5 ec 6d`,
 which is **not** a valid update — yjs `applyUpdate` throws
 `Unexpected end of array` (first varuint decodes to 1,799,733 "clients").
-Treat as empty/absent when reading; leafspring's reader must never assume
+Treat as empty/absent when reading; leafbud's reader must never assume
 every `block/text` value parses.

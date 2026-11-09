@@ -113,18 +113,18 @@ fn bind(arena: &mut Arena<Mdast>, parent: u32, errors: &mut Vec<Diagnostic>) {
     for (i, &id) in children.iter().enumerate() {
         let k = kind(arena, id);
         if !matches!(k, MdastNodeType::MdxFlowExpression | MdastNodeType::MdxTextExpression)
-            || !expression(arena, id).trim_start().starts_with("/* leafspring:")
+            || !expression(arena, id).trim_start().starts_with("/* leafbud:")
         {
             keep.push(id);
             continue;
         }
         let value = expression(arena, id).to_owned();
         let Some(key) = value
-            .strip_prefix("/* leafspring:key ")
+            .strip_prefix("/* leafbud:key ")
             .and_then(|v| v.strip_suffix(" */"))
             .filter(|k| valid_key(k))
         else {
-            fail(errors, arena, id, "malformed-key", "expected {/* leafspring:key NAME */}");
+            fail(errors, arena, id, "malformed-key", "expected {/* leafbud:key NAME */}");
             continue;
         };
         if k != MdastNodeType::MdxFlowExpression {
@@ -144,8 +144,8 @@ fn bind(arena: &mut Arena<Mdast>, parent: u32, errors: &mut Vec<Diagnostic>) {
             continue;
         }
         let mut data = metadata(arena, next);
-        data["leafspringKey"] = key.into();
-        data["leafspringKeySpan"] = serde_json::to_value(span(arena, id)).unwrap();
+        data["leafbudKey"] = key.into();
+        data["leafbudKeySpan"] = serde_json::to_value(span(arena, id)).unwrap();
         write_data(arena, next, data);
     }
     arena.set_children(parent, &keep);
@@ -204,12 +204,12 @@ fn gate(arena: &mut Arena<Mdast>, errors: &mut Vec<Diagnostic>) {
                 let mut data = metadata(arena, id);
                 if let Some(key) = props.get("key") {
                     if let Some(key) = key.as_str().filter(|k| valid_key(k)) {
-                        if data.get("leafspringKey").is_some() {
+                        if data.get("leafbudKey").is_some() {
                             fail(errors, arena, id, "key-collision", "comment and component key both supplied");
-                            data.as_object_mut().unwrap().remove("leafspringKey");
-                            data.as_object_mut().unwrap().remove("leafspringKeySpan");
+                            data.as_object_mut().unwrap().remove("leafbudKey");
+                            data.as_object_mut().unwrap().remove("leafbudKeySpan");
                         } else {
-                            data["leafspringKey"] = key.into();
+                            data["leafbudKey"] = key.into();
                         }
                     } else {
                         fail(errors, arena, id, "invalid-key", "component key must be an author-key string");
@@ -223,7 +223,7 @@ fn gate(arena: &mut Arena<Mdast>, errors: &mut Vec<Diagnostic>) {
     }
     let mut keys: HashMap<String, Vec<u32>> = HashMap::new();
     for id in reachable(arena, 0) {
-        if let Some(key) = metadata(arena, id)["leafspringKey"].as_str() {
+        if let Some(key) = metadata(arena, id)["leafbudKey"].as_str() {
             keys.entry(key.into()).or_default().push(id);
         }
     }
@@ -231,8 +231,8 @@ fn gate(arena: &mut Arena<Mdast>, errors: &mut Vec<Diagnostic>) {
         for id in ids {
             fail(errors, arena, id, "duplicate-key", format!("duplicate author key {key:?}"));
             let mut data = metadata(arena, id);
-            data.as_object_mut().unwrap().remove("leafspringKey");
-            data.as_object_mut().unwrap().remove("leafspringKeySpan");
+            data.as_object_mut().unwrap().remove("leafbudKey");
+            data.as_object_mut().unwrap().remove("leafbudKeySpan");
             write_data(arena, id, data);
         }
     }
@@ -310,7 +310,7 @@ pub fn project(arena: &Arena<Mdast>, id: u32) -> Node {
         id,
         kind: k.name().into(),
         span: span(arena, id),
-        key: data["leafspringKey"].as_str().map(str::to_owned),
+        key: data["leafbudKey"].as_str().map(str::to_owned),
         data,
         details,
         value,

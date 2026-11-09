@@ -118,11 +118,11 @@ fn valid_key(key: &str) -> bool {
 }
 
 fn reserved(value: &str) -> bool {
-    value.trim().starts_with("/* leafspring:")
+    value.trim().starts_with("/* leafbud:")
 }
 
 fn directive(value: &str) -> Option<&str> {
-    let key = value.strip_prefix("/* leafspring:key ")?.strip_suffix(" */")?;
+    let key = value.strip_prefix("/* leafbud:key ")?.strip_suffix(" */")?;
     valid_key(key).then_some(key)
 }
 

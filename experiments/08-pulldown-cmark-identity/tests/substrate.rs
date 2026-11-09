@@ -135,9 +135,9 @@ fn strict_control_is_explicitly_overrestrictive_not_a_jsx_validator() {
 
 #[test]
 fn requested_mdx_comment_is_visible_baseline_and_explicitly_unsupported() {
-    let source = "{/* leafspring:key introduction */}\n## Introduction\n";
+    let source = "{/* leafbud:key introduction */}\n## Introduction\n";
     let plain = parse(source, Mode::Plain);
-    assert!(plain.html.contains("{/* leafspring:key introduction */}"));
+    assert!(plain.html.contains("{/* leafbud:key introduction */}"));
     assert_eq!(plain.blocks[0].kind(), "Paragraph");
     let attrs = parse(source, Mode::Attributes);
     assert_eq!(attrs.diagnostics.len(), 1);
@@ -147,7 +147,7 @@ fn requested_mdx_comment_is_visible_baseline_and_explicitly_unsupported() {
 
 #[test]
 fn ordinary_html_comment_is_raw_html_not_an_identity_directive() {
-    let source = "<!-- leafspring:key introduction -->\n## Introduction\n";
+    let source = "<!-- leafbud:key introduction -->\n## Introduction\n";
     let result = parse(source, Mode::Attributes);
     assert_eq!(result.blocks[0].kind(), "HtmlBlock");
     assert!(result.blocks.iter().all(|n| n.key.is_none()));

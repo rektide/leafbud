@@ -123,7 +123,7 @@ The native parser already constructs `Heading`, `Paragraph`, `List`, `ListItem`,
 | `MdastNodeType`, `get_node`, `get_children` | Inspect actual typed parser nodes and their real container/sibling relationships |
 | `decode_expression_data`, `get_str` | Read the native comment-expression body; recognize the narrow reserved directive there |
 | `set_children` | Detach annotation nodes from the transient tree after binding; source is never changed |
-| `get_node_data`, `set_node_data` | Attach **`leafspringKey`** and **`leafspringKeySpan`** to the actual target parser node, independently of HTML `id` |
+| `get_node_data`, `set_node_data` | Attach **`leafbudKey`** and **`leafbudKeySpan`** to the actual target parser node, independently of HTML `id` |
 | Public MDAST codecs | Preserve heading depth, list/item properties, link destinations, code payload and native JSX attribute kinds/values |
 | Typed inspection projection | Preserve children/inline structure and the optional key; emit transient JSON for tests/CLI inspection |
 
@@ -171,16 +171,16 @@ Thus `author` deliberately uses native MDX **without** general attributes and
 selects the user's alternative:
 
 ```mdx
-{/* leafspring:key introduction */}
+{/* leafbud:key introduction */}
 ## Introduction
 
-{/* leafspring:key central-argument */}
+{/* leafbud:key central-argument */}
 This is an ordinary paragraph with **formatting**.
 ```
 
 ### Attachment contract implemented
 
-- The single comment body must be exactly `/* leafspring:key NAME */`.
+- The single comment body must be exactly `/* leafbud:key NAME */`.
   Keys match `[A-Za-z][A-Za-z0-9_.-]*`, case-sensitive, document-wide unique.
   Unicode prose is supported; Unicode author keys are intentionally rejected.
 - Only native **flow** expression nodes bind. Inline/same-line/heading-contained
@@ -269,7 +269,7 @@ reconstructing source from those normalized values would not be a no-op.
 
 ```text
 Code `first
-{/* leafspring:key literal */}
+{/* leafbud:key literal */}
 last`.
 ```
 

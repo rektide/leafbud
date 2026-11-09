@@ -153,7 +153,7 @@ async fn server() -> (testserver::TestServer, Arc<RwLock<BTreeMap<String, Value>
 }
 
 fn cli(base: &str, root: &str, args: &[&str]) -> TokioCommand {
-    let mut command = TokioCommand::new(env!("CARGO_BIN_EXE_leafspring"));
+    let mut command = TokioCommand::new(env!("CARGO_BIN_EXE_leafbud"));
     command
         .env_remove("LEAFLET_AUTH_TOKEN")
         .env_remove("LEAFLET_BASE_URL")
@@ -314,10 +314,10 @@ async fn offline_status_uses_configured_workspace_and_does_not_even_load_credent
     let root = temp.path().join("workspace");
     std::fs::create_dir(&root).unwrap();
     import(&server, root.to_str().unwrap()).await;
-    let config = temp.path().join("config/leafspring");
+    let config = temp.path().join("config/leafbud");
     std::fs::create_dir_all(&config).unwrap();
     std::fs::write(
-        config.join("leafspring.toml"),
+        config.join("leafbud.toml"),
         format!("workspace = {:?}\npublication = 'do-not-retarget'\n", root),
     )
     .unwrap();
@@ -325,7 +325,7 @@ async fn offline_status_uses_configured_workspace_and_does_not_even_load_credent
     // offline status is independent of that path and uses no remote requests.
     std::fs::create_dir(config.join("auth-token")).unwrap();
     let calls = server.request_count("/api/rpc/get_leaflet_data");
-    let output = TokioCommand::new(env!("CARGO_BIN_EXE_leafspring"))
+    let output = TokioCommand::new(env!("CARGO_BIN_EXE_leafbud"))
         .env("XDG_CONFIG_HOME", config.parent().unwrap())
         .env("LEAFLET_AUTH_TOKEN", "")
         .env("LEAFLET_BASE_URL", "not a URL")
@@ -349,7 +349,7 @@ async fn status_invalid_operands_are_per_file_and_missing_remote_is_a_report_not
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path().to_str().unwrap();
     import(&server, root).await;
-    std::fs::write(temp.path().join("broken.mdx"), "---\n\"@leafspring\": [unclosed\n---\nprivate-source-prose\n").unwrap();
+    std::fs::write(temp.path().join("broken.mdx"), "---\n\"@leafbud\": [unclosed\n---\nprivate-source-prose\n").unwrap();
     let output = cli(&server.base_url, root, &["status", "broken.mdx", "--json"]).output().await.unwrap();
     assert_eq!(output.status.code(), Some(1));
     assert_eq!(serde_json::from_slice::<Value>(&output.stdout).unwrap()["items"][0]["outcome"], "invalid");

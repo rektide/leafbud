@@ -121,8 +121,8 @@ make this join stronger than agreement on a generic “incremental editing” sl
 
 ## Earlier proposed next batch — internal evidence only
 
-Use `leafspring-editor-text` plus the essential portions of
-`leafspring-editor-conflicts`. **Sol high is recommended** for this first native
+Use `leafbud-editor-text` plus the essential portions of
+`leafbud-editor-conflicts`. **Sol high is recommended** for this first native
 write boundary: the editing algorithm is deliberately modest, but protocol,
 identity, uncertainty and verification still need careful integration.
 
@@ -172,7 +172,7 @@ close the broader structure/recovery tickets merely by delivering this narrow lo
 
 The immediate road is therefore one useful save loop, followed by evidence-driven
 selection of topology/structure scope. Local inventory remains an independent,
-small g task (`leafspring-inspect-list`) if native-write work is not the next choice.
+small g task (`leafbud-inspect-list`) if native-write work is not the next choice.
 
 ## Connections
 

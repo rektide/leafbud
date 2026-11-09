@@ -17,8 +17,8 @@ async fn current_views_are_symmetric_and_never_settle_receipts_even_when_converg
     let metadata_calls = server.request_count("/api/rpc/get_leaflet_data");
     let content_calls = server.request_count("/api/rpc/pull");
     let source = std::fs::read_to_string(&path).unwrap().replacen(
-        "\n\"@leafspring\":",
-        "\ncustomSecret: 'local-only, never show'\npublishedAt: '2030-01-01'\n\"@leafspring\":",
+        "\n\"@leafbud\":",
+        "\ncustomSecret: 'local-only, never show'\npublishedAt: '2030-01-01'\n\"@leafbud\":",
         1,
     );
     std::fs::write(&path, &source).unwrap();
@@ -27,7 +27,7 @@ async fn current_views_are_symmetric_and_never_settle_receipts_even_when_converg
     assert_eq!(local, editor);
     assert!(local.contains("Synthetic body copy"));
     assert!(local.contains("<Page name=\"page-1\""));
-    for absent in [TOKEN, "sha256:", "@leafspring", "customSecret", "local-only, never show", "publishedAt", "<Key"] {
+    for absent in [TOKEN, "sha256:", "@leafbud", "customSecret", "local-only, never show", "publishedAt", "<Key"] {
         assert!(!local.contains(absent), "{absent}");
     }
     assert_eq!(unchanged(&path), before);
@@ -66,9 +66,9 @@ async fn unsupported_missing_and_ambiguous_inputs_do_not_fabricate_views_or_leak
     assert!(reader.comparison_views(&ctx, &path).await.unwrap_err().to_string().contains("duplicate"));
     std::fs::remove_file(duplicate).unwrap();
     for (from, to, expected) in [
-        ("@leafspring", "@springleaf", "conversion"),
+        ("@leafbud", "@springleaf", "conversion"),
         ("leaflet-editor/2", "future/99", "unsupported local"),
-        ("leafspring-mdx/1", "unknown-mdx/1", "unsupported local"),
+        ("leafbud-mdx/1", "unknown-mdx/1", "unsupported local"),
     ] {
         let changed = String::from_utf8(original.0.clone()).unwrap().replace(from, to);
         std::fs::write(&path, &changed).unwrap();

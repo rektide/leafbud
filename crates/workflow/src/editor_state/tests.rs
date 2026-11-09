@@ -1,7 +1,7 @@
 use super::*;
 use crate::import;
-use leafspring_document::{Inline, Mark, PROFILE};
-use leafspring_web::{parse_pull, parse_rpc};
+use leafbud_document::{Inline, Mark, PROFILE};
+use leafbud_web::{parse_pull, parse_rpc};
 use serde_json::{Value, json};
 
 fn document() -> Document {
@@ -92,16 +92,16 @@ fn classification_keeps_legacy_uncertainty_and_true_both_sided_changes() {
 fn opaque_remote_evidence_survives_mapping_refusal_and_ignores_transport_only_fields() {
     let facts = vec![json!({"id":"a","entity":"b","attribute":"future/opaque","data":{"unknown":"a"},"version":1})];
     let extras = BTreeMap::new();
-    let base = leafspring_editor::witness(&facts, &extras, json!({}));
+    let base = leafbud_editor::witness(&facts, &extras, json!({}));
     let mut changed = facts.clone();
     changed[0]["version"] = json!(2);
     changed[0]["created_at"] = json!("ignored");
-    assert_eq!(base, leafspring_editor::witness(&changed, &extras, json!({})));
+    assert_eq!(base, leafbud_editor::witness(&changed, &extras, json!({})));
     changed[0]["data"]["unknown"] = json!("b");
-    assert_ne!(base, leafspring_editor::witness(&changed, &extras, json!({})));
+    assert_ne!(base, leafbud_editor::witness(&changed, &extras, json!({})));
     changed[0]["future-field"] = json!(true);
-    assert_ne!(base, leafspring_editor::witness(&changed, &extras, json!({})));
-    assert!(leafspring_editor::observe(&changed, "b", uuid::Uuid::nil()).is_err());
+    assert_ne!(base, leafbud_editor::witness(&changed, &extras, json!({})));
+    assert!(leafbud_editor::observe(&changed, "b", uuid::Uuid::nil()).is_err());
 }
 
 #[test]

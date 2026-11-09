@@ -26,7 +26,7 @@ satteri-ast = "=0.6.3"
 satteri-pulldown-cmark = { version = "=0.6.7", features = ["mdx", "serde"] }
 sha2 = "0.10"
 yrs = { git = "https://github.com/y-crdt/y-crdt", rev = "e0b476b0ce613453c70d0bb477b955808aa79a07", version = "0.28.1", default-features = false }
-# jacquard pins (leafspring-records): exact-pinned to the codegen binary's
+# jacquard pins (leafbud-records): exact-pinned to the codegen binary's
 # workspace version — see crates/leaflet/records/LEAFLET-PIN.md.
 jacquard-common = { version = "=0.12.1", default-features = false, features = ["std"] }
 jacquard-derive = "=0.12.1"
@@ -38,12 +38,12 @@ jiff = "0.2"
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "query", "rustls"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-leafspring-atproto = { version = "=0.9.0", path = "crates/atproto" }
-leafspring-web = { version = "=0.9.0", path = "crates/leaflet/web" }
-leafspring-workflow = { version = "=0.9.0", path = "crates/workflow" }
-leafspring-document = { version = "=0.9.0", path = "crates/document/model" }
-leafspring-mdx = { version = "=0.9.0", path = "crates/document/mdx" }
-leafspring-editor = { version = "=0.9.0", path = "crates/leaflet/editor" }
+leafbud-atproto = { version = "=0.9.0", path = "crates/atproto" }
+leafbud-web = { version = "=0.9.0", path = "crates/leaflet/web" }
+leafbud-workflow = { version = "=0.9.0", path = "crates/workflow" }
+leafbud-document = { version = "=0.9.0", path = "crates/document/model" }
+leafbud-mdx = { version = "=0.9.0", path = "crates/document/mdx" }
+leafbud-editor = { version = "=0.9.0", path = "crates/leaflet/editor" }
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"

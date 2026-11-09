@@ -58,7 +58,7 @@ It covers ordinary marks, Unicode, hard breaks, deletion-only updates, no-op and
 repeat behavior, competing updates and one fact-graph text mutation. It does not
 implement the full structural/media adapter described below.
 
-The file remains a complete current document with top-level `@leafspring`, in
+The file remains a complete current document with top-level `@leafbud`, in
 one exclusive draft/published state. There is **no saved historical document,
 fact graph, CRDT state, shadow copy, sidecar or serialized mutation batch**.
 Transient remote state is an input to this attempt, discarded afterwards.
@@ -130,8 +130,8 @@ the operator's archive and no permanent dual-engine compatibility layer.
 
 ## 2. Small, explicit conversion boundaries
 
-Proposed modules inside `leafspring-drafts`, preserving existing generated record
-types in `leafspring-leaflet`:
+Proposed modules inside `leafbud-drafts`, preserving existing generated record
+types in `leafbud-leaflet`:
 
 ```text
 conversion/
@@ -167,7 +167,7 @@ The current `facts.rs` drops unknown payloads to a type label and discards usefu
 fields; `pull.rs` discards row metadata. Replace that in the conversion path with
 a **raw-value-preserving current fact view** plus validated typed accessors.
 Keep unknown facts in memory for conservative witnesses/preservation. Do not
-serialize the graph under `@leafspring`. Cardinality violations and malformed
+serialize the graph under `@leafbud`. Cardinality violations and malformed
 known payloads are errors, not arbitrary `[0]` decisions during editing.
 
 Once acceptance gates pass, remove the handwritten varints, Item integration,
@@ -175,7 +175,7 @@ tombstone splitting and fresh-content text encoder from production `yjs.rs`.
 Retain existing frozen input fixtures/reference scripts as evidence. Semantic
 equivalence is the replacement gate; new Yrs struct layout need not reproduce
 the old encoder's bytes. Domain-specific mark/inline conversion still belongs to
-leafspring and should not be confused with CRDT integration supplied by Yrs.
+leafbud and should not be confused with CRDT integration supplied by Yrs.
 
 ## 3. Rich text projection and Unicode contract
 
@@ -302,12 +302,12 @@ carried association. Yrs cannot solve this outer-graph correspondence problem.
 **Proposed compact bookkeeping**, entirely inside the single top-level envelope:
 
 ```text
-@leafspring.binding                 exclusive lifecycle + target locator/root
-@leafspring.conversion.profile      leaflet schema/mapping profile
-@leafspring.conversion.nodes[]      localId, entityId, current JSON pointer,
+@leafbud.binding                 exclusive lifecycle + target locator/root
+@leafbud.conversion.profile      leaflet schema/mapping profile
+@leafbud.conversion.nodes[]      localId, entityId, current JSON pointer,
                                    optional relationship factId, fingerprint
-@leafspring.assets[]                resource identity/hash + source locator
-@leafspring.agreement               current accepted local/remote fingerprints
+@leafbud.assets[]                resource identity/hash + source locator
+@leafbud.agreement               current accepted local/remote fingerprints
 ```
 
 Each row names a node/edge; it contains no previous text, fields, XML or CRDT
@@ -329,7 +329,7 @@ at those associations, not a guarantee the tool inferred the intended move.
 New unbound nodes receive IDs once the plan is selected; repeated successful
 operations reuse the returned associations instead of appending again.
 
-All outgoing records strip `@leafspring`; fact mutations are constructed from
+All outgoing records strip `@leafbud`; fact mutations are constructed from
 typed fields and verified IDs, not by forwarding the local envelope. Fingerprints
 exclude transport/client counters but include meaningful unknown current state
 for drift detection. Metadata read-back must not overwrite a concurrently edited
@@ -349,12 +349,12 @@ Recommended contract: the working JSON is a **record-shaped complete current
 document**, with a documented local content profile for editor-only blocks,
 unpublished resource definitions and editor intent not expressible in the public
 record schema. Those are **current content in the body**, not hidden historical
-payloads under `@leafspring`. Prefer existing canonical fields wherever expressive;
+payloads under `@leafbud`. Prefer existing canonical fields wherever expressive;
 add the smallest typed extensions for the remaining meanings. The exact extension
 names/schema need acceptance before implementing full coverage. Do not invent
 fake poll AT-URIs, blob availability, or registered lexicons.
 
-Consequences: stripping `@leafspring` is always required, but is not sufficient
+Consequences: stripping `@leafbud` is always required, but is not sufficient
 to make every unpublished working body a valid published record. Native editor
 mutations can represent those blocks; publication has a separate documented
 projection. A record-only serializer must validate/materialize that projection
@@ -369,7 +369,7 @@ not a reason to leave permanent skips in the converter.
 Read a full `cookie:null` pull and envelope into memory. Select the explicitly
 bound document/start page; preserve other publication navigation roots. The
 upstream converter uses `root/page[0]` when no start page is supplied, whereas
-current leafspring sorts it; do not treat either shortcut as universal ownership.
+current leafbud sorts it; do not treat either shortcut as universal ownership.
 
 | Concern | Proposed round-trip and mutation policy |
 | --- | --- |

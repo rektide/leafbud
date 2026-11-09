@@ -20,5 +20,5 @@ Escaped \{#literal} and inline `{#code}`.
 
 ```md
 {#not-a-key}
-{/* leafspring:key not-a-key */}
+{/* leafbud:key not-a-key */}
 ```

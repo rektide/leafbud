@@ -1,15 +1,15 @@
 {
   "$type": "site.standard.document",
   "site": "at://did:plc:zjbq26wybii5ojoypkso2mso/site.standard.publication/3molsbwkh522o",
-  "title": "Leafspring protocol probe",
+  "title": "Leafbud protocol probe",
   "description": "Dry-run construction of a site.standard.document record — experiment 03, no write executed.",
   "tags": [
-    "leafspring",
+    "leafbud",
     "protocol",
     "dry-run"
   ],
   "publishedAt": "2026-11-07T00:05:30.799Z",
-  "path": "/leafspring-protocol-probe",
+  "path": "/leafbud-protocol-probe",
   "textContent": "A dry-run probe\nThis paragraph carries no markup at all: plain prose for the converter's baseline.\nÉmigré — the cafés of Montréal sit before the facet below: see the Leaflet homepage for the renderer. Bold claim, italic aside, and inline code finish the sweep.\nA closing paragraph. The é, É, and em-dash above are two- and three-byte UTF-8 code points, so every facet placed after them must count six extra bytes; slicing by character index instead of byte index would misplace each span.",
   "content": {
     "$type": "pub.leaflet.content",

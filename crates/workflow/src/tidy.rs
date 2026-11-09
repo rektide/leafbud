@@ -50,7 +50,7 @@ fn managed_files(root: &Path) -> Result<Vec<PathBuf>> {
             let path = entry.path();
             if kind.is_dir() {
                 visit(&path, out)?;
-            } else if kind.is_file() && path.extension().is_some_and(|e| e == "mdx") && std::fs::read_to_string(&path)?.contains("@leafspring") {
+            } else if kind.is_file() && path.extension().is_some_and(|e| e == "mdx") && std::fs::read_to_string(&path)?.contains("@leafbud") {
                 out.push(path);
             }
         }
@@ -121,7 +121,7 @@ fn tidy_file(path: &Path, dry_run: bool) -> Item {
 fn try_tidy(path: &Path, dry_run: bool) -> Result<Item> {
     let original = std::fs::read(path).context("reading managed file")?;
     let source = String::from_utf8(original.clone()).context("managed file is not UTF-8")?;
-    let plan = leafspring_mdx::plan_markdown_tidy(&source).context("unsupported managed source; nothing was written")?;
+    let plan = leafbud_mdx::plan_markdown_tidy(&source).context("unsupported managed source; nothing was written")?;
     let skip_reasons = plan.skip_reasons.iter().map(|(key, reason)| format!("{key}: {reason}")).collect::<Vec<_>>();
     let item = Item {
         path: path.to_path_buf(),
@@ -135,7 +135,7 @@ fn try_tidy(path: &Path, dry_run: bool) -> Result<Item> {
         return Ok(item);
     }
     // Compose and validate even in dry run, so previews report real outcomes.
-    let next = leafspring_mdx::apply_markdown_tidy(&source, &plan).context("composing Markdown tidy")?;
+    let next = leafbud_mdx::apply_markdown_tidy(&source, &plan).context("composing Markdown tidy")?;
     if !dry_run && let Err(error) = crate::files::write(path, Some(&original), next.as_bytes()).context("local file changed during tidy; not overwritten") {
         return Err(error);
     }

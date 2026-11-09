@@ -1,8 +1,8 @@
 ---
-title: Leafspring protocol probe
+title: Leafbud protocol probe
 description: Dry-run construction of a site.standard.document record — experiment 03, no write executed.
-tags: leafspring, protocol, dry-run
-slug: leafspring-protocol-probe
+tags: leafbud, protocol, dry-run
+slug: leafbud-protocol-probe
 ---
 
 # A dry-run probe
