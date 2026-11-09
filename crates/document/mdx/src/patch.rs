@@ -223,25 +223,37 @@ fn replace_envelope(source: &str, state: &State) -> Result<String> {
 /// Settle tracking state only: replace the reserved envelope with `next`,
 /// keeping author fields, comments, body bytes and unrelated state untouched.
 ///
-/// Guards: the local document identity must not change, and an established
-/// binding may not be silently rebound to another token (first binding —
-/// `None → Some` — is the deliberate transition). Nodes/receipts follow the
-/// verified observation this settlement records. The result is verified to
-/// parse back to exactly `next` with everything else unchanged.
+/// Guards: the local document identity must not change; an established
+/// binding is preserved whole (origin, token, root, entity set, entry fact,
+/// publication association — never dropped or altered), with the deliberate
+/// first binding (`None → Some`) as the only transition; main-page identity
+/// is persisted by preparation, never by settlement. Nodes/receipts follow
+/// the verified observation this settlement records, so the authored
+/// projection (not the full semantic value, which includes that tracking)
+/// must be identical before and after, together with the exact body bytes.
 pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     let existing = parse(source)?;
     ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
-    if let (Some(before), Some(after)) = (&existing.state.binding, &next.binding) {
-        ensure!(before.token == after.token, "tracking settlement cannot rebind a document");
-    }
     ensure!(next.state == "draft", "unsupported lifecycle");
+    match (&existing.state.binding, &next.binding) {
+        (Some(before), Some(after)) => ensure!(
+            before == after,
+            "tracking settlement cannot rebind or alter an established binding"
+        ),
+        (Some(_), None) => bail!("tracking settlement cannot drop an established binding"),
+        (None, Some(_)) | (None, None) => {}
+    }
+    ensure!(
+        existing.state.main_page == next.main_page,
+        "tracking settlement cannot change main-page identity; preparation persists it"
+    );
     let result = replace_envelope(source, next)?;
     let parsed = parse(&result).context("tracking settlement validation")?;
     ensure!(parsed.state == *next, "tracking settlement diverges from the intended state");
-    // Everything outside the envelope must be untouched: same semantic
-    // content (pages/keys/nodes/main page) as the pre-settlement document.
+    // Everything outside tracking must be untouched: same authored content
+    // (pages/keys/metadata) as the pre-settlement document.
     ensure!(
-        parsed.semantic_value() == existing.semantic_value(),
+        parsed.authored_value() == existing.authored_value(),
         "tracking settlement changed authored content"
     );
     let (_, existing_body) = split_managed(source)?;

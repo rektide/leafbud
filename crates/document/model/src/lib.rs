@@ -387,4 +387,14 @@ impl Document {
             "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,
             "mainPage":self.state.main_page,"pages":self.pages,"nodes":self.state.nodes})
     }
+
+    /// Authored projection: editor-owned meaning plus current content with
+    /// source identities, excluding everything tracking settlement may
+    /// legitimately change (binding, nodes, receipts) and the main-page
+    /// persistence boundary owned by preparation. A settlement must leave
+    /// this value untouched.
+    pub fn authored_value(&self) -> Value {
+        serde_json::json!({"format":self.format,"title":self.title,"description":self.description,"tags":self.tags,
+            "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,"pages":self.pages})
+    }
 }

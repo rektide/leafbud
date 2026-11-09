@@ -1329,6 +1329,112 @@ fn preparation_keeps_retired_rows_and_existing_keys() {
 
 // ============ Tracking-only settlement ============
 
+/// Settlement updates exactly the tracking the observation verified:
+/// promoting confirmed nodes, retiring stale rows and advancing receipts are
+/// legitimate transitions that must succeed while authored metadata, body
+/// bytes, main-page identity and any established binding stay exact.
+#[test]
+fn patch_tracking_settles_node_promotion_and_receipt_advances() {
+    // An authored, fully prepared unbound draft: explicit keys, no rows yet.
+    let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\"}";
+    let original = format!(
+        "---\nformat: leafbud-mdx/2\ntitle: T # author's choice\n{state}\n---\n\n<Key id=\"b-1\" />\nfirst\n\n<Key id=\"b-2\" />\nsecond\n"
+    );
+    let before = parse(&original).unwrap();
+    // First binding WITH node promotion: every current key gains its
+    // confirmed occurrence, receipts appear.
+    let binding = Binding {
+        base_url: "https://leaflet.pub".into(),
+        token: Uuid::new_v5(&Uuid::NAMESPACE_URL, b"fresh"),
+        root: "e-root".into(),
+        entity_set: "es".into(),
+        entry_fact: "f-entry".into(),
+        publication: None,
+    };
+    let row = |entity: &str, placement: &str| {
+        node(
+            entity,
+            Occurrence::Block {
+                placement: placement.into(),
+                text_fact: None,
+                inactive_text_fact: None,
+            },
+        )
+    };
+    let mut next = before.state.clone();
+    next.binding = Some(binding.clone());
+    next.nodes.insert("p-main".into(), node("e-main", Occurrence::Page { references: vec![] }));
+    next.nodes.insert("b-1".into(), row("e-b1", "f-b1"));
+    next.nodes.insert("b-2".into(), row("e-b2", "f-b2"));
+    next.sync = Some(Sync {
+        profile: EDITOR_PROFILE.into(),
+        local_hash: "sha256:local-1".into(),
+        remote_hash: "sha256:remote-1".into(),
+    });
+    let settled = patch_tracking(&original, &next).unwrap();
+    assert!(settled.contains("title: T # author's choice"), "authored metadata untouched");
+    assert!(settled.contains("sha256:remote-1"));
+    assert_eq!(body_of(&settled), body_of(&original), "body bytes untouched");
+    assert_eq!(parse(&settled).unwrap().state, next);
+    // Repeat settlement: retire one row, promote nothing new, advance
+    // receipts — same authored surface.
+    let mut later = next.clone();
+    later.nodes.remove("b-2").unwrap();
+    later.sync.as_mut().unwrap().local_hash = "sha256:local-2".into();
+    later.sync.as_mut().unwrap().remote_hash = "sha256:remote-2".into();
+    let resettle = patch_tracking(&settled, &later).unwrap();
+    assert!(resettle.contains("sha256:remote-2"));
+    assert_eq!(body_of(&resettle), body_of(&original));
+    assert_eq!(parse(&resettle).unwrap().state, later);
+    // Established bindings are preserved whole: another token, locator
+    // group or publication association is a rebind, and dropping the
+    // binding is refused.
+    let mut rebinding = later.clone();
+    rebinding.binding = Some(Binding {
+        token: Uuid::nil(),
+        ..binding.clone()
+    });
+    assert!(patch_tracking(&resettle, &rebinding).is_err(), "token change is a rebind");
+    let mut relocated = later.clone();
+    relocated.binding = Some(Binding {
+        root: "e-elsewhere".into(),
+        ..binding.clone()
+    });
+    assert!(patch_tracking(&resettle, &relocated).is_err(), "locator change is a rebind");
+    let mut published = later.clone();
+    published.binding = Some(Binding {
+        publication: Some("at://did:plc:abc/site.standard.publication/p".into()),
+        ..binding
+    });
+    assert!(patch_tracking(&resettle, &published).is_err(), "publication association change is a rebind");
+    let mut dropped = later.clone();
+    dropped.binding = None;
+    assert!(patch_tracking(&resettle, &dropped).is_err(), "an established binding cannot be dropped");
+}
+
+/// Settlement owns tracking only: main-page identity, document identity and
+/// lifecycle transitions are refused, not silently rewritten.
+#[test]
+fn patch_tracking_refuses_main_page_and_identity_changes() {
+    let original = authored(&render(&document()).unwrap());
+    let before = parse(&original).unwrap();
+    // main-page identity is persisted by preparation, never by settlement.
+    let mut rekeyed = before.state.clone();
+    rekeyed.main_page = Some("p-elsewhere".into());
+    assert!(patch_tracking(&original, &rekeyed).is_err());
+    let mut cleared = before.state.clone();
+    cleared.main_page = None;
+    assert!(patch_tracking(&original, &cleared).is_err(), "clearing main-page identity would rekey the authored body");
+    // Foreign identity is refused.
+    let mut foreign = before.state.clone();
+    foreign.id = Uuid::new_v4();
+    assert!(patch_tracking(&original, &foreign).is_err());
+    // A no-op settlement round-trips the same state.
+    let same = patch_tracking(&original, &before.state).unwrap();
+    assert_eq!(body_of(&same), body_of(&original));
+    assert_eq!(parse(&same).unwrap().state, before.state);
+}
+
 #[test]
 fn patch_tracking_settles_envelope_without_touching_body_or_fields() {
     // An authored unbound draft (comments and custom fields included).
