@@ -8,6 +8,10 @@ updated:
   at: 2026-11-09
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf"
+    title: "Explicit first-binding default/publication preparation, selected-locator recovery, synthetic lifecycle proof and create-free P1 deployed partial on native description representation"
+  - resource: /design/native-default-adoption0.gpt61s.md
+    title: "Version-0.15 correction receipt, API/verification map and remaining terminal-partial boundaries"
   - resource: "opencode://ses_e4121e55dffeF009EbMiG1Xinz"
     title: "Native-effect foundation, compact recovery interfaces, loopback verification and bounded deployed verification with explicit partial/uncertain outcomes"
   - resource: /design/native-effects0.gpt61s.md
@@ -30,7 +34,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, and internal native-effect/recovery interfaces, version 0.14.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, and internal native-effect/recovery interfaces, version 0.15.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -42,7 +46,7 @@ destination shape. Implemented versus pending:
 | implemented | not implemented |
 | --- | --- |
 | `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | native saves/publication and generalized managed push |
-| `leafbud-protocol` + native web/workflow foundation — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts and finite guarded recovery | complete keyed compiler/public `push`; default-omission settlement; completed deployed publication mint/read-back proof |
+| `leafbud-protocol` + native web/workflow foundation — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, explicit selected-locator recovery | complete keyed compiler/public `push`; general terminal-partial resolution; completed deployed publication mint/read-back proof |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning, flat lists and strict Yrs text decoding | canvas, nested/task lists, interactive/other unsupported editor content |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
 | `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | local `list`, `push`, `publish`, `edit`, `export`, `keys`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
@@ -97,6 +101,22 @@ discovery have real loopback coverage. `recover_native` observes/settles finite
 attempts; it never remints or re-encodes a request after restart. The complete
 compiler receiving runner remains crate-private; **CLI `push` is not implemented**.
 
+First binding records the verified publication association explicitly and copies
+only **omitted** theme/contributor defaults into source. Explicit watermark true/
+false and contributor lists (including `[]`) remain authoritative. Explicit
+`theme: null`/`contributors: null` have no supported meaning and fail before mint;
+description/tags are not adopted as defaults. Source prose, keys, local UUID,
+local-only fields and unrelated comments remain unchanged. This is one guarded,
+atomic preparation checkpoint with corresponding mint hashes, not relaxed read-back
+verification. Unsupported contributor changes stop before push. A located mint
+resumes through the same preparation; a dispatched push never has its old intent
+retroactively rewritten. Actually observed empty contributor lists are now retained.
+
+`select_mint_locator` accepts an explicit existing recovery target for the expected
+dispatched attempt, stores it before verification, and reuses ordinary mint
+recovery. It does not discover candidates, retry creation, replace a known locator
+or establish original-response attribution.
+
 Attempts contain IDs, fingerprints, reserved writer ranges and protected-scope
 witnesses, never source bodies, binary text or a request journal. HTTP success and
 mutation acknowledgment are not proof of application. Status distinguishes
@@ -107,14 +127,19 @@ is a separate import fallback.
 
 The authorized deployed check verified **one new standalone draft**, controlled
 text/metadata writes, writer acknowledgments and explicit known-fact read-back.
-It remains resolved-partial because an omitted source theme differs from the
-native watermark default. One publication mint invocation has an **uncertain
-locator** after a Flight decoder failure; it was not retried. Repeated preload
-rows are now covered, and future undecoded replies remain available in memory
-without entering JSON reports or pending state. No publication/email or existing
-user-document mutation occurred. The two-draft budget is exhausted for automatic
-creation; do not remint or choose a candidate by title. Detailed evidence and
-remaining decisions: [native-effect receipt](design/native-effects0.gpt61s.md).
+It remains resolved-partial under its original dispatched intent; the new default
+policy was not applied retroactively. The publication mint's original locator was
+lost in Flight decoding. The operator subsequently selected **P1 as the existing
+recovery target**, not as a proven original result. Create-free recovery verified
+its seed/rights/context, recorded defaults, and acknowledged/observed controlled
+title/text writes. Whole-current verification remains **resolved-partial** solely
+on absent source description versus native empty-string description. No receipt
+was advanced, description adopted as a default, or push re-encoded after restart.
+No release/email or unrelated user-document mutation occurred. Both creation slots
+remain consumed; no new draft was minted during this correction. Initial evidence:
+[native-effect receipt](design/native-effects0.gpt61s.md). Correction, exact API
+contracts and remaining boundaries:
+[default-adoption receipt](design/native-default-adoption0.gpt61s.md).
 
 ## Remote reads
 
@@ -610,9 +635,11 @@ cargo run -p leafbud -- push essay.mdx   # -> "not implemented", exit 1
 ```
 
 Checks: `cargo fmt`, `cargo clippy --workspace --all-targets`,
-`cargo nextest run`. Tests are offline (loopback HTTP responders,
-committed fixtures under `experiments/`); no test writes to any real
-PDS or leaflet draft.
+`cargo nextest run`. Regular tests are offline (loopback HTTP responders,
+committed fixtures under `experiments/`) and never contact real drafts/PDSes.
+Ignored deployment harnesses require separate explicit authorization/private
+records; both original creation slots are consumed. The latest authorized harness
+is create-free selected-P1 recovery, with its partial result documented above.
 
 ## Reading map
 
@@ -640,6 +667,8 @@ PDS or leaflet draft.
 - Corrected authoring foundation: [`design/authoring-corrections0.glm53m.md`](design/authoring-corrections0.glm53m.md)
 - Production live adapter and receiving contract: [`design/live-transport0.gpt61s.md`](design/live-transport0.gpt61s.md)
 - Integrated guarded live watch, locks and actual proof limits: [`design/connected-watch0.gpt61s.md`](design/connected-watch0.gpt61s.md)
+- First-binding defaults, explicit selected-locator recovery and deployed partial
+  boundaries: [`design/native-default-adoption0.gpt61s.md`](design/native-default-adoption0.gpt61s.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
 
 Never commit credentials or real response bodies; see
