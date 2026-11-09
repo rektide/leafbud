@@ -3,7 +3,7 @@ type: Review
 title: "Authoring foundation review and connected-watch join"
 description: "Parent architectural review of batch A: accepted source choices, concrete identity/preparation/settlement defects, a focused correction commission and independent realtime transport work."
 resource: /design/authoring-review0.gpt6a.md
-status: accepted-for-watch-integration
+status: accepted
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
@@ -198,10 +198,23 @@ before the next controller rescan. Pass the full current operand set through tha
 existing policy and prove the race with held HTTP responses; do not introduce a
 new selection system. The otherwise-complete delivery awaits that correction.
 
+**Final acceptance:** `80da0e9c` forwards all resolved selected paths into refresh
+validation. The author reproduced UUID-only and binding-only external-operand
+races as erroneous updates on the predecessor; both corrected production-pipeline
+regressions now report ambiguity and preserve source, receipts and mtime without
+writes. Parent inspected the final policy construction and accepts the correction.
+The final reported workspace gate is **223/223 tests**, with strict clippy,
+formatting and receipt checks passing. `leafbud-editor-follow` is complete.
+
 The deployed smoke observed no durable poke; actual event-to-file adoption is
 verified through real loopback HTTP/Phoenix controller tests, not inferred from
 a quiet deployed connection. The user's `~/l` remains untouched and old-format;
 the smoke used an isolated fresh import. Those evidence boundaries remain intact.
+
+Next recommended work remains `leafbud-editor-bind` +
+`leafbud-editor-recovery` with Sol high, then the text/structure compiler with g.
+Those are open proposals rather than an automatic continuation of this completed
+authoring-foundation/connected-inbound commission.
 
 The [build path](keyed-build-path0.gpt6a.md) remains the current direction; the
 [batch A receipt](author-create-keys0.glm53m.md) preserves the implementation

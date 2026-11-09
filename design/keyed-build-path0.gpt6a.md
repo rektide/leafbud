@@ -51,6 +51,8 @@ sources:
     title: "Parent review of landed batch A and concrete correction/transport join conditions"
   - resource: /design/live-transport0.gpt61s.md
     title: "Production web transport checkpoint accepted after parent source review; workflow/CLI adoption remains the next join"
+  - resource: /design/connected-watch0.gpt61s.md
+    title: "Completed version-0.13 connected inbound workflow, final external-selection correction and 223-test verification"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/index.tsx
     title: "Source-inspected rootEntity poke subscription, reconnect pull, poll backstop and browser push batching"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/serverPullData.ts
@@ -719,3 +721,12 @@ boundary. Fresh Sol session `opencode://ses_e416ba4e7ffeZ1ThfycXYgNh5S` now owns
 completion of `leafbud-editor-follow`: connected adoption, shared locking and
 refresh, scheduler/selection and CLI. This is the full inbound delivery rather
 than another transport-only checkpoint.
+
+**Delivered and parent-accepted:** [connected watch](connected-watch0.gpt61s.md),
+version 0.13.0, with final correction `80da0e9c` and **223/223 workspace tests**.
+Actual loopback HTTP/Phoenix tests prove notification-to-file adoption and the
+source/selection/locking guards. A passive deployed CLI smoke proves connection,
+catch-up/no-op/presence/interrupt; it observed no deployed edit. The authoring
+foundation and continuous inbound workflow are complete for their supported
+profile. Native bind/recovery and text/structure saves remain the next proposed
+build batches; complete remote drafting is not yet delivered.
