@@ -426,6 +426,8 @@ PDS or leaflet draft.
 
 - Accepted interface (CLI, crates, YAML policy):
   [`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md)
+- Current write-side design (complete drafting with stable keyed blocks):
+  [`design/keyed-authoring0.gpt6a.md`](design/keyed-authoring0.gpt6a.md)
 - Governing handoff incl. keyed bidirectional addendum and CLI arena:
   [`design/authoring-handoff0.gpt61s.md`](design/authoring-handoff0.gpt61s.md)
 - YAML frontmatter envelope: [`design/frontmatter0.gpt61s.md`](design/frontmatter0.gpt61s.md)

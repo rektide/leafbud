@@ -3,13 +3,16 @@ type: Assessment
 title: "Complete drafting design join — choose one body engine"
 description: "Parent join of the fresh whole-workflow drafts and cross-reviews: both satisfy normal drafting, with a generated-body recommendation under the user's complexity budget and explicit body-identity tradeoffs."
 resource: /design/drafting-push-join0.gpt6a.md
-status: recommendation
+status: withdrawn
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-09
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Corrected commissioning, parent first-binding review, independent/cross-review join and whole-workflow architecture assessment"
+    title: "Parent join and subsequent operator rejection of the generated-body recommendation; replaced by complete keyed authoring design"
   - resource: /design/drafting-push-brief0.gpt6a.md
     title: "Controlling product acceptance after the rejected text-only recommendation"
   - resource: /design/drafting-push0.gpt6a.md
@@ -25,6 +28,13 @@ sources:
 ---
 
 # Complete drafting: parent design join
+
+**Withdrawn after operator review, 2026-11-09.** The generated-body default below
+discarded too much of the keyed continuity and extensible foundation the project
+had developed. The receiving design is now
+[Keyed drafting: complete documents, simple native updates](keyed-authoring0.gpt6a.md).
+The previous assessment remains below as decision history, not implementation
+direction. Complete drafting remains the delivery boundary.
 
 This joins the [corrected product brief](drafting-push-brief0.gpt6a.md),
 [Astra's proposal and cross-review](drafting-push0.gpt6a.md), and

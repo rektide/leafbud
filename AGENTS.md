@@ -7,9 +7,12 @@ status: active
 generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-09
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
-    title: "Operator set narrative batch previews, agent/session cadence and low-volume product fit: bounded conceptual complexity, existing tools, modest structural ambition"
+    title: "Operator set session cadence and complexity budget, then rejected generated-body default in favor of complete drafting on the keyed native-object foundation"
 ---
 
 # Leafbud work-session cadence
@@ -24,6 +27,11 @@ sources:
   when their identity/content effects are understood and explicit. Evaluate them
   alongside simple identity-preserving wins; keep modest room to improve without
   building a general structural optimization framework in advance.
+- Preserve the keyed native-object foundation in ordinary saves. The operator
+  rejected whole-body regeneration as the default: simplicity should come from
+  straightforward keyed create/update/place/detach operations and bounded text
+  editing, not discarding page/block continuity. Current write-side design:
+  [keyed authoring](design/keyed-authoring0.gpt6a.md).
 - Human comparison and enacting edits have distinct purposes. The selected human
   direction is comparable Markdown views passed to a user-provided diff tool.
   The architecture inquiry concerns how to enact/plan CRDT and fact-graph changes;
