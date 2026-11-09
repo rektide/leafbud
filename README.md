@@ -9,7 +9,7 @@ updated:
   by: model:openai/gpt-6.1-sol#high
 sources:
   - resource: "opencode://ses_e3dcb1f8effebiT0KtCRZB8dWf"
-    title: "Explicit first-binding default/publication preparation, selected-locator recovery, synthetic lifecycle proof and create-free P1 deployed partial on native description representation"
+    title: "First-binding default/publication preparation and selected-locator recovery; corrected shared description-clear semantics and settled original P1 intent without content effects"
   - resource: /design/native-default-adoption0.gpt61s.md
     title: "Version-0.15 correction receipt, API/verification map and remaining terminal-partial boundaries"
   - resource: "opencode://ses_e4121e55dffeF009EbMiG1Xinz"
@@ -112,6 +112,12 @@ verification. Unsupported contributor changes stop before push. A located mint
 resumes through the same preparation; a dispatched push never has its old intent
 retroactively rewritten. Actually observed empty contributor lists are now retained.
 
+Description absence, null and exactly `""` all mean **clear**. Nonempty strings,
+including whitespace-only strings, remain exact. Editor/semantic projections,
+incoming mapping and human views share this rule, while source spelling and raw
+native witnesses remain intact. Omission still requires a real clear operation
+when the native description is nonempty; it never means preserve remote content.
+
 `select_mint_locator` accepts an explicit existing recovery target for the expected
 dispatched attempt, stores it before verification, and reuses ordinary mint
 recovery. It does not discover candidates, retry creation, replace a known locator
@@ -132,9 +138,12 @@ policy was not applied retroactively. The publication mint's original locator wa
 lost in Flight decoding. The operator subsequently selected **P1 as the existing
 recovery target**, not as a proven original result. Create-free recovery verified
 its seed/rights/context, recorded defaults, and acknowledged/observed controlled
-title/text writes. Whole-current verification remains **resolved-partial** solely
-on absent source description versus native empty-string description. No receipt
-was advanced, description adopted as a default, or push re-encoded after restart.
+title/text writes. Initial verification stopped on absent source description versus
+native empty string. The shared clear-semantics correction then let normal recovery
+verify **the original intent with unchanged pending hashes** and settle tracking
+only. P1 now has clean status, equal endpoints, unchanged pull and an exact
+byte/mtime repeat no-op. No description field was inserted or native content effect
+sent during settlement; no push was replayed or independently re-encoded.
 No release/email or unrelated user-document mutation occurred. Both creation slots
 remain consumed; no new draft was minted during this correction. Initial evidence:
 [native-effect receipt](design/native-effects0.gpt61s.md). Correction, exact API
@@ -639,7 +648,7 @@ Checks: `cargo fmt`, `cargo clippy --workspace --all-targets`,
 committed fixtures under `experiments/`) and never contact real drafts/PDSes.
 Ignored deployment harnesses require separate explicit authorization/private
 records; both original creation slots are consumed. The latest authorized harness
-is create-free selected-P1 recovery, with its partial result documented above.
+is create-free selected-P1 clear-intent settlement, with its passing result documented above.
 
 ## Reading map
 
