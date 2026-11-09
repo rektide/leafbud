@@ -1,15 +1,32 @@
 ---
 type: Report
 title: "Leafbud: current ground, next fronts and compaction handoff"
-description: "Compaction-ready account of the reviewed 0.17 delivery, active fresh-Sol local-authoring design, remaining work fronts, exact verification boundaries and safe continuation instructions."
+description: "Compaction-ready account of the accepted 0.18 local-authoring delivery, remaining work fronts, exact verification boundaries and next source-fidelity/coverage design."
 resource: /design/next-fronts0.gpt6a.md
 status: current-handoff
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-10
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Long-running parent session: grounded architecture, reviewed implementations and corrections, commissioned fresh Sol batches, and wrote this user-requested report before compaction"
+    title: "Parent architecture and compaction report, then 0.18 source/identity integration review and refreshed next-front design"
+  - resource: /design/local-authoring-tools0.gpt61s.md
+    title: "Completed 0.18 metadata/rekey/list, 317-test gate and actual CLI/HTTP/Phoenix evidence"
+  - resource: /crates/document/mdx/src/author.rs
+    title: "Reviewed selected field replacement, parser comment ranges and full-output proof"
+  - resource: /crates/document/mdx/src/rekey.rs
+    title: "Reviewed exact identity/reference rename and expected-document proof"
+  - resource: /crates/document/mdx/src/parse.rs
+    title: "Reviewed production JSX selection and bounded attribute-token extents"
+  - resource: /crates/document/mdx/src/patch.rs
+    title: "Reviewed unchanged-state fast path after existing settlement guards"
+  - resource: /crates/workflow/src/author.rs
+    title: "Reviewed shared lock, duplicate checks and original-byte write guard"
+  - resource: /crates/workflow/src/list.rs
+    title: "Reviewed global identity accounting, partial header evidence and read-race reporting"
   - resource: /AGENTS.md
     title: "Active operator constraints, fresh-Sol selection and 240–350k rollover"
   - resource: /design/terminal-recovery0.gpt61s.md
@@ -38,26 +55,18 @@ sources:
 
 ## Resume here after compaction
 
-**Latest completed baseline: 0.17.0, through `c1a2ce11`.** The complete supported
-draft authoring/save/watch/recovery loop is implemented. Parent has read the
-terminal resolution/provenance code and retained-default no-op correction and
-accepts their architecture and reported verification. Later files in the shared
-checkout may belong to the active next agent; do not mistake them for abandoned
-work or overwrite them.
+**Latest accepted baseline: 0.18.0, through `9dfd68d9`.** The complete supported
+draft authoring/save/watch/recovery loop now includes offline metadata editing,
+key renaming and local inventory. Parent reviewed selected YAML-entry ownership,
+parser-selected JSX edits, exact reparse proofs, unchanged tracking settlement,
+shared locked writes and read-only inventory. No blocking integration issue was
+found; the reported 317-test gate is accepted.
 
-**One agent is currently active:** fresh Sol high,
-`ses_e3d511cf0ffeKLT5XsWr37v0r6`, implementing:
-
-- `leafbud-author-metadata`
-- `leafbud-author-rekey`
-- `leafbud-inspect-list`
-
-Its concrete receiving design is [local authoring tools](local-authoring-tools0.gpt6a.md).
-It owns code/tests, relevant README changes and its own implementation receipt.
-Parent owns this handoff and parent design/review documents. **Do not spawn a
-duplicate implementation or poll its progress.** Await the harness completion
-notification, then review its result. If it needs rollover, use its committed
-handoff in a fresh Sol high session.
+**No agent is currently active.** Sol session
+`ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets at about
+215k context. Its [receipt](local-authoring-tools0.gpt61s.md) records APIs and
+source-shape limits. The next proposed two-ticket batch is **source fidelity +
+executable coverage**, designed in section 4A below; it has not been dispatched.
 
 User's latest request: write the current report and next-front design in Markdown
 so this parent session can compact. No completed implementation/test/deployed
@@ -73,6 +82,7 @@ probe needs repeating merely because context was compacted.
 | Native effect foundation | Both mint transports, exact bounded requests, writer acknowledgments, explicit known-ID reads, compact pending attempts | `leaflet/protocol`, `leaflet/web`, `workflow::native`; [native effects](native-effects0.gpt61s.md) |
 | Complete supported saves | Preview-first public push; first binding; text/marks/breaks; new/drop/move/reorder; flat lists, code/images, named pages, selected recreation | `editor::write`, `native::save`; [keyed saves](keyed-save0.gpt61s.md) |
 | Deliberate terminal recovery | Original-success settlement separately from explicit accept-current/replan; bounded `lastResolution`; no uncertain replay/remint | `native::resolve`; [terminal recovery](terminal-recovery0.gpt61s.md) |
+| Offline authoring tools | Selected metadata edits, identity-preserving key rename, truthful local inventory | `mdx::author/rekey`, `workflow::author/list`; [local tools](local-authoring-tools0.gpt61s.md) |
 
 The supported native lifecycle is **draft**. Canvas, nested/task lists, richer
 interactive objects, uploads, published-editor adoption and public release are
@@ -86,7 +96,7 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 
 ### Verification to carry forward
 
-- Latest regular gate: **300/300 workspace tests**, six opt-in deployment tests
+- Latest regular gate: **317/317 workspace tests**, six opt-in deployment tests
   skipped; formatting, strict all-target clippy and document checks passed.
 - Production Yrs → independent actual Yjs: **7/7 groups**. The terminal-recovery
   slice did not change the writer; its receipt correctly reuses that evidence.
@@ -100,6 +110,10 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 - HTTP/Phoenix fixtures prove follower pending preservation and later remote-save
   adoption. The passive deployed watch smoke proved connection/catch-up/no-op/
   presence/interrupt, not an observed deployed poke-to-file event.
+- Actual CLI/HTTP confirmed rekey → preview/repeat push preserves empty effects,
+  receipts, source bytes and mtime. HTTP/Phoenix tests cover renamed-key adoption,
+  shared-lock contention and preservation of dirty local metadata. These 0.18
+  checks used temporary fixtures; no live corpus or draft was touched.
 
 Trust these reported checks. Add tests for new changes or a specific unresolved
 review question; do not rerun everything to reconstruct confidence after compaction.
@@ -131,10 +145,13 @@ review question; do not rerun everything to reconstruct confidence after compact
   all explicit operands in late duplicate checks. Atomic rename is not filesystem
   CAS against unrelated editors. Native server locking is not caller CAS.
 
-## 3. Next front — local authoring ergonomics
+## 3. Accepted return — local authoring ergonomics
 
-**Standing: commissioned and active.** Three tickets, fresh Sol high, design in
-[local authoring tools](local-authoring-tools0.gpt6a.md).
+**Standing: implemented and parent-accepted.** All three tickets are closed:
+`leafbud-author-metadata`, `leafbud-author-rekey`, `leafbud-inspect-list`.
+Commits: `b5c2aa5e` implementation, `10ae22b5` receipt/usage, `9dfd68d9` expanded
+source/watch verification. [Design](local-authoring-tools0.gpt6a.md) and
+[implementation receipt](local-authoring-tools0.gpt61s.md) remain distinct.
 
 This batch makes the implemented system easier to operate: list local drafts,
 edit selected title/description/tags/date fields, and rename block/page keys while
@@ -143,17 +160,19 @@ Its important judgment is keeping author edits, alias edits and receipt settleme
 distinct. Confirmed rekeying should leave the editor witness unchanged; an author
 metadata edit must not hide itself by advancing receipts.
 
-**Expected review gates:** exact unrelated bytes/comments preserved; no network
-or credential dependency; current/pending/future-owned state respected; native
-IDs and confirmed receipts survive rekey; malformed/duplicate/unbound inventory
-is truthful; actual workflow/CLI no-op and classification fixtures pass.
+The pure APIs are `MetadataEdit`, `edit_metadata` and `rename_key`; workflow owns
+locked `author::edit/rename` and read-only `list::inspect`. Repeatable `--tag`
+replaces the ordered list; `--clear-tags` writes `[]`. Pending/future owned state
+blocks helpers safely. Selected-field comments may move to standalone lines,
+while unrelated source/body bytes remain intact. Whole-flow-root metadata edits
+and block-scalar main-page renames still refuse explicitly.
 
-The agent may choose exact tag flag spelling and narrow patch API names. It may
-not turn this into arbitrary property editing, publication retargeting, a second
-parser, or a new tracking database. Public additions likely land as 0.18, but
-that version and capability count are unverified until the agent returns.
+Review accepts the bounded source adapters: production parser nodes choose edits,
+and full reparse equality proves their scope. The new equal-state return in
+`patch_tracking` runs after existing identity/writer/binding/pending guards, so a
+renamed node-map's textual order no longer causes an empty push to rewrite bytes.
 
-## 4. Fronts after the active batch
+## 4. Next fronts after 0.18
 
 These are recommendations/options, not claims of commissioned implementation.
 Use **fresh Sol high**, selecting coherent batches of 1–4 tickets.
@@ -163,10 +182,10 @@ Use **fresh Sol high**, selecting coherent batches of 1–4 tickets.
 **Tickets:** `leafbud-mdx-source` + `leafbud-mdx-coverage`.
 
 **Payoff:** fewer ordinary authoring spellings cause refusal, and future changes
-have a visible operation/content coverage contract. The current code has disclosed
-edges around flow-style YAML, trailing comments and some property spellings;
-body comment support also needs deliberate source ownership. The active local
-tool batch may remove some edges—refresh this scope from its actual results.
+have a visible operation/content coverage contract. Version 0.18 already handles
+selected-field trailing comments and escaped/whitespace JSX rename spellings.
+Remaining targets are whole-flow-root metadata editing, older preparation
+matchers and body-comment ownership; do not redo completed rename behavior.
 
 **Bounded design:** choose a small corpus of currently failing valid source forms.
 Extend parser-derived patch ranges or use an explicit owned-region rewrite where
@@ -180,13 +199,27 @@ converter first. Unknown content remains a clear refusal, never a truncated save
 semantic equivalence and no-op/race preservation; unsupported cases remain explicit.
 This improves the most-used path without adding another remote effect surface.
 
+**Suggested landing sequence:** first reproduce preparation failures for valid
+PageLink property spellings and reuse parser-selected token ranges where sound.
+Next choose one bounded frontmatter patch extension, proving unchanged unknown
+fields/comments and pending state. Inspect body comments separately: define their
+ownership during tidy and remote adoption before enabling them, since accepting
+syntax alone could permit later comment loss. Record any unresolved comment
+boundary rather than calling the broad source ticket complete prematurely.
+
+Coverage should map each currently advertised content/operation family to named
+tests with independent expected meaning, distinguishing pure parser tests,
+CLI/HTTP/Phoenix integration and actual Yjs evidence. A maintained Markdown matrix
+with test references is sufficient; generate or validate it only where that
+removes real maintenance risk. New source-form tests must cover prepare → save
+preview/execution → repeat and explicit unsupported refusal before effects.
+
 ### B. Naming and path intent — small independent authoring completion
 
 **Ticket:** `leafbud-author-names`.
 
 **Payoff:** reconcile intentional filename/path choices without confusing them
-with native identity. This is the remaining open child of the author epic outside
-the active batch at handoff.
+with native identity. This is the remaining open child of the author epic.
 
 **Bounded design:** implement deliberate `tidy --from filename|path` and `--accept`
 using independent naming witnesses. Normal push never renames files. A pathname
@@ -260,7 +293,7 @@ Reassess these only for an explicit direct-PDS use case.
 
 ## 5. Tracker and session state
 
-At handoff, **in progress**: metadata, rekey, local list. The text/structure,
+At this update, metadata, rekey and local list are **closed**. The text/structure,
 binding, recovery, conflicts, follow and earlier authoring-foundation children
 are closed. The `leafbud-editor` parent epic remains open for its final scope/
 administrative review; do not infer published lifecycle completion from the
@@ -269,12 +302,12 @@ children reviewed, not duplicate implementation tickets.
 
 | Session | Disposition |
 | --- | --- |
-| `ses_e3d511cf0ffeKLT5XsWr37v0r6` | **Active:** local metadata/rekey/list; await result |
+| `ses_e3d511cf0ffeKLT5XsWr37v0r6` | Completed local metadata/rekey/list at ~215k; parent accepted 0.18 |
 | `ses_e3d6d728effe6RFnyZcrUtifT9` | Completed terminal recovery/no-op correction at ~263k; rotate rather than continue major work |
 | `ses_e3d96851dffeS2cPD2vPHjGklF` | Completed keyed save loop at ~276k; retired from major continuation |
 | `ses_e3dcb1f8effebiT0KtCRZB8dWf` | Completed defaults/description/P1 settlement at ~256k; retired |
 | `ses_e4121e55dffeF009EbMiG1Xinz` | Completed native effects and later candidate inspection at ~310k; retired |
-| `ses_e4217c526ffeXeHByo5ZswnB3F` | This parent session, now preparing to compact; sources retain this actual ID |
+| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent resumed after compaction, reviewed 0.18 and refreshed this handoff |
 
 Historical independent waves and earlier agents are linked from the receipts.
 Their old g recommendations or polling-first descriptions are superseded by
@@ -298,18 +331,18 @@ was published or emailed, and no unrelated document or asset was cleaned up.
 - Do not blindly rerun ignored deployment tests or erase their started markers.
   They intentionally prevent repeating creation or reconstructing an old edit.
   Inspect the current recorded state and the exact test's effect before use.
-- The active local-authoring batch has **no live-object edits** in its scope.
-  It uses fixtures/temporary workspaces and leaves `~/l` and both test drafts alone.
+- The completed local-authoring batch used fixtures/temporary workspaces and
+  left `~/l` and both test drafts alone.
 
 ## 7. Minimal continuation checklist
 
-1. Read this report, [AGENTS](/AGENTS.md), and the active
-   [local-tool design](local-authoring-tools0.gpt6a.md). No need to reload every
+1. Read this report, [AGENTS](/AGENTS.md), and the completed
+   [local-tool receipt](local-authoring-tools0.gpt61s.md). No need to reload every
    historical design or rerun completed checks.
-2. Await the active Sol's completion. Respect its file ownership and any coherent
-   rollover handoff. Do not poll or launch a second writer for the same batch.
-3. Read its receipt and the important changed patch/identity/lock boundaries.
-   Trust reported tests; request targeted regressions for actual concerns.
+2. No implementation agent is active. The next recommended batch is section 4A;
+   refresh ticket state before a fresh Sol high dispatch.
+3. Parent integration review of 0.18 is complete. Trust reported tests; add
+   targeted regressions only for new changes or actual unresolved concerns.
 4. Preserve predecessor commits before corrections. Use explicit owned jj paths;
    never `jj edit`, squash or push. Shared `.beads/issues.jsonl` changes may include
    multiple sessions' legitimate ticket updates—inspect before checkpointing.
@@ -318,6 +351,6 @@ was published or emailed, and no unrelated document or asset was cleaned up.
 6. Select the next front deliberately. Continue major implementation in a fresh
    Sol high session; external release effects retain their separate authorization.
 
-This file is a checkpoint, not a claim that the active batch has finished or that
-every listed front is selected. The [README](/README.md) remains the maintained
+This file records accepted work and proposed fronts; every listed front is not
+selected. The [README](/README.md) remains the maintained
 capability/usage home, and Beads remains the current work-state authority.

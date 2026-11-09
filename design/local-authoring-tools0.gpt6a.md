@@ -3,13 +3,18 @@ type: Design
 title: "Local authoring tools: metadata, key names and inventory"
 description: "Concrete commissioned next batch after 0.17: offline metadata edits, identity-preserving source-key rename and truthful local inventory, using current source patches and writer locks."
 resource: /design/local-authoring-tools0.gpt6a.md
-status: commissioned
+status: implemented
 generated:
   at: 2026-11-09
   by: model:openai/gpt-6-astra#high
+updated:
+  at: 2026-11-10
+  by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Commissioned the next fresh-Sol local-authoring batch and wrote its design for the requested compaction handoff"
+    title: "Commissioned local-authoring tools, wrote the compaction design, and accepted 0.18 after source/identity integration review"
+  - resource: /design/local-authoring-tools0.gpt61s.md
+    title: "Completed 0.18 implementation and 317-test/CLI/HTTP/Phoenix evidence"
   - resource: /AGENTS.md
     title: "Current fresh-Sol, rollover, bounded-complexity and source-ownership instructions"
   - resource: /design/authoring-interface0.gpt6a.md
@@ -30,11 +35,17 @@ sources:
 
 # Local authoring tools
 
+**2026-11-10 parent acceptance:** delivered in 0.18.0 through `9dfd68d9`, with
+317/317 tests and source/identity review complete. The
+[implementation receipt](local-authoring-tools0.gpt61s.md) records actual APIs,
+CLI spelling, remaining patch-shape refusals and verification. The design below
+preserves the original commission; [next fronts](next-fronts0.gpt6a.md) is current.
+
 ## Commission and payoff
 
-**Active owner:** fresh Sol high, `opencode://ses_e3d511cf0ffeKLT5XsWr37v0r6`.
+**Implementation owner:** fresh Sol high, `opencode://ses_e3d511cf0ffeKLT5XsWr37v0r6`.
 **Tickets:** `leafbud-author-metadata`, `leafbud-author-rekey`,
-`leafbud-inspect-list`; all three are in progress at this handoff.
+`leafbud-inspect-list`; all three are now closed.
 
 The 0.17 save/watch/recovery loop is implemented. This batch makes everyday local
 work convenient: find a draft, edit selected metadata, and rename a meaningful
