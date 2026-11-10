@@ -104,12 +104,22 @@ be deleted; count unknown"). Scoped acceptance of native behavior only — no
 Leafbud-side deletion machinery. Two independent explainers converged:
 [g](native-cleanup-question0.glm53m.md), [Sol](native-cleanup-question0.gpt61s.md).
 
-**Active agent:** g `ses_e3917df05ffexDi7k5XmXAi7Lj` researching
-**`leafbud-release-delivery`** (newsletter + share) — RESEARCH/DESIGN ONLY, no
-code, zero live effects, per operator instruction 2026-11-10. Its doc will land
-as `design/newsletter-delivery0.glm53m.md`; review it and obtain the operator's
-explicit commission before any implementation (email effects are externally
-visible; quiet publication does not authorize delivery).
+**Delivery research returned (g `ses_e3917df05ffexDi7k5XmXAi7Lj`,
+[doc](newsletter-delivery0.glm53m.md), `f786423f`) — implementation awaits an
+explicit operator commission.** Headline findings: quiet publishing is an
+**active protective write** (a `skipped` send-slot claim that outruns a
+firehose-driven auto-sender), with a **crash-window hazard** — a quiet publish
+dying between record write and slot claim leaves the slot free and subscribers
+can be emailed despite quiet intent (native Leaflet behavior, live for today's
+forced-quiet publishes; disclosed in the design with an observe-and-report
+recovery rule, never re-invocation). `sendEmail` defaults **true** natively, so
+the future wire must always send an explicit boolean. "Sent" means Postmark
+batch acceptance only — per-subscriber receipts exist server-side but are
+invisible to every RPC Leafbud can invoke. **No resend primitive exists**;
+the design refuses to fake one. Proposed surface: `delivery.email` frontmatter,
+missing = quiet default unchanged; delivery receipts separate from publication
+receipts and never gate settlement. Test-email and post-hoc Bluesky share are
+separate later slices.
 
 **Handoff note from the operator (2026-11-10):** content expansion (front D)
 is to be **handed to a new session** — that is the next session's starting
