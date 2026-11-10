@@ -8,6 +8,8 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
+    title: "Corrected explicit-null native witnesses and bounded Flight decoding from retained live update; one fresh quiet first/update settled, record/editor deleted and local unbound, with first-action response limitation disclosed"
   - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
     title: "0.25 save-first quiet native publish, observation-only recovery, separate release settlement and fixture verification; one-shot live smoke blocked before dispatch and disposable draft deleted"
   - resource: /design/native-publish0.gpt61s.md
@@ -99,11 +101,14 @@ visible rather than being advertised as supported by a roundtrip alone.
 
 The [0.25 publication workflow](design/native-publish0.gpt61s.md) joins keyed save,
 durable dispatch uncertainty, content-CID/full-meaning verification and separate
-release settlement. Fixtures cover standalone and publication contexts. The
-authorized one-time standalone smoke was **blocked before publication dispatch**
-because deployed metadata omitted `reply_drafts`; its newly minted draft was deleted
-and observed gone. No live publish/update proof is claimed. Unknown native effect
-fields still refuse, not default to empty.
+release settlement. Fixtures cover standalone and publication contexts. The final
+authorized disposable standalone proof verified first publication, same-URI update,
+two clean statuses, then native record/editor deletion and local unbinding. The
+retained update action response was decoded and matched to its verified PDS CID
+offline; first-response bytes were unavailable, so first action-result decoding
+is not claimed. The earlier smoke's “missing reply” diagnosis was actually a
+null-vs-array guard bug: both pinned and deployed effect joins are one-to-one.
+Explicit null proves empty; absent, malformed or nonempty evidence still refuses.
 
 ## Quiet native publication
 
@@ -129,7 +134,7 @@ content-verified reads. Editor-achieved/release-undispatched recovery clears onl
 that continuation; a subsequent explicit `publish` is a separate action. Exit
 codes: 0 success/no-op/preview, 4 blocked/pending/uncertain/partial/source-changed,
 1 operational failure, 2 usage. Unsupported resource/offload/multiple-byline
-profiles remain refusals. Bounded undecoded mint responses are retained privately
+profiles remain refusals. Bounded undecoded mint/publication responses are retained privately
 under the global config directory's `action-responses/<attempt-id>.flight`
 (0700 directory, 0600 file); inspect deliberately, never publish those bodies.
 
@@ -280,8 +285,9 @@ preserved), **2** usage.
 The one-time authorized live smoke minted a fresh standalone disposable
 draft, saved it, deleted it through this path, observed the token 404 and
 confirmed the clean local unbind (private receipt under
-`.test-agent/native-delete/`). Published deletion is loopback-fixture tested
-only; test-publish authorization is deferred.
+`.test-agent/native-delete/`). The separately authorized final publication probe
+also verified published record-first/editor-second deletion and local unbinding;
+its consumed marker/private receipts are under `.test-agent/native-publish-final/`.
 Implementation receipt: [native delete](design/native-delete0.glm53m.md).
 
 ## Explicit save recovery

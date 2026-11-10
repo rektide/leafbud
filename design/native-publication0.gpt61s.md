@@ -8,6 +8,8 @@ generated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
+    title: "Added superseding deployed explicit-null witness diagnosis and final first/update/cleanup evidence pointer without rewriting the original foundation checkpoint"
   - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
     title: "Added current 0.25 execution/settlement and blocked-live-smoke follow-up pointer; original 0.22 evidence preserved"
   - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
@@ -317,3 +319,16 @@ preview discloses old image copies may be deleted, count unknown, rather than
 retaining the historical policy blocker above. A one-shot live standalone smoke
 refused missing deployed `reply_drafts` evidence before dispatch; its fresh draft
 was deleted and token observed gone. Fixture success is not live public proof.
+
+## Deployed follow-up — 2026-11-10
+
+The [current receipt's deployed correction](/design/native-publish0.gpt61s.md#deployed-witness-correction--2026-11-10)
+supersedes the prior omission diagnosis: the inspected API returns explicit null
+for both selected one-to-one relations, matching the pin. The guard now
+distinguishes null from an absent/malformed/nonempty field in both adopted and
+minted scopes, without an exemption or re-pin. One separately authorized final
+standalone disposable first/update settled with full content-CID correspondence,
+then record/editor deletion was observed and the local file unbound. Actual
+retained update Flight evidence grounded the bounded decoder repair; first-response
+bytes remain unavailable. Parent review owns acceptance, not the old blocked-smoke
+or the new artifact completion alone.

@@ -8,6 +8,8 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
+    title: "Corrected present-null one-to-one effect witnesses, retained publication-response diagnostics and actual Flight shapes; disposable first/update content settlement and record/editor deletion, with first-response evidence limitation"
   - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
     title: "0.25 native publication execution/recovery and distinct release-patch authority; fixture verification and honest blocked live smoke"
   - resource: /design/native-publish0.gpt61s.md
@@ -67,14 +69,21 @@ saved-state proof—not a semantic estimate or server-CAS claim.
 
 Publication-container context discloses accepted native housekeeping: **old image
 copies may be deleted; count unknown**. It cannot be ruled out from an image-free
-current source. Leafbud adds no deletion/storage access/retry. Nonempty reply/schedule,
+current source. Leafbud adds no deletion/storage access/retry. Present explicit null
+in both selected one-to-one reply/schedule joins is the authoritative empty witness;
+missing keys, malformed shapes or nonempty relations refuse equally for adopted and
+freshly minted editors. Nonempty reply/schedule,
 unsupported inherited preferences/current output and incomplete authority evidence
 refuse or block. Native email is forced off; Bluesky sharing is a separate unused
 action, not an inferred guarantee that all native lifecycle effects are absent.
 See the [original action contract](/design/native-publication0.gpt61s.md) and
 [current execution standing](/design/native-publish0.gpt61s.md). Both contexts are
-fixture-proven; the one-shot live standalone smoke refused missing deployed reply
-evidence before dispatch, then deleted its fresh draft. No live public proof.
+fixture-proven. The final disposable standalone proof settled first publication and
+same-URI update, verified clean editor/release status twice, then observed native
+record/editor deletion and unbound the local source. The retained update response
+decodes offline against its settled PDS CID; first-response bytes were unavailable,
+so decoded first-action evidence is not claimed. The prior smoke's “missing reply”
+diagnosis was null-vs-array confusion, not established deployed field omission.
 
 ## One source, verified identities
 
@@ -220,8 +229,12 @@ Full supported current meaning is compared as
 well; a claimed unchanged CID with inconsistent current meaning is not clean.
 Unknown future owned receipt fields/profiles refuse managed mutation, not drop.
 
-See [source ownership](../mdx/README.md), [executable coverage](../mdx/coverage.md)
-and [usage](/README.md). Publication proof is synthetic CLI/HTTP; the 0.25
-disposable live draft was saved then deleted after publication preflight refused
-missing deployed effect evidence. No deployed public record, `~/l` or pre-existing
-document was changed; no live publish/update proof is claimed.
+Undecoded publication responses use the same private bounded create-new receipts
+as mint responses. Reports retain the diagnostic/path even when independent
+observation settles correspondence; they distinguish a decoded agreeing action
+result from observation-only settlement. No receipt body enters source or logs.
+
+See [source ownership](../mdx/README.md), [executable coverage](../mdx/coverage.md),
+[usage](/README.md) and the [live proof and decoder qualification](/design/native-publish0.gpt61s.md#final-disposable-proof-and-bounded-decoder-repair).
+No `~/l` or pre-existing document was written. Publication-container effects remain
+fixture/source-grounded, not a newly commissioned live publication-container test.

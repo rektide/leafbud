@@ -8,6 +8,8 @@ generated:
   at: 2026-11-10
   by: model:zai-coding-plan/glm-5.3#max
 sources:
+  - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
+    title: "Added dated final-publication-probe follow-up: published standalone deletion observed record and token gone and local unbound; original draft-only evidence retained"
   - resource: "opencode://ses_e39c64844ffeh98er3US2A0gQC"
     title: "Implemented delete transport/workflow/CLI, verified the upstream published-record path, ran the authorized disposable live smoke and wrote this receipt"
   - resource: /design/native-publication0.gpt61s.md
@@ -31,6 +33,10 @@ sources:
 ---
 
 # Deliberate native editor deletion — draft and published
+
+Later deployed published-deletion evidence is recorded in the
+[2026-11-10 follow-up](#published-deletion-follow-up--2026-11-10); the initial
+draft-only smoke and its limits below remain historical evidence.
 
 ## Standing and scope
 
@@ -187,4 +193,18 @@ confirmation of this record-deletion answer.
   in-publication draft path carry loopback coverage only.
 - `unbind_deleted` keeps the adopted `theme`/`contributors`/`publishedAt`
   author fields — they are authored/adopted metadata, not dead server
-  references; a future first binding re-verifies defaults.
+   references; a future first binding re-verifies defaults.
+
+## Published deletion follow-up — 2026-11-10
+
+The separately authorized [final native publication proof](/design/native-publish0.gpt61s.md#final-disposable-proof-and-bounded-decoder-repair)
+used one fresh standalone disposable draft only. After first publication and a
+same-URI update had each settled complete verified correspondence and clean
+status, existing `leafbud delete FILE --yes` invoked native record-first/editor-
+second deletion. Its final observation reported `record_gone:true` and
+`token_gone:true`; the retained local source was unbound draft with no released
+receipt. Read-only delete-action discovery was verified before mint/publish.
+Private receipts and consumed marker: `.test-agent/native-publish-final/`.
+This supplies the published-standalone deployed evidence missing from the
+original smoke; it does not add a live publication-container deletion claim,
+automatic cleanup/retry, email/share call or pre-existing object mutation.

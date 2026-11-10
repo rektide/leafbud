@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
+    title: "Connected 0.25 save-first execution/recovery, explicit-null witness scope, actual retained Flight regressions and final disposable live first/update/native-delete evidence with exact qualifications"
+  - resource: /design/native-publish0.gpt61s.md
+    title: "Current publication execution, deployed witness correction, retained update decoder and complete disposable cleanup evidence"
   - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
     title: "Added independent canonical CID vectors, stronger-read/strict-JSON tests and pinned actual native segmentation/size/offload fixtures without publication execution"
   - resource: /design/publication-verification0.gpt61s.md
@@ -42,7 +46,7 @@ sources:
 
 # Executable content and operation fidelity coverage
 
-Scope: **0.23 native draft/published authoring, bounded public comparison and internal publication verification/preflight**, not all Leaflet content or every
+Scope: **0.25 native draft/published authoring, bounded public comparison and guarded publication/recovery**, not all Leaflet content or every
 cross-product of kinds and operations. [Source ownership](README.md) is the
 source-shape contract; [project usage](/README.md) advertises only this bounded
 profile. Maintain this account when a capability or named fixture changes.
@@ -128,8 +132,9 @@ not-requested evidence remain distinct; no status/diff invocation acknowledges i
 
 ## Native publication foundation coverage
 
-This is **not full publish/save-first/recovery or delivery proof**. Root `publish`
-remains unsupported, including `--yes`. In 0.22, eleven added pure/HTTP tests cover:
+The following 0.22/0.23 foundation gates are historical; the 0.25 execution and
+deployed follow-up below supersede their old root-publish/effect blockers. No gate
+here is newsletter/share delivery proof. In 0.22, eleven added pure/HTTP tests cover:
 
 - [Native adapter](/crates/leaflet/web/src/publication/tests.rs): literal success/
   update/error shapes and actual Next POST headers/body; forced `sendEmail:false`,
@@ -143,14 +148,14 @@ remains unsupported, including `--yes`. In 0.22, eleven added pure/HTTP tests co
   refusal before remote reads, unsaved editor effects, future-date/path disclosure,
   preserved observed date, write-right/owner/linkage/inherited-field refusals and
   source/late-duplicate races. Publication gated-image pruning remains an explicit
-   blocker; unsupported/unobserved native size is not called ready.
+   blocker at that checkpoint; unsupported/unobserved native size is not called ready.
 - [Projection](/crates/leaflet/records/src/projection.rs): the exact pinned standalone
   default theme is equivalent to default absence; false and extra properties refuse.
 
 0.22 gate: **368/368 regular tests**, six deployment skips, strict Clippy and formatting.
-No locked publication state machine, source release-patch authority,
-deployed publication/update or delivery success is claimed. The
-[checkpoint](/design/native-publication0.gpt61s.md) owns the next fresh-session slice.
+That checkpoint did not yet implement the locked publication state machine or
+source release-patch authority. The [checkpoint](/design/native-publication0.gpt61s.md)
+preserves its receiving brief; the current implementation is below.
 
 ### 0.23 verification prerequisites
 
@@ -181,6 +186,47 @@ bound derivation and fresh execution join. No live proof or ticket completion.
 0.23 final gate: **378/378 regular tests**, six opt-in deployment skips, strict
 workspace/all-target Clippy, formatting, owned Markdown/OKF and both independent
 JS harnesses pass. The prior 0.22 gate above is retained historical evidence.
+
+### 0.25 execution and deployed evidence
+
+- [Execution/recovery HTTP](/crates/workflow/src/native/publication_tests.rs):
+  first bind/save/publish and same-URI updates in both contexts, source/late drift,
+  crash-before/after-dispatch windows, complete meaning/CID/date/path refusal,
+  no blind replay, byline ordering and fresh saved-fragmentation size refusal.
+  [Actual CLI](/crates/cli/tests/publish.rs) covers both contexts, stable no-op
+  bytes/mtime and uncertain recovery. Both exercise the observed empty X/C iterable
+  framing and optional `reply:"$undefined"`, not only a synthetic bare JSON slot.
+- [Effect witnesses](/crates/workflow/src/publication/tests.rs):
+  `one_to_one_effect_witness_requires_presence_null_and_never_guesses_empty` and
+  [workflow scope matrix](/crates/workflow/src/native/publication_tests.rs)
+  `effect_evidence_required_for_preexisting_and_transaction_minted_drafts` require
+  explicit null for each selected one-to-one relation. Missing/malformed/nonempty
+  evidence prevents authored save and dispatch in both scopes; no mint exemption.
+- [Flight decoder](/crates/leaflet/web/src/native_tests.rs) and
+  [publication decoder](/crates/leaflet/web/src/publication/tests.rs): reduced
+  literal anonymized fixtures from the actual retained update, strict empty X/C
+  pairing/ID/row bounds, optional reply-only undefined normalization, malformed/
+  duplicate/selected-stream refusal and no record-value coercion. The mint fixture
+  proves shared decoding only, not an actual new publication-mint result.
+- [Publication-response retention](/crates/workflow/src/native/publication_tests.rs):
+  an undecoded response survives in a bounded private 0700/0600 receipt even when
+  observation settles; diagnostic/path remains visible, body never enters source
+  or incidental output, repeat makes no second invocation.
+- **Deployed:** one final separately authorized fresh standalone mint/save,
+  quiet first publication, one same-URI/rkey paragraph update, complete
+  content-CID/meaning/association settlement and clean editor/release status twice;
+  native record-first/editor-second deletion observed both gone and local unbound.
+  No P1/previous verification draft/`~/l` write, email/share or extra live invocation.
+  The first action response was undecoded and unretained; do not claim it decoded
+  retroactively. The retained update body was subsequently decoded **offline** by
+  `retained_deployed_update_response_decodes_and_matches_settled_receipt_offline`,
+  including complete projection and the actual settled PDS CID. That private-data
+  test is opt-in and makes no network calls. Publication-container live release,
+  generic Flight streaming and delivery are not claimed.
+
+Current gate: **411/411 regular tests**, ten opt-in skips, strict workspace/all-target
+Clippy and formatting. Full receipts and exact live limitations:
+[native publish follow-up](/design/native-publish0.gpt61s.md#deployed-witness-correction--2026-11-10).
 
 ## Explicit unsupported native inventory
 
