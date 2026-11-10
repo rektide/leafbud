@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
+    title: "0.25 save-first quiet native publish, observation-only recovery, separate release settlement and fixture verification; one-shot live smoke blocked before dispatch and disposable draft deleted"
+  - resource: /design/native-publish0.gpt61s.md
+    title: "Publication execution, normalization, private undecoded-response evidence and exact live limitations"
   - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
     title: "0.22 internal native publication action/preflight checkpoint; no root publish execution or confirmed release receipts"
   - resource: /design/native-publication0.gpt61s.md
@@ -64,7 +68,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save and independent public status/diff, version 0.22.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save, independent public status/diff, deliberate native deletion and preview-first quiet native publication, version 0.25.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -75,11 +79,11 @@ destination shape. Implemented versus pending:
 
 | implemented | not implemented |
 | --- | --- |
-| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions and credential-free public reads; `leafbud-records` — pinned types/validation plus bounded native public-meaning projection | public release/publishing effects |
+| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions and credential-free public reads/content-CID verification; `leafbud-records` — pinned types/validation plus bounded native public-meaning projection | delivery/email/share controls |
 | `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, selected-locator recovery and deliberate terminal accept-current/replan | original lost publication-mint attribution; general repair of incomplete/unsupported partial graphs |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning and complete keyed create/update/place/detach compiler, loaded Yrs text/marks/break editing and selected supported-block recreation | canvas, nested/task lists, interactive/other unsupported editor content; whole-body recreation |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent, independent naming pairs and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, explicit naming patches separate from tracking settlement and remote adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | nested/task lists |
-| `leafbud-workflow` + CLI — draft/published native `import`, `push`, `pull` and connected `watch`; `pull --adopt-published`; independent names/editor/release `status`, `status --public-only`, `diff --edge editor\|release`; offline create/edit/rekey/list/check/tidy; finite recover; native remote discovery/show; shared locks, source guards and layered config | `publish`, `export`, `pubs`, `auth` commands; `diff --edge names`; native custom public-path mutation |
+| `leafbud-workflow` + CLI — draft/published native `import`, `push`, `pull` and connected `watch`; `pull --adopt-published`; save-first quiet `publish`, native `delete`; independent names/editor/release `status`, `status --public-only`, `diff --edge editor\|release`; offline create/edit/rekey/list/check/tidy; finite recover; native remote discovery/show; shared locks, source guards and layered config | `export`, `pubs`, `auth` commands; `diff --edge names`; native custom public-path mutation |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -93,11 +97,41 @@ separates parser acceptance, native write preflight, CLI/HTTP/Phoenix fixtures,
 independent actual Yjs and earlier deployed evidence; unimplemented cells remain
 visible rather than being advertised as supported by a roundtrip alone.
 
-The [0.22 native publication foundation](design/native-publication0.gpt61s.md)
-adds a literal no-email action adapter and internal read-only preflight, not a
-user-facing publication workflow. Root `publish`/`--yes` still refuse before effects.
-Unavoidable native publication cleanup and output-size coverage need parent review;
-execution/recovery, verified release settlement and live proof remain open.
+The [0.25 publication workflow](design/native-publish0.gpt61s.md) joins keyed save,
+durable dispatch uncertainty, content-CID/full-meaning verification and separate
+release settlement. Fixtures cover standalone and publication contexts. The
+authorized one-time standalone smoke was **blocked before publication dispatch**
+because deployed metadata omitted `reply_drafts`; its newly minted draft was deleted
+and observed gone. No live publish/update proof is claimed. Unknown native effect
+fields still refuse, not default to empty.
+
+## Quiet native publication
+
+```sh
+leafbud publish drafts/essay.mdx --json               # read-only preview
+leafbud publish drafts/essay.mdx --yes --json         # save if needed, then release
+leafbud publish drafts/essay.mdx --take local --yes   # explicit editor drift decision
+leafbud recover drafts/essay.mdx --json               # observe prior progress
+leafbud recover drafts/essay.mdx --yes --json         # settle verified correspondence only
+```
+
+Publication forces `sendEmail:false`, never shares, and has no caller rkey/actor/
+delete escape hatch. Native publication-container housekeeping is disclosed:
+**old image copies may be deleted; count unknown**. Leafbud adds no cleanup or
+retry. Paths normalize to `/rkey`; a missing first date or explicit future date
+uses native now, while omitted update dates preserve the observed value.
+Only complete verified supported output can update the source's URI/path/date
+and compact release receipt. Clean repeats are byte/mtime-stable no-ops.
+
+Uncertain dispatch—including a pre-send crash—is never retried by `publish`,
+`push --take local` or `recover`. Recovery uses native association and exact-URI
+content-verified reads. Editor-achieved/release-undispatched recovery clears only
+that continuation; a subsequent explicit `publish` is a separate action. Exit
+codes: 0 success/no-op/preview, 4 blocked/pending/uncertain/partial/source-changed,
+1 operational failure, 2 usage. Unsupported resource/offload/multiple-byline
+profiles remain refusals. Bounded undecoded mint responses are retained privately
+under the global config directory's `action-responses/<attempt-id>.flight`
+(0700 directory, 0600 file); inspect deliberately, never publish those bodies.
 
 ## Layout
 

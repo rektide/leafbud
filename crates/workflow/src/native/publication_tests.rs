@@ -1,11 +1,11 @@
 use super::*;
+use crate::native::tests::saves::store;
 use crate::{import::tests::testserver::TestServer, pull::tests as support};
 use leafbud_document::{BlockKind, Inline};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicUsize, Ordering},
 };
-use crate::native::tests::saves::store;
 
 const OWNER: &str = "did:plc:abcdefghijklmnopqrstuvwx";
 const URI: &str = "at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post";
@@ -225,13 +225,28 @@ fn read(path: &Path) -> Document {
 #[tokio::test]
 async fn malformed_release_metadata_refuses_before_auth_mint_or_save() {
     for field in ["publishedAt: not-a-date", "path: 17"] {
-        let root=tempfile::tempdir().unwrap(); let path=root.path().join("post.mdx"); draft(&path,false);
-        let source=std::fs::read_to_string(&path).unwrap().replace("# retain author comment",field);
-        std::fs::write(&path,&source).unwrap();
-        let server=Server::new(false,path.clone()).await;
-        let report=server.reader().publish_native(&server.context(root.path()),&path,Selection::default(),PublishOptions{yes:true,..Default::default()}).await.unwrap();
-        assert_eq!(report.outcome,"blocked","{report:?}"); assert!(server.http.requests().is_empty());
-        assert_eq!(std::fs::read_to_string(&path).unwrap(),source);
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("post.mdx");
+        draft(&path, false);
+        let source = std::fs::read_to_string(&path).unwrap().replace("# retain author comment", field);
+        std::fs::write(&path, &source).unwrap();
+        let server = Server::new(false, path.clone()).await;
+        let report = server
+            .reader()
+            .publish_native(
+                &server.context(root.path()),
+                &path,
+                Selection::default(),
+                PublishOptions {
+                    yes: true,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(report.outcome, "blocked", "{report:?}");
+        assert!(server.http.requests().is_empty());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
     }
 }
 

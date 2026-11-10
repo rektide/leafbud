@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
+    title: "0.25 native publication execution/recovery and distinct release-patch authority; fixture verification and honest blocked live smoke"
+  - resource: /design/native-publish0.gpt61s.md
+    title: "Execution/settlement proof and remaining deployed metadata/decoder boundaries"
   - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
     title: "Added separate canonical record-content verification and actual loaded/compiled native inline-size witness; retained all execution/cleanup/delivery boundaries"
   - resource: /design/publication-verification0.gpt61s.md
@@ -34,21 +38,26 @@ sources:
 
 # Published editors and independent release evidence
 
-**0.21 implements adoption/read/refresh, editor-only save, and read-only public
-status/diff—not publishing.** `publish` remains unimplemented. No subscriber
-email, share, upload, public record mutation, cleanup or migration is enabled.
+**0.25 implements preview-first native `publish FILE [--yes] [--json] [--take local]`.**
+It saves the complete supported editor under one stable-ID lock, atomically records
+editor-achieved/release-undispatched progress with the save receipt, persists
+may-have-been-sent before invocation, then verifies exact native association,
+PDS content CID and complete supported public meaning. A separate loss-checked
+release authority settles lifecycle/URI, declared path/date/byline normalization
+and `released`. No email/share, custom rkey, arbitrary actor or Leafbud cleanup.
+Uncertain dispatch never retries; recovery only observes/settles correspondence.
+See the [execution receipt](/design/native-publish0.gpt61s.md).
 
-**0.22 adds an internal action/preflight foundation only.**
+**0.22 supplied the action/preflight foundation.**
 `leafbud_web::publication` supplies current-origin/session action discovery, literal
 no-email arguments, explicit low-level transport and bounded results.
 `workflow::publication::preview` validates complete source before remote reads,
 reports missing keys/native page IDs, unsaved editor effects, actual owner/context
 and path/date normalization, and rechecks source/duplicates/native metadata after
-awaits. It writes nothing and is not exposed as root `publish`; `--yes` remains an
-honest unsupported-command refusal. No workflow invokes the effect adapter.
+awaits. It writes nothing; execution reacquires fresh locked evidence and never
+treats preview as persistent authorization.
 
-Every preview retains the execution blocker. **0.23 adds verification prerequisites,
-not execution:** a bound/online preview can replace the blanket size blocker with
+**0.23 supplied verification prerequisites:** a bound/online preview replaces the blanket size blocker with
 an actual loaded/compiled cumulative-native size witness. It retains XmlText/delta
 facet fragmentation, counts UTF-8 JSON overhead, and proves no offload only when
 the conservative bound is at most 102400 bytes. Saves/new UUID page IDs are explicitly
@@ -56,12 +65,16 @@ conditional/provisional; unbound/offline previews remain size-unwitnessed. Nativ
 facts/metadata are rechecked after awaits, and future dispatch still requires fresh
 saved-state proof—not a semantic estimate or server-CAS claim.
 
-Publication-container context also blocks unavoidable native gated-image pruning, which has no suppression flag
-and cannot be ruled out from an image-free current source. Nonempty reply/schedule,
+Publication-container context discloses accepted native housekeeping: **old image
+copies may be deleted; count unknown**. It cannot be ruled out from an image-free
+current source. Leafbud adds no deletion/storage access/retry. Nonempty reply/schedule,
 unsupported inherited preferences/current output and incomplete authority evidence
 refuse or block. Native email is forced off; Bluesky sharing is a separate unused
 action, not an inferred guarantee that all native lifecycle effects are absent.
-See the [contract and receiving policy questions](/design/native-publication0.gpt61s.md).
+See the [original action contract](/design/native-publication0.gpt61s.md) and
+[current execution standing](/design/native-publish0.gpt61s.md). Both contexts are
+fixture-proven; the one-shot live standalone smoke refused missing deployed reply
+evidence before dispatch, then deleted its fresh draft. No live public proof.
 
 ## One source, verified identities
 
@@ -184,8 +197,8 @@ while status reports linkage-mismatch; viewing it does not accept a new binding.
 Optional compact `released` contains profile, confirmed input hash, reported
 output CID, actual path/date and confirmation time. It is last **confirmed
 correspondence**, not a public-read cache. Import leaves it absent. Ordinary editor
-tracking/adoption explicitly cannot advance it; no command in this batch creates
-it. A future verified publication operation owns receipt creation.
+tracking/adoption explicitly cannot advance it; only verified native publication
+execution/recovery creates it through `leafbud_mdx::settle_release`.
 
 Status reports input/output change independently. A known baseline can yield
 clean, input-changed, output-changed, both-changed or converged-unaccepted.
@@ -200,13 +213,15 @@ independently rehashed or signature verified**. Separately,
 `atproto::content::verify_record_content` and
 `PublicReader::fetch_content_verified` verify actual canonical AT-data DAG-CBOR
 content against its reported CID, with typed data/profile/digest refusals. This
-stronger API is available for future settlement, not silently applied to old
-observations or used to create a receipt now. Rehash establishes content addressing
+stronger API is used for publication settlement, not silently applied to old
+observations. Rehash establishes content addressing
 only, not authorship, actor, time, repo signature or delivery.
 Full supported current meaning is compared as
 well; a claimed unchanged CID with inconsistent current meaning is not clean.
 Unknown future owned receipt fields/profiles refuse managed mutation, not drop.
 
 See [source ownership](../mdx/README.md), [executable coverage](../mdx/coverage.md)
-and [usage](/README.md). All new proof is synthetic CLI/HTTP/Phoenix; no deployed
-published document, `~/l`, credentials or public output was touched.
+and [usage](/README.md). Publication proof is synthetic CLI/HTTP; the 0.25
+disposable live draft was saved then deleted after publication preflight refused
+missing deployed effect evidence. No deployed public record, `~/l` or pre-existing
+document was changed; no live publish/update proof is claimed.

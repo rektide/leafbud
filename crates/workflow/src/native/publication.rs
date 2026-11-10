@@ -322,7 +322,10 @@ impl RemoteReader {
         validate_binding_intent(&source.text)?;
         let desired = save::prepared(&source.text)?;
         projection::preflight(&desired)?;
-        let mut normalization = Preview { uri: desired.state.binding.as_ref().and_then(|b| b.uri.clone()), ..Default::default() };
+        let mut normalization = Preview {
+            uri: desired.state.binding.as_ref().and_then(|b| b.uri.clone()),
+            ..Default::default()
+        };
         crate::publication::normalize(&desired, None, jiff::Timestamp::now(), &mut normalization)?;
         if source.document.state.publication_attempt.is_some() {
             *report = self.recover_publication_locked(source, true).await?;

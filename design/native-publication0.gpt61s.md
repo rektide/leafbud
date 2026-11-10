@@ -8,6 +8,8 @@ generated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
+    title: "Added current 0.25 execution/settlement and blocked-live-smoke follow-up pointer; original 0.22 evidence preserved"
   - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
     title: "Added verification follow-up pointer and clarified publication-container-only gated cleanup scope; original 0.22 checkpoint preserved"
   - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
@@ -305,3 +307,13 @@ Scope clarification for the hidden-effect prose: `publishLeaflet` constructs
 every such publication-container action. Standalone is not subject to that
 gated-image cleanup branch. The 0.22 preview already scoped its blocker correctly;
 this clarification does not resolve or relax the parent/operator policy question.
+
+## Execution follow-up — 0.25
+
+The [native publish receipt](/design/native-publish0.gpt61s.md) implements the
+save→durable-dispatch→content-verified-observation→separate-settlement join and
+finite recovery. The operator accepted native publication-container housekeeping;
+preview discloses old image copies may be deleted, count unknown, rather than
+retaining the historical policy blocker above. A one-shot live standalone smoke
+refused missing deployed `reply_drafts` evidence before dispatch; its fresh draft
+was deleted and token observed gone. Fixture success is not live public proof.
