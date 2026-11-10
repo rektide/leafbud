@@ -1,6 +1,6 @@
 //! Literal `publishToPublication` contract at Leaflet 600c7b5f. This is a
 //! transport, NOT publication authorization, input verification or recovery.
-//! The workflow has deliberately not wired execution to this foundation.
+//! The guarded workflow owns save-first execution, dispatch evidence and recovery.
 use crate::{Error, LeafletClient, actions, transport};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -84,7 +84,7 @@ impl LeafletClient {
     /// EFFECT. Caller MUST persist dispatched uncertainty before polling this,
     /// verify the complete saved input and all native side effects, and observe
     /// output/linkage afterward. No automatic retries, even on publish_failed.
-    /// No root CLI/workflow invokes this in the preflight checkpoint.
+    /// Production callers compose this through the guarded publication workflow.
     pub async fn invoke_publication(&self, preparation: &Preparation, arguments: &Arguments) -> Result<Outcome, Error> {
         if self.base_url() != preparation.base || self.session != preparation.session || !self.has_cookie || arguments.leaflet_id != preparation.token {
             return Err(Error::Native("publication preparation belongs to another origin/session/token"));

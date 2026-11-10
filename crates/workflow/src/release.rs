@@ -57,7 +57,7 @@ impl PublicReader {
         Ok(record)
     }
 
-    /// Separate stronger acquisition for future publication settlement. Ordinary
+    /// Separate stronger acquisition for verified publication settlement. Ordinary
     /// status/diff intentionally retain their reported/syntax-only evidence.
     /// Still NOT authorship, time, repo-signature, semantic/linkage or delivery proof.
     pub async fn fetch_content_verified(&self, uri: &str) -> std::result::Result<ContentVerifiedRecord, ContentFetchError> {

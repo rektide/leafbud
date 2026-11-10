@@ -5,6 +5,7 @@
 //! remote content and owned author fields for guarded refresh;
 //! [`prepare_binding_defaults`] is separate pre-content-write preparation.
 //! [`unbind_deleted`] is the deliberate post-native-deletion conversion.
+//! [`settle_release`] separately owns verified publication settlement.
 use super::{parse, yaml};
 use anyhow::{Context, Result, bail, ensure};
 use leafbud_document::*;
