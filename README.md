@@ -8,6 +8,12 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
+    title: "0.21 verified published adoption/refresh/save, explicit lifecycle adoption and independent credential-free public status/diff; native/public CLI/HTTP/Phoenix verification"
+  - resource: /doc/release/README.md
+    title: "Current public projection, release evidence and capability boundaries"
+  - resource: /design/published-lifecycle0.gpt61s.md
+    title: "Published lifecycle design checkpoint and implementation receipt"
   - resource: "opencode://ses_e3c29df03ffeKTX7z5IHA3nup5"
     title: "Version-0.20 independent filename/path witnesses, offline tidy directions, guarded no-clobber moves and read-only naming status; CLI/HTTP/Phoenix verification"
   - resource: /design/naming0.gpt61s.md
@@ -54,7 +60,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments and independent filename/path reconciliation, version 0.20.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save and independent public status/diff, version 0.21.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -65,11 +71,11 @@ destination shape. Implemented versus pending:
 
 | implemented | not implemented |
 | --- | --- |
-| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | public release/publishing workflow |
+| `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions and credential-free public reads; `leafbud-records` — pinned types/validation plus bounded native public-meaning projection | public release/publishing effects |
 | `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, selected-locator recovery and deliberate terminal accept-current/replan | original lost publication-mint attribution; general repair of incomplete/unsupported partial graphs |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning and complete keyed create/update/place/detach compiler, loaded Yrs text/marks/break editing and selected supported-block recreation | canvas, nested/task lists, interactive/other unsupported editor content; whole-body recreation |
 | `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent, independent naming pairs and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, explicit naming patches separate from tracking settlement and remote adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | nested/task lists |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, selected-field `edit`, `keys rename`, `list --state/--json`, preparation-aware `check`, read-only `status [FILE...] --offline/--json` with independent names, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, `recover FILE [--take remote\|local] [--yes] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--from filename\|path/--accept/--dry-run/--json`, Figment2 config show/set and shared workspace root | `publish`, `export`, `pubs`, `auth` commands; `diff --edge names/release`; native custom public-path mutation |
+| `leafbud-workflow` + CLI — draft/published native `import`, `push`, `pull` and connected `watch`; `pull --adopt-published`; independent names/editor/release `status`, `status --public-only`, `diff --edge editor\|release`; offline create/edit/rekey/list/check/tidy; finite recover; native remote discovery/show; shared locks, source guards and layered config | `publish`, `export`, `pubs`, `auth` commands; `diff --edge names`; native custom public-path mutation |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -100,7 +106,7 @@ crates/
     web/       leafbud-web: cookie auth, discovery, RPC/actions,
                  mint/push/known-ID reads and receive-only live subscriptions
     records/   leafbud-records: generated pinned lexicon record types,
-               validation, wire-shape helpers — see LEAFLET-PIN.md
+                validation, wire-shape helpers and bounded public-meaning projection
   atproto/     leafbud-atproto: hand-rolled ATProto surface — handle→DID→PDS
                identity resolution, XRPC client, sessions, public reads
   workflow/    leafbud-workflow: local files, config, inventory,
@@ -461,11 +467,13 @@ failed/unsupported or operational failure, **4** mixed results; usage errors **2
 The editing helpers use **0** success/no-op, **1** refusal/failure, **2** usage.
 Details/evidence: [local authoring receipt](design/local-authoring-tools0.gpt61s.md).
 
-## Checkout drafts as editable MDX
+## Checkout native documents as editable MDX
 
 ```sh
 cargo run -p leafbud -- import --all --state draft --root /home/rektide/l
 cargo run -p leafbud -- import EDITOR_URL --to drafts/chosen.mdx --json
+cargo run -p leafbud -- import --all --state published --json
+cargo run -p leafbud -- import DOCUMENT_AT_URI --to chosen.mdx --json
 cargo run -p leafbud -- --root /home/rektide/l check drafts/chosen.mdx
 ```
 
@@ -488,12 +496,29 @@ validation. Code blocks use an exact `Code` component. `check` validates
 this bounded profile, not every destination MDX feature. Images retain
 remote URLs; no offline binary asset cache is claimed.
 
-Import verifies sibling-token publication linkage before selecting drafts.
+Import verifies native/sibling publication linkage before selecting documents.
 Unsupported content produces a per-document failure, not a truncated success.
-Repeated equal imports do not write; local edits are preserved. Remote drift
-currently reports a required explicit pull/refresh rather than overwriting an
-existing file. Destination collisions, duplicate bindings and unsafe paths
+Repeated imports reuse guarded pull at the existing path; equal observations do
+not write, remote-only edits refresh and conflicts/local-only edits remain protected.
+Import JSON is version 2 and counts `refreshed` separately from new `imported` files.
+Destination collisions, duplicate UUID/native/public bindings and unsafe paths
 are errors. No unseen files are pruned. Bulk partial failure exits 4.
+
+Published import takes **current native working content**, not the potentially
+older public body. It retains the exact verified public URI and native editor
+identity. URI lookup selects one exact native discovery candidate and reverifies
+its association; no recoverable editor means **editing-unavailable**, with no
+local public-body copy or new mint. Discovery completeness remains unknown.
+Default new-file paths still use `drafts/` as a convenience, not lifecycle authority.
+Ordinary `push` saves that same published editor and **never releases** it.
+
+If an existing draft was published elsewhere, ordinary observation refuses to
+change its lifecycle. Use `pull FILE --adopt-published [--dry-run]` for the verified
+same-binding transition; this does not override local editor conflicts (use a
+separate `--take remote` decision where intended). UUID, keys, native locators,
+writer/history and names survive. Actual date/path are adopted only where omitted
+or null; explicit local choices remain. No release-input receipt is invented.
+See [published/public contract](doc/release/README.md).
 
 The commissioned live checkout produced **27 draft MDX files** in `~/l/drafts/`,
 with **335 blocks**, from 30 observed Leaflets; 3 published objects were excluded.
@@ -521,7 +546,7 @@ also supported. Status never writes bodies, keys, receipts or remotes—even
 when current endpoints have converged. It does not compare text or explain
 an operation plan; [human diff](#human-localeditor-diff) is a separate view.
 
-For supported bound drafts, status reports `clean`, `local-changed`,
+For supported bound draft or published editors, status reports `clean`, `local-changed`,
 `remote-changed`, `both-changed`, `converged` or `unverified`, with independent
 local/remote change evidence. Missing/inaccessible native objects, unmanaged
 operands, **unbound** local drafts, bound-without-receipt documents,
@@ -535,10 +560,14 @@ Offline status requires no credentials or network and **never says clean**:
 remote change/equality remain unknown, even when the stored local input matches.
 Online `current` means fetched during this invocation, not a transaction/CAS;
 metadata-only, checked-missing, unavailable and not-requested evidence are
-distinguished. Naming witnesses are `not-tracked`; release equality is
-`unknown-not-implemented`. Local-only author metadata is not compared to the editor.
+distinguished. Names use their independent pair. Each item's `release` evidence
+separately reports publication-input change, current public CID/change, baseline,
+freshness and projection support. An imported baseline stays unknown even when
+current public meaning matches. Public output changes do not dirty editor hashes.
+`status --public-only` skips native credentials/reads; `--offline` fetches neither edge.
+Local-only author metadata is not compared to the editor.
 
-JSON schema `version: 1` has `workspace`, `offline`, `selected`, `failed`,
+JSON schema `version: 3` has `workspace`, `offline`, `selected`, `failed`,
 `ignored_unmanaged`, `names`, `release` and `items`. Each item carries its
 `path`, `outcome`, safe `detail`, `local` (`unchanged`/`changed`/`unknown`),
 `baseline`, `receipt_profile`, nullable `endpoints_equal`/`document_id`,
@@ -597,7 +626,7 @@ leafbud diff drafts/chosen.mdx                 # --edge editor is the default
 
 This compares **current local authored content → current bound native editor**,
 not a saved base, public/released document, proposed operation or merge. It shares
-status/pull's read-only observation and strict supported draft profile. Both sides
+status/pull's read-only observation and strict supported native-editor profile. Both sides
 are rendered by the same normalized view writer; original MDX bytes are never
 compared asymmetrically against generated remote output. No keys, receipts, local
 source or remotes are written, including when content has converged. Missing or
@@ -649,7 +678,11 @@ POSIX diff convention **0 equal, 1 different**, with both successful Leafbud
 reports (exit **0**). Neither the executable's name nor its exit code determines
 Leafbud's own normalized-view equality report. Other codes, a signal or a
 spawn/wait/cleanup failure give Leafbud exit **1**; usage errors give **2**.
-`--edge names/release` is explicitly unimplemented (exit 1). There is deliberately
+`--edge release` compares current public-meaning input with the **fetched** public
+record, without editor credentials or a saved body. It includes date/path, not
+naming/writer trivia, and refuses unsupported public fields/resources. Read the
+[projection and evidence limits](doc/release/README.md#public-meaning-profile).
+`--edge names` is explicitly unimplemented (exit 1). There is deliberately
 **no `--json`**: stdin/stdout/stderr/TTY are inherited for CLI or interactive tools;
 the tool owns stdout and Leafbud emits only a short execution summary on stderr.
 
@@ -664,14 +697,13 @@ or editor. Treat configured programs/workspace config as trusted code: the child
 receives private writing and the normal inherited environment, and its own backups,
 caches, rendering, resource access or side effects are outside Leafbud's control.
 
-Implementation and verification: [human diff handoff](design/human-diff0.gpt61s.md).
-The [last verified live rename gap](#read-only-localeditor-status) remains a separate
-integration prerequisite; this capability was exercised on synthetic current-format
-fixtures/loopback, not by converting `~/l` or its stores. A separate user session now
-owns the further Leafbud rename and existing-data/config conversion; this diff slice
-does not perform or promise that migration.
+Earlier editor-diff evidence: [human diff handoff](design/human-diff0.gpt61s.md).
+Current published/public integration is covered by the
+[0.21 receipt](design/published-lifecycle0.gpt61s.md), using synthetic current-format
+fixtures/loopback. `~/l` remains format-stale and untouched; no automatic data/config
+migration or deployed published-diff proof is claimed.
 
-## Refresh bound drafts from their editors (guarded pull)
+## Refresh bound documents from their editors (guarded pull)
 
 ```sh
 cargo run -p leafbud -- pull --all --root /home/rektide/l
@@ -694,7 +726,7 @@ history, no server CAS):
 | Both changed to the same thing | `converged` — receipts settle without a body rewrite |
 | No receipt, differing current endpoints | `needs-decision` — no historical baseline inferred (unknown profiles fail) |
 | Local-only change, or diverged local and remote edits | `needs-decision` — file preserved verbatim |
-| Missing remote, published lifecycle, unsupported content, broken bindings | explicit per-file outcome; nothing is pruned or created |
+| Missing remote, unaccepted lifecycle transition, unsupported content, broken bindings | explicit per-file outcome; nothing is pruned or created |
 
 `--take remote` deliberately replaces differing **editor-owned** local content
 (keeping local-only metadata fields, supported anchored comments and manual key renames); it never
@@ -737,7 +769,7 @@ leafbud watch --all --backstop 300 --rescan 5   # seconds; these are the default
 ```
 
 `watch` maintains an actual origin-scoped Leaflet connection and adopts durable
-saved editor edits into existing **current-format bound drafts**. It never pushes,
+saved editor edits into existing **current-format bound draft or published documents**. It never pushes,
 prepares keys, creates remote objects, imports undiscovered documents or prunes
 missing files. Local-only edits are normal `local-dirty`; divergent edits become
 `needs-decision`. Invalid, unknown owned state, pending recovery evidence,
@@ -856,7 +888,7 @@ cargo run -p leafbud -- status --offline --json
 `--from filename` changes only that author field and the independent naming pair.
 `--accept` records the actual pair without changing path or body. `--from` and
 `--accept` are exclusive. These commands need no credentials or network and work
-on local-only and bound drafts. No ordinary push/pull/watch renames or accepts names.
+on local-only drafts and bound draft/published documents. No ordinary push/pull/watch renames or accepts names.
 UUID, native binding/node IDs, writer, pending provenance and editor receipts are
 not derived from filenames; accepting names cannot clear editor or release drift.
 Pending/future owned state still blocks managed mutation.
@@ -917,6 +949,8 @@ only temporary synthetic sources/loopback servers, never the live corpus.
 
 ## Reading map
 
+- Published adoption, public-only status/diff and independent release witnesses:
+  [maintained contract](doc/release/README.md), [implementation receipt](design/published-lifecycle0.gpt61s.md)
 - Accepted interface (CLI, crates, YAML policy):
   [`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md)
 - Offline metadata edits, native-preserving key rename and local inventory:

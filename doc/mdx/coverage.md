@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
+    title: "Added published native/editor CLI/HTTP/Phoenix evidence, independent release projection/status/diff and explicit public coverage limitations"
+  - resource: /doc/release/README.md
+    title: "Current published lifecycle/public projection and evidence contract"
   - resource: "opencode://ses_e3c29df03ffeKTX7z5IHA3nup5"
     title: "Added independent local names, real CLI offline/HTTP no-effect proofs, move interruption and late-race fixtures, and watcher rescan preserving naming/comment/native evidence"
   - resource: /design/naming0.gpt61s.md
@@ -30,7 +34,7 @@ sources:
 
 # Executable content and operation fidelity coverage
 
-Scope: **0.20 current draft authoring**, not all Leaflet content or every
+Scope: **0.21 native draft/published authoring and bounded public comparison**, not all Leaflet content or every
 cross-product of kinds and operations. [Source ownership](README.md) is the
 source-shape contract; [project usage](/README.md) advertises only this bounded
 profile. Maintain this account when a capability or named fixture changes.
@@ -79,6 +83,40 @@ passing source validation is never shorthand for all columns.
 | Image resources | Native `local` payload fields refuse; read source/fallback is not an upload. Writer requires HTTP(S) source/fallback. `file:`, `data:` fallbacks and Markdown image syntax are not writable managed inputs. No download/cache/upload/export promise. | O2, U1; [source preflight](/crates/leaflet/editor/src/write.rs) |
 | UUID, current/retired node rows, manual aliases | New keys are new identity; retained native locators ignore spelling. Preparation cannot borrow confirmed/retired identities; drops detach rather than delete. | P2, C2, C5, W2, R2 |
 | Pending, writer ranges, receipt profiles, `lastResolution` | Typed current state only; pending/future owned state stays preserved; no rewind of reservations or historical hashes | Q1; [model attempt tests](/crates/document/model/src/attempt.rs); [watch refusal tests](/crates/workflow/src/watch/tests.rs) |
+| Published native binding and lifecycle | Exact native/public association, current working body/metadata rather than public body; public URI never derived from filename/config; explicit same-binding lifecycle adoption; duplicate URI accounting and OS locks | A1, A2, C7 |
+| Release evidence and public projection | Independent optional confirmed input/output witness; unknown imported baseline remains unknown; public changes excluded from editor witness; current PDS output observed without native authority | S1, S2, A1, A2, C7 |
+
+## Public comparison coverage
+
+Public `leaflet-public/1` is narrower than editor writability. Supported prose/
+marks/breaks, headings/quotes/rules/code, flat lists and uniquely reachable linear
+page links map through native public wire shapes into the existing document model.
+S1 independently asserts UTF-8 facet offsets/marks, scalar bytes/kinds, list styles,
+page IDs/references, defaults and date normalization, with a roundtrip control.
+Native watermark, source keys/comments, names and writer/history do not enter
+release meaning. Metadata/site/path/date and supported bylines do.
+
+Images without resolved blob identity, multiple working contributors (unordered
+native pull versus ordered publication), repeated/cyclic/unreachable page graphs,
+new pages without native identity, colored highlights needing theme resolution,
+legacy release output, richer/unknown public fields, offloading/gating, cover/theme/
+preferences/share references and richer list semantics **refuse**, not strip.
+No resource fetch/upload or PDS write is implemented by this comparison. S2 still
+exposes observed CID/output change when complete projection is unsupported.
+The [maintained contract](../release/README.md#public-meaning-profile) owns these
+exact boundaries; this is not complete public serialization/export or release proof.
+
+The A1 legacy pure case is
+`legacy_public_identity_still_adopts_current_native_content_without_claiming_release_projection`:
+legacy owner/publication association and current editor import share the native
+path, while legacy release projection explicitly refuses. No dedicated legacy
+published-save HTTP or deployed claim is made.
+
+PDS CID evidence is syntax/profile-validated server reporting, not an independent
+record rehash/signature verification. S2's CID fixtures are explicitly independent
+syntax vectors used as reported revisions; record meaning has separate literal
+fixtures. Known/current, missing, unavailable, mismatch, unsupported, offline and
+not-requested evidence remain distinct; no status/diff invocation acknowledges it.
 
 ## Explicit unsupported native inventory
 
@@ -126,10 +164,10 @@ comment-plus-terminal-partial end-to-end fixture is claimed.
 **Exports:** root `export` remains unimplemented (C6). Internal MDX rendering and
 `render_comparison` are covered by P1; normalized human diff views are temporary,
 loss-checked comparison inputs, **not** Markdown exports or executable documents.
-Generated public record types have their own
-[record fixture roundtrip](/crates/leaflet/records/src/record.rs); that does not
-connect current MDX to release/export. Published lifecycle, public release,
-subscriber email, Bluesky share and uploads remain outside this matrix's support.
+Generated public record types retain their
+[record fixture roundtrip](/crates/leaflet/records/src/record.rs); S1/S2/C7 separately
+connect current MDX to bounded public comparison. Public release effects,
+subscriber email, Bluesky share, uploads and general exports remain outside support.
 
 **Independent/deployed evidence:** Y1's prior seven independent Yjs groups remain
 applicable because this batch changed no native/Yrs writer. Earlier D evidence is
@@ -174,6 +212,11 @@ Node harness, not nextest. Keep test names and these explanations aligned.
 | N2 | [Naming workflow tests](/crates/workflow/src/tidy/tests.rs): `names_pair_classification_direction_acceptance_and_repeat_noop`, `names_missing_null_equal_external_and_selectors_are_independent`, `names_mapping_nested_unicode_extension_and_unsafe_intent`, `names_dry_run_composes_keys_reports_path_and_preserves_body_state`, `names_no_clobber_symlinks_aliases_and_batch_destination_conflicts`, `names_late_source_identity_route_target_and_duplicate_guards`, `names_interruption_after_move_retains_good_source_and_retry_settles_truth`, `names_after_move_external_source_save_wins_over_witness_patch`, `names_readonly_status_and_list_do_not_accept_or_clear_dirty_editor` |
 | N3 | [Offline CLI](/crates/cli/tests/author.rs): `offline_naming_directions_preview_selectors_status_and_noop` — intentionally bad credential/origin environment; [CLI/HTTP](/crates/cli/tests/push.rs): `confirmed_naming_is_content_noop_push_and_never_settles_editor_drift` — bound IDs/receipts/writer retained, status does not settle name drift, repeat push/pull bytes/mtime and no native push; names acceptance leaves dirty editor dirty |
 | L2 | [Phoenix/HTTP watch](/crates/workflow/src/watch/tests.rs): `rescan_follows_explicit_identity_rename_blocks_duplicates_and_never_recreates_removed_path` now uses actual naming tidy, then remote adoption at the new path retaining UUID/binding, accepted names and comment anchor; no new watcher framework or deployed-edit claim |
+| A1 | [Published adoption](/crates/workflow/src/published/tests.rs): `published_build_uses_current_working_metadata_and_preserves_exact_public_identity`, `published_linkage_missing_ambiguous_wrong_owner_and_working_metadata_refuse`, `exact_uri_discovery_import_all_and_duplicate_public_binding_are_guarded`, `published_import_refresh_retains_uuid_keys_names_comments_and_local_date_without_public_body`, `observed_native_publication_transition_requires_explicit_guarded_adoption` — both native contexts, literal public/editor disagreement, explicit lifecycle authority, prospective duplicate public URI, no fallback/copy/retarget |
+| A2 | [Native save](/crates/workflow/src/native/save_tests.rs): `published_editor_save_updates_working_linkage_only_in_both_contexts` — published standalone uses linkage metadata, not loose token metadata; ordinary structural/text save/readback/repeat, unchanged public output and older release witness. L1's actual poke fixture now runs draft and published variants retaining public identity, names and old release evidence |
+| S1 | [Public projection](/crates/leaflet/records/src/projection.rs): `explicit_utf8_facets_date_defaults_and_spelling_free_public_meaning`, `native_public_scalar_lists_and_unique_page_links_have_explicit_meaning`, `public_unknown_richer_resources_and_bad_facet_boundaries_are_not_stripped` — explicit expected meaning plus controlled roundtrip; no independent publisher execution claim |
+| S2 | [Public observation](/crates/workflow/src/release/tests.rs): `independent_release_matrix_unknown_baseline_input_output_both_convergence_and_offline`, `missing_unavailable_mismatched_unsupported_and_not_requested_evidence_stay_distinct`, `public_only_status_and_diff_use_fetched_current_markdown_without_native_authority_or_receipt_writes`, `public_read_local_source_race_never_reports_stale_clean_or_overwrites_new_source` — actual PDS GETs without cookie/bearer/native requests, current view tool, source/mtime and witness preservation, future owned-state refusal and stale-source invalidation; no receipt fabrication |
+| C7 | [Published CLI](/crates/cli/tests/push.rs): `published_cli_import_edit_save_refresh_public_only_status_and_fetched_release_diff` — URI discovery/import, unreleased native body versus older public body, BOM/CRLF/unknown author/comment preservation, preview/save/pull/repeat/remote refresh, independent public-only status and fetched external diff with deliberately broken native credential store/origin; zero mint/release/upload actions |
 | Y1 | [Actual Yjs harness](/crates/leaflet/editor/tests/text-interop.mjs), [production-output producer](/crates/leaflet/editor/examples/text-write.rs), [received seven-group receipt](/design/keyed-save0.gpt61s.md) |
 
 Safety is operation-wide, not repeated as a fake per-kind certification:

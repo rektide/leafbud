@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
+    title: "Added verified published lifecycle, separate explicit lifecycle patch authority and exact preservation of independent release evidence through editor operations"
+  - resource: /doc/release/README.md
+    title: "Maintained native/public identity, independent evidence and bounded public projection contract"
   - resource: "opencode://ses_e3c29df03ffeKTX7z5IHA3nup5"
     title: "Added explicit naming patch authority, independent witness preservation through native observation, and guarded recoverable file moves"
   - resource: /design/naming0.gpt61s.md
@@ -28,7 +32,7 @@ sources:
 
 # Managed MDX source fidelity
 
-Current contract: **Leafbud 0.20**, `leafbud-mdx/2`, draft lifecycle,
+Current contract: **Leafbud 0.21**, `leafbud-mdx/2`, draft/published native-editor lifecycle,
 `leaflet-editor/3` receipts. [Usage](/README.md) and
 [executable content/operation coverage](coverage.md) are companion homes.
 This is a bounded source adapter, not an arbitrary YAML setter or lossless MDX CST.
@@ -45,11 +49,22 @@ This is a bounded source adapter, not an arbitrary YAML setter or lossless MDX C
 | Tracking settlement | Reserved `@leafbud` state after verification | Author fields and exact body; established binding and monotonic writer reservations |
 | First-binding default preparation | Explicit verified publication; omitted native theme/contributors | Prose and explicit author choices; original dispatched pushes are never reinterpreted |
 | Pull/watch/remote recovery adoption | Changed editor-owned metadata/body and verified state | Local-only author fields, matched labels, UUID/binding; comments under the rule below |
+| Explicit `pull --adopt-published` | Verified public URI/lifecycle on the same settled draft binding; actual date/path only when omitted/null; guarded editor adoption under ordinary conflict policy | Native identity/publication association, UUID/keys, names, writer/history, explicit author choices; no release receipt is invented |
 
 Pending attempts block managed edit/rename/tidy and ordinary inbound adoption;
 explicit recovery owns their resolution. Unknown future owned state blocks rather
 than being dropped. A helper never refreshes receipts to conceal dirty content.
 Original-byte filesystem guards remain in workflow, not the MDX adapter.
+
+Published binding validation requires the exact public URI and complete native
+editor group; a draft cannot fabricate a URI. Ordinary tracking and editor
+adoption retain the whole binding/lifecycle. Only the separate `adopt_published`
+patch authority can perform the explicit same-binding lifecycle transition.
+Tracking/editor adoption also require exact equality of the independent optional
+`released` witness. Typed unknown future receipt fields/profiles block managed
+mutation. Date/path changes in joined public output never overwrite local intent
+or settle names/releases during ordinary pull/watch. Details and limitations:
+[published/public contract](../release/README.md).
 
 ## YAML shapes
 
