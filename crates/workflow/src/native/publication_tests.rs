@@ -170,7 +170,10 @@ impl Server {
                     return (
                         200,
                         vec![("Content-Type".into(), "text/x-component".into())],
-                        format!("0:{{\"a\":\"$@1\"}}\n1:{result}\n"),
+                        format!(
+                            "0:{{\"a\":\"$@1\"}}\n1:{result}\n{}",
+                            if mode == 13 { "unknown-row:opaque-private-evidence\n" } else { "" }
+                        ),
                     );
                 }
                 p if p.starts_with("/xrpc/com.atproto.repo.getRecord") => {
@@ -220,6 +223,63 @@ fn draft(path: &Path, publication: bool) {
 }
 fn read(path: &Path) -> Document {
     leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[tokio::test]
+async fn undecoded_publication_body_survives_observation_settlement_privately_without_replay() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("post.mdx");
+    draft(&path, false);
+    let server = Server::new(false, path.clone()).await;
+    server.mode.store(13, Ordering::SeqCst);
+    let reader = server.reader();
+    let context = server.context(root.path());
+    let report = reader
+        .publish_native(
+            &context,
+            &path,
+            Selection::default(),
+            PublishOptions {
+                yes: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.outcome, "published", "{report:?}");
+    assert!(read(&path).state.released.is_some());
+    let message = report.message.unwrap();
+    assert!(message.contains("private bounded response retained at"));
+    assert!(message.contains("without a decoded action result"));
+    assert!(!message.contains("opaque-private-evidence"));
+    let directory = context.global_path.parent().unwrap().join("action-responses");
+    let entries: Vec<_> = std::fs::read_dir(&directory).unwrap().collect();
+    assert_eq!(entries.len(), 1);
+    let receipt = entries[0].as_ref().unwrap().path();
+    let body = std::fs::read_to_string(&receipt).unwrap();
+    assert!(body.ends_with("unknown-row:opaque-private-evidence\n"));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&directory).unwrap().permissions().mode() & 0o777, 0o700);
+        assert_eq!(std::fs::metadata(&receipt).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+    let source = std::fs::read_to_string(&path).unwrap();
+    assert!(!source.contains("opaque-private-evidence") && !source.contains("action-responses"));
+    let repeat = reader
+        .publish_native(
+            &context,
+            &path,
+            Selection::default(),
+            PublishOptions {
+                yes: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(repeat.outcome, "unchanged");
+    assert_eq!(server.calls.load(Ordering::SeqCst), 1);
 }
 
 #[tokio::test]
@@ -273,6 +333,7 @@ async fn effect_evidence_required_for_preexisting_and_transaction_minted_drafts(
                         .unwrap();
                     if succeeds {
                         assert_eq!(report.outcome, "published", "{report:?}");
+                        assert!(report.message.unwrap().contains("native action result, exact association"));
                         assert!(read(&path).state.released.is_some());
                         assert_eq!(server.calls.load(Ordering::SeqCst), 1);
                     } else {

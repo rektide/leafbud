@@ -191,7 +191,11 @@ impl RemoteReader {
             source.document = desired;
         }
         report.outcome = if settle { "published" } else { "verified-published" };
-        report.message = Some("full current public correspondence verified, not invocation causation or notification/delivery proof".into());
+        report.message = Some(if action.is_some() {
+            "native action result, exact association and full content-verified public meaning agree; not invocation causation or notification/delivery proof"
+        } else {
+            "full current public correspondence verified by observation without a decoded action result; not invocation causation or notification/delivery proof"
+        }.into());
         Ok(())
     }
 }
@@ -453,11 +457,25 @@ impl RemoteReader {
                 self.verify_publication_locked(source, true, Some(&result), report).await?;
             }
             other => {
-                report.message = Some(match other {
+                let action_message = match other {
                     Ok(Outcome::Failed(f)) => format!("native reported {:?}; effects not ruled out; observation only, no retry", f.kind),
+                    Err(leafbud_web::Error::ActionResponse { response, .. }) => match retain_action_response(source.context, attempt.id, &response) {
+                        Ok(path) => format!(
+                            "native publication response undecoded; private bounded response retained at {}; observation only, no retry",
+                            path.display()
+                        ),
+                        Err(error) => {
+                            format!("native publication response undecoded; private response retention failed: {error:#}; observation only, no retry")
+                        }
+                    },
                     _ => "publication response unavailable; observation only, no retry".into(),
-                });
+                };
+                report.message = Some(action_message.clone());
                 self.verify_publication_locked(source, true, None, report).await?;
+                // Correspondence can settle independently of a lost/undecoded
+                // action result. Do not erase the response-evidence boundary or
+                // its private receipt locator when observation succeeds.
+                report.message = Some(format!("{action_message}; {}", report.message.take().unwrap_or_default()));
             }
         }
         Ok(())
