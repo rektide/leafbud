@@ -443,8 +443,14 @@ pub fn from_record(record: &Value, template: &Document) -> Result<Projection> {
     // Native emits repeated subpages for repeated cards. This bounded profile
     // rejects duplicates above; definition layout/order is not public meaning.
     projected_pages[1..].sort_by_key(|page| page["id"].to_string());
+    // A native default toggle is semantically the already-supported default,
+    // not a new input hash or a reason to republish an unchanged old receipt.
+    let mut canonical_metadata = metadata.clone();
+    if metadata["preferences"] == leafbud_document::Preferences::default().meaning() {
+        canonical_metadata.as_object_mut().expect("metadata").remove("preferences");
+    }
     Ok(Projection {
-        value: json!({"profile":RELEASE_PROFILE,"metadata":metadata,"pages":projected_pages}),
+        value: json!({"profile":RELEASE_PROFILE,"metadata":canonical_metadata,"pages":projected_pages}),
         document,
         metadata,
     })
@@ -552,6 +558,10 @@ mod tests {
     #[test]
     fn preferences_supported_subset_and_default_meaning_are_complete() {
         let plain = from_record(&record(), &template()).unwrap();
+        assert!(
+            plain.value["metadata"].get("preferences").is_none(),
+            "default meaning retains the previous public hash shape"
+        );
         for key in leafbud_document::PREFERENCE_KEYS {
             for value in [true, false] {
                 let mut native = record();

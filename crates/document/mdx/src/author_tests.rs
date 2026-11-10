@@ -11,10 +11,15 @@ fn input(body: &str) -> String {
 fn preferences_tristate_strict_types_merge_clear_and_source_preservation() {
     let base = input("\n<Key id='b' />\nbody 😀\n");
     assert!(parse(&base).unwrap().preferences.is_none());
+    let absent = parse(&base).unwrap();
+    for value in [absent.editor_value(), absent.authored_value(), absent.semantic_value()] {
+        assert!(value.get("preferences").is_none(), "absent intent retains the pre-preferences hash shape");
+    }
     for value in ["null", "{}", "{showComments: false, showInDiscover: true}"] {
         let source = base.replace("title: T", &format!("preferences: {value}\ntitle: T"));
         let document = parse(&source).unwrap();
         assert_eq!(document.preferences.is_none(), value == "null");
+        assert_eq!(document.authored_value().get("preferences").is_none(), value == "null");
         assert_eq!(parse(&render(&document).unwrap()).unwrap(), document);
     }
     for value in [

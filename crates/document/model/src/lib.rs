@@ -550,17 +550,25 @@ impl Document {
             rows
         };
         let extra: BTreeMap<_, _> = self.extra.iter().filter(|(key, _)| EDITOR_OWNED_EXTRA.contains(&key.as_str())).collect();
-        serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":canonical_description(self.description.as_deref()),
-            "tags":self.tags,"publication":self.publication.value(),"theme":self.theme,"preferences":self.preferences.as_ref().map(Preferences::meaning),"extra":extra,
-            "main":self.pages.first().map(page),"definitions":definitions,"retired":retired})
+        let mut value = serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":canonical_description(self.description.as_deref()),
+            "tags":self.tags,"publication":self.publication.value(),"theme":self.theme,"extra":extra,
+            "main":self.pages.first().map(page),"definitions":definitions,"retired":retired});
+        if let Some(preferences) = &self.preferences {
+            value["preferences"] = preferences.meaning();
+        }
+        value
     }
 
     /// Current semantic projection only. Excludes binding bookkeeping and all
     /// receipt hashes; includes source identities/order and represented meaning.
     pub fn semantic_value(&self) -> Value {
-        serde_json::json!({"format":self.format,"title":self.title,"description":canonical_description(self.description.as_deref()),"tags":self.tags,
-            "publication":self.publication.value(),"theme":self.theme,"preferences":self.preferences,"extra":self.extra,
-            "mainPage":self.state.main_page,"pages":self.pages,"nodes":self.state.nodes})
+        let mut value = serde_json::json!({"format":self.format,"title":self.title,"description":canonical_description(self.description.as_deref()),"tags":self.tags,
+            "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,
+            "mainPage":self.state.main_page,"pages":self.pages,"nodes":self.state.nodes});
+        if let Some(preferences) = &self.preferences {
+            value["preferences"] = serde_json::json!(preferences);
+        }
+        value
     }
 
     /// Authored projection: editor-owned meaning plus current content with
@@ -569,7 +577,11 @@ impl Document {
     /// persistence boundary owned by preparation. A settlement must leave
     /// this value untouched.
     pub fn authored_value(&self) -> Value {
-        serde_json::json!({"format":self.format,"title":self.title,"description":self.description,"tags":self.tags,
-            "publication":self.publication.value(),"theme":self.theme,"preferences":self.preferences,"extra":self.extra,"pages":self.pages})
+        let mut value = serde_json::json!({"format":self.format,"title":self.title,"description":self.description,"tags":self.tags,
+            "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,"pages":self.pages});
+        if let Some(preferences) = &self.preferences {
+            value["preferences"] = serde_json::json!(preferences);
+        }
+        value
     }
 }

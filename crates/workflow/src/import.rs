@@ -80,9 +80,15 @@ pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot) -> String {
         // The full current facts/extras retain conservative editor coverage;
         // Native/public identity and working-row preferences belong here;
         // released record preferences do not.
+        let working_preferences = |mut identity: Value, link: &Value| {
+            if let Some(value) = link.get("preferences").filter(|v| !v.is_null()) {
+                identity["preferences"] = value.clone();
+            }
+            identity
+        };
         let associations:Vec<_>=data.association_rows().iter().map(|row|json!({
-            "publication":row["leaflets_in_publications"].as_array().into_iter().flatten().map(|link|json!({"publication":link["publication"],"doc":link["doc"],"preferences":link["preferences"]})).collect::<Vec<_>>(),
-            "standalone":row["leaflets_to_documents"].as_array().into_iter().flatten().map(|link|json!({"document":link["document"],"preferences":link["preferences"]})).collect::<Vec<_>>()
+            "publication":row["leaflets_in_publications"].as_array().into_iter().flatten().map(|link|working_preferences(json!({"publication":link["publication"],"doc":link["doc"]}),link)).collect::<Vec<_>>(),
+            "standalone":row["leaflets_to_documents"].as_array().into_iter().flatten().map(|link|working_preferences(json!({"document":link["document"]}),link)).collect::<Vec<_>>()
         })).collect();
         return hash(&leafbud_editor::witness(
             &pull.facts,

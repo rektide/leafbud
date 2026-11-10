@@ -144,7 +144,8 @@ impl RemoteReader {
         );
         let row_preferences = links[0].get("preferences").context("published linkage preferences witness missing")?;
         ensure!(
-            projection::decode_preferences(Some(row_preferences), true)?.unwrap_or_default().meaning() == expected["metadata"]["preferences"],
+            projection::decode_preferences(Some(row_preferences), true)?.unwrap_or_default().meaning()
+                == desired.preferences.as_ref().cloned().unwrap_or_default().meaning(),
             "published linkage preferences differ from dispatched intent"
         );
         ensure!(
