@@ -288,13 +288,20 @@ pub(crate) fn inspect_effect_fields(data: &leafbud_web::LeafletData, result: &mu
     // Only this token's action context is usable. Sibling-only adoption does
     // not prove the publish action's .eq(leaflet, leaflet_id) lookup will work.
     for field in ["reply_drafts", "publication_scheduled_posts"] {
-        let values = data.raw[field]
-            .as_array()
-            .with_context(|| format!("native {field} evidence missing; cannot assume absent"))?;
-        if !values.is_empty() {
-            result
+        // Both selected PostgREST joins are one-to-one at the pinned schema.
+        // Explicit null witnesses no related row. Indexing by [] would conflate
+        // an absent key with null, so presence must be checked separately. This
+        // rule applies equally to adopted and freshly minted native documents.
+        match data
+            .raw
+            .get(field)
+            .with_context(|| format!("native {field} evidence missing; cannot assume absent"))?
+        {
+            Value::Null => {}
+            Value::Object(_) => result
                 .blockers
-                .push(format!("native {field} is nonempty; publication would submit a reply or cancel a schedule"));
+                .push(format!("native {field} is nonempty; publication would submit a reply or cancel a schedule")),
+            _ => anyhow::bail!("native {field} evidence malformed; expected a one-to-one object or explicit null"),
         }
     }
     let table = if result.publication.is_some() {

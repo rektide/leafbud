@@ -14,8 +14,8 @@ fn context(root: &Path) -> config::Context {
 }
 fn fixture(publication: bool, published: bool) -> Value {
     let mut fixture = published_support::fixture(publication);
-    fixture["leaflet_data"]["reply_drafts"] = json!([]);
-    fixture["leaflet_data"]["publication_scheduled_posts"] = json!([]);
+    fixture["leaflet_data"]["reply_drafts"] = Value::Null;
+    fixture["leaflet_data"]["publication_scheduled_posts"] = Value::Null;
     let link = &mut fixture["leaflet_data"][if publication { "leaflets_in_publications" } else { "leaflets_to_documents" }][0];
     link["preferences"] = Value::Null;
     if publication {
@@ -285,8 +285,53 @@ fn explicit_future_dates_preservation_and_native_effect_blockers() {
     normalize(&doc, Some(&json!({"publishedAt":"2026-10-01T10:00:00Z"})), now(), &mut report).unwrap();
     assert_eq!(report.date["kind"], "preserve-observed");
     let mut raw = fixture.clone();
-    raw["leaflet_data"]["reply_drafts"] = json!([{"subject":"at://did:plc:x/site.standard.document/reply"}]);
+    raw["leaflet_data"]["reply_drafts"] = json!({"subject":"at://did:plc:x/site.standard.document/reply","block":null,"identity_did":OWNER});
     inspect_effect_fields(&support::data(&raw), &mut report).unwrap();
     assert!(report.blockers.iter().any(|s| s.contains("reply_drafts")));
     assert!(verify_owner(&doc, &support::data(&raw), "did:plc:intruder", &mut report).is_err());
+}
+
+#[test]
+fn one_to_one_effect_witness_requires_presence_null_and_never_guesses_empty() {
+    for publication in [false, true] {
+        for field in ["reply_drafts", "publication_scheduled_posts"] {
+            let fixture = fixture(publication, false);
+            let summary = || Preview {
+                publication: publication.then(|| PUBLICATION.into()),
+                ..Default::default()
+            };
+            let mut report = summary();
+            inspect_effect_fields(&support::data(&fixture), &mut report).unwrap();
+            assert!(report.blockers.is_empty()); // literal explicit null joins
+
+            let mut missing = fixture.clone();
+            missing["leaflet_data"].as_object_mut().unwrap().remove(field);
+            assert!(
+                inspect_effect_fields(&support::data(&missing), &mut summary())
+                    .unwrap_err()
+                    .to_string()
+                    .contains("evidence missing")
+            );
+
+            for value in [json!([]), json!([{}]), json!(false), json!(0), json!("null")] {
+                let mut malformed = fixture.clone();
+                malformed["leaflet_data"][field] = value;
+                assert!(
+                    inspect_effect_fields(&support::data(&malformed), &mut summary())
+                        .unwrap_err()
+                        .to_string()
+                        .contains("evidence malformed")
+                );
+            }
+            let mut nonempty = fixture;
+            nonempty["leaflet_data"][field] = if field == "reply_drafts" {
+                json!({"subject":"at://did:plc:x/site.standard.document/reply","block":null,"identity_did":OWNER})
+            } else {
+                json!({"publish_at":"2026-11-11T12:00:00Z","status":"scheduled"})
+            };
+            let mut report = summary();
+            inspect_effect_fields(&support::data(&nonempty), &mut report).unwrap();
+            assert!(report.blockers.iter().any(|b| b.contains(field)));
+        }
+    }
 }

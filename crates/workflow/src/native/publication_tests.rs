@@ -84,8 +84,8 @@ struct Server {
 impl Server {
     async fn new(publication: bool, path: PathBuf) -> Self {
         let mut store = store::Store::new(publication);
-        store.data["reply_drafts"] = json!([]);
-        store.data["publication_scheduled_posts"] = json!([]);
+        store.data["reply_drafts"] = Value::Null;
+        store.data["publication_scheduled_posts"] = Value::Null;
         if publication {
             store.data["leaflets_in_publications"][0]["leaflet"] = json!(store::TOKEN);
             store.data["leaflets_in_publications"][0]["publication"] = json!(PUBLICATION);
@@ -220,6 +220,72 @@ fn draft(path: &Path, publication: bool) {
 }
 fn read(path: &Path) -> Document {
     leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[tokio::test]
+async fn effect_evidence_required_for_preexisting_and_transaction_minted_drafts() {
+    for publication in [false, true] {
+        for preexisting in [false, true] {
+            for field in ["reply_drafts", "publication_scheduled_posts"] {
+                for value in [None, Some(json!({"unexpected":"related row"})), Some(json!([])), Some(Value::Null)] {
+                    let root = tempfile::tempdir().unwrap();
+                    let path = root.path().join("post.mdx");
+                    draft(&path, publication);
+                    let server = Server::new(publication, path.clone()).await;
+                    let reader = server.reader();
+                    let context = server.context(root.path());
+                    if preexisting {
+                        let saved = reader
+                            .save_native(
+                                &context,
+                                &path,
+                                Selection::default(),
+                                SaveOptions {
+                                    yes: true,
+                                    ..Default::default()
+                                },
+                            )
+                            .await
+                            .unwrap();
+                        assert_eq!(saved.outcome, "saved", "{saved:?}");
+                    }
+                    let succeeds = value.as_ref() == Some(&Value::Null);
+                    {
+                        let mut store = server.store.lock().unwrap();
+                        if let Some(value) = value {
+                            store.data[field] = value;
+                        } else {
+                            store.data.as_object_mut().unwrap().remove(field);
+                        }
+                    }
+                    let pushes = server.store.lock().unwrap().pushes;
+                    let report = reader
+                        .publish_native(
+                            &context,
+                            &path,
+                            Selection::default(),
+                            PublishOptions {
+                                yes: true,
+                                ..Default::default()
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    if succeeds {
+                        assert_eq!(report.outcome, "published", "{report:?}");
+                        assert!(read(&path).state.released.is_some());
+                        assert_eq!(server.calls.load(Ordering::SeqCst), 1);
+                    } else {
+                        assert!(matches!(report.outcome, "pending" | "blocked"), "{report:?}");
+                        assert!(report.message.unwrap().contains(field));
+                        assert_eq!(server.calls.load(Ordering::SeqCst), 0);
+                        assert_eq!(server.store.lock().unwrap().pushes, pushes, "effect guard must precede authored saves");
+                        assert!(read(&path).state.released.is_none());
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[tokio::test]

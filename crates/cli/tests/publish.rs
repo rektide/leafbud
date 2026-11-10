@@ -47,8 +47,8 @@ async fn preview_first_execute_update_noop_and_uncertain_recovery_cli_both_conte
         let path = root.path().join("doc.mdx");
         let source = path.clone();
         let mut native = store::Store::new(publication);
-        native.data["reply_drafts"] = json!([]);
-        native.data["publication_scheduled_posts"] = json!([]);
+        native.data["reply_drafts"] = Value::Null;
+        native.data["publication_scheduled_posts"] = Value::Null;
         if publication {
             native.extras.insert("draft_contributors".into(), json!([]));
             native.data["leaflets_in_publications"][0] = json!({"leaflet":store::TOKEN,"publication":PUB,"doc":null,"title":"Untitled","preferences":null,"publications":{"uri":PUB,"identity_did":OWNER,"publication_contributors":[]}});
