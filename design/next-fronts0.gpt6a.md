@@ -1,7 +1,7 @@
 ---
 type: Report
 title: "Leafbud: current ground, next fronts and compaction handoff"
-description: "Compaction-ready account of the accepted 0.18 local-authoring delivery, remaining work fronts, exact verification boundaries and next source-fidelity/coverage design."
+description: "Continuation account of accepted 0.19 source fidelity/coverage, active filename/path reconciliation, remaining fronts and exact verification boundaries."
 resource: /design/next-fronts0.gpt6a.md
 status: current-handoff
 generated:
@@ -12,7 +12,17 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Parent architecture and compaction report, 0.18 integration acceptance, then renewed continuing-work commission and 220–320k rotation policy"
+    title: "Parent architecture and compaction report, 0.18/0.19 integration acceptance, continuing Sol commissions and 220–320k rotation policy"
+  - resource: /design/source-fidelity0.gpt61s.md
+    title: "0.19 source/comment/flow delivery and 328-test gate"
+  - resource: /doc/mdx/README.md
+    title: "Accepted bounded source ownership and comment-anchor policy"
+  - resource: /doc/mdx/coverage.md
+    title: "Maintained capability/operation evidence and explicit limits"
+  - resource: /crates/document/mdx/src/source.rs
+    title: "Reviewed parser-paired flow collections and selected-entry surgery"
+  - resource: /crates/document/mdx/src/render.rs
+    title: "Reviewed original-source-bound tidy and raw comment preservation proof"
   - resource: /design/local-authoring-tools0.gpt61s.md
     title: "Completed 0.18 metadata/rekey/list, 317-test gate and actual CLI/HTTP/Phoenix evidence"
   - resource: /crates/document/mdx/src/author.rs
@@ -28,7 +38,7 @@ sources:
   - resource: /crates/workflow/src/list.rs
     title: "Reviewed global identity accounting, partial header evidence and read-race reporting"
   - resource: /AGENTS.md
-    title: "Active operator constraints, fresh-Sol selection and 240–350k rollover"
+    title: "Active operator constraints, fresh-Sol selection and 220–320k rotation"
   - resource: /design/terminal-recovery0.gpt61s.md
     title: "Latest completed 0.17 delivery and 300-test/deployed standalone evidence"
   - resource: /design/keyed-save0.gpt61s.md
@@ -40,7 +50,7 @@ sources:
   - resource: /design/connected-watch0.gpt61s.md
     title: "Persistent connected watch, source/selection/locking guards and live proof limits"
   - resource: /design/local-authoring-tools0.gpt6a.md
-    title: "Concrete design of the active next local-authoring batch"
+    title: "Completed local-authoring batch design"
   - resource: /design/authoring-interface0.gpt6a.md
     title: "Broader command meanings, naming practices and effect contracts"
   - resource: /design/document-sync1.gpt61s.md
@@ -55,19 +65,16 @@ sources:
 
 ## Resume here after compaction
 
-**Latest accepted baseline: 0.18.0, through `9dfd68d9`.** The complete supported
-draft authoring/save/watch/recovery loop now includes offline metadata editing,
-key renaming and local inventory. Parent reviewed selected YAML-entry ownership,
-parser-selected JSX edits, exact reparse proofs, unchanged tracking settlement,
-shared locked writes and read-only inventory. No blocking integration issue was
-found; the reported 317-test gate is accepted.
+**Latest accepted baseline: 0.19.0, through `aa13bed1`.** The draft workflow now
+includes whole-flow author headers, parser-selected preparation spellings and
+source-only block-anchored comments. Parent reviewed flow collection pairing,
+comment selection/attachment/adoption, source-bound tidy and maintained coverage;
+the bounded contract and reported 328-test gate are accepted (section 4A).
 
-**Active agent:** fresh Sol high `ses_e3c420e5affeLoQfS0oTd9wu5b`, implementing
-**source fidelity + executable coverage** (`leafbud-mdx-source` and
-`leafbud-mdx-coverage`), designed in section 4A below. The operator explicitly
-renewed continuing implementation on 2026-11-10; after parent review, a fresh Sol
-high should take filename/path reconciliation (`leafbud-author-names`). Rotate at
-major task boundaries or **220–320k reported context**, superseding 240–350k.
+**Active agent:** fresh Sol high `ses_e3c29df03ffeKTX7z5IHA3nup5`, implementing
+**filename/path reconciliation** (`leafbud-author-names`, section 4B). The source/
+coverage predecessor returned at 239,394 measured tokens; it is finished. Rotate
+at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 Predecessor `ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets
 at about 215k context. Its [receipt](local-authoring-tools0.gpt61s.md) records APIs
@@ -89,6 +96,7 @@ window. Completed checks need not repeat merely because context was compacted.
 | Complete supported saves | Preview-first public push; first binding; text/marks/breaks; new/drop/move/reorder; flat lists, code/images, named pages, selected recreation | `editor::write`, `native::save`; [keyed saves](keyed-save0.gpt61s.md) |
 | Deliberate terminal recovery | Original-success settlement separately from explicit accept-current/replan; bounded `lastResolution`; no uncertain replay/remint | `native::resolve`; [terminal recovery](terminal-recovery0.gpt61s.md) |
 | Offline authoring tools | Selected metadata edits, identity-preserving key rename, truthful local inventory | `mdx::author/rekey`, `workflow::author/list`; [local tools](local-authoring-tools0.gpt61s.md) |
+| Source fidelity and coverage | Whole-flow headers, broad preparation spellings, same-page block comments; explicit operation evidence | [Source contract](/doc/mdx/README.md), [coverage](/doc/mdx/coverage.md) |
 
 The supported native lifecycle is **draft**. Canvas, nested/task lists, richer
 interactive objects, uploads, published-editor adoption and public release are
@@ -102,7 +110,7 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 
 ### Verification to carry forward
 
-- Latest regular gate: **317/317 workspace tests**, six opt-in deployment tests
+- Latest regular gate: **328/328 workspace tests**, six opt-in deployment tests
   skipped; formatting, strict all-target clippy and document checks passed.
 - Production Yrs → independent actual Yjs: **7/7 groups**. The terminal-recovery
   slice did not change the writer; its receipt correctly reuses that evidence.
@@ -120,6 +128,9 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
   receipts, source bytes and mtime. HTTP/Phoenix tests cover renamed-key adoption,
   shared-lock contention and preservation of dirty local metadata. These 0.18
   checks used temporary fixtures; no live corpus or draft was touched.
+- Version 0.19 CLI/HTTP and Phoenix fixtures cover whole-flow edit/default/save/
+  refresh, comment preservation and refusal when a remote comment anchor disappears.
+  Native/Yrs writer unchanged; prior seven-group Yjs evidence remains applicable.
 
 Trust these reported checks. Add tests for new changes or a specific unresolved
 review question; do not rerun everything to reconstruct confidence after compaction.
@@ -172,64 +183,53 @@ locked `author::edit/rename` and read-only `list::inspect`. Repeatable `--tag`
 replaces the ordered list; `--clear-tags` writes `[]`. Pending/future owned state
 blocks helpers safely. Selected-field comments may move to standalone lines,
 while unrelated source/body bytes remain intact. Whole-flow-root metadata edits
-and block-scalar main-page renames still refuse explicitly.
+subsequently landed in 0.19; block-scalar main-page rename still refuses explicitly.
 
 Review accepts the bounded source adapters: production parser nodes choose edits,
 and full reparse equality proves their scope. The new equal-state return in
 `patch_tracking` runs after existing identity/writer/binding/pending guards, so a
 renamed node-map's textual order no longer causes an empty push to rewrite bytes.
 
-## 4. Next fronts after 0.18
+## 4. Current and next fronts after 0.19
 
-Front A is now commissioned and active; front B is the next commissioned
-continuation after integration review. Later fronts remain options. Use **fresh
+Front A is accepted; front B is commissioned and active after integration review.
+Later fronts remain options. Use **fresh
 Sol high**, selecting coherent batches of 1–4 tickets.
 
-### A. Source fidelity and executable coverage — recommended next foundation
+### A. Source fidelity and executable coverage — accepted
 
 **Tickets:** `leafbud-mdx-source` + `leafbud-mdx-coverage`.
 
-**Commissioned:** fresh Sol `ses_e3c420e5affeLoQfS0oTd9wu5b`; owns production
-code/tests, README, maintained source/coverage documentation and its own receipt.
-Parent owns this report and AGENTS. Complete a useful bounded source/coverage
-batch, then return for review before the separate naming task.
+**Delivered and parent-accepted:** Sol `ses_e3c420e5affeLoQfS0oTd9wu5b`, through
+`aa13bed1`. Both tickets are closed. [Receipt](source-fidelity0.gpt61s.md) records
+commits and 328/328 tests; [source contract](/doc/mdx/README.md) and
+[coverage matrix](/doc/mdx/coverage.md) are maintained homes.
 
-**Payoff:** fewer ordinary authoring spellings cause refusal, and future changes
-have a visible operation/content coverage contract. Version 0.18 already handles
-selected-field trailing comments and escaped/whitespace JSX rename spellings.
-Remaining targets are whole-flow-root metadata editing, older preparation
-matchers and body-comment ownership; do not redo completed rename behavior.
+Parent expressly accepts the bounded comment policy: standalone source comments
+attach to the following same-page block; retained block reorder carries them.
+Remote deletion/cross-page movement refuses adoption, including `--take remote`,
+preserving source and requiring explicit author placement/removal. Inline/orphan
+comments and native discussion remain unsupported. This makes comment ownership
+predictable without a saved body, sidecar or general source tree.
 
-**Bounded design:** choose a small corpus of currently failing valid source forms.
-Extend parser-derived patch ranges or use an explicit owned-region rewrite where
-that is simpler, preserving unrelated bytes. Reuse the real production parser and
-existing test servers. Maintain a compact matrix of source form/content kind ×
-create/change/drop/reorder/pull/recovery, linking fixtures and naming unsupported
-cells. Do not build a generic lossless formatter, test framework or all-format
-converter first. Unknown content remains a clear refusal, never a truncated save.
+Flow collection extents come from paired parser events rather than incomplete
+serde spans. Existing pure-operation reparse checks constrain each patch; only
+the tool envelope may normalize during settlement. Markdown tidy now binds exact
+original bytes and proves comment anchors/raw text as well as content/state.
 
-**Acceptance:** each chosen form works through the actual command/workflow with
-semantic equivalence and no-op/race preservation; unsupported cases remain explicit.
-This improves the most-used path without adding another remote effect surface.
-
-**Suggested landing sequence:** first reproduce preparation failures for valid
-PageLink property spellings and reuse parser-selected token ranges where sound.
-Next choose one bounded frontmatter patch extension, proving unchanged unknown
-fields/comments and pending state. Inspect body comments separately: define their
-ownership during tidy and remote adoption before enabling them, since accepting
-syntax alone could permit later comment loss. Record any unresolved comment
-boundary rather than calling the broad source ticket complete prematurely.
-
-Coverage should map each currently advertised content/operation family to named
-tests with independent expected meaning, distinguishing pure parser tests,
-CLI/HTTP/Phoenix integration and actual Yjs evidence. A maintained Markdown matrix
-with test references is sufficient; generate or validate it only where that
-removes real maintenance risk. New source-form tests must cover prepare → save
-preview/execution → repeat and explicit unsupported refusal before effects.
+Coverage distinguishes parser validity, native writability and actual workflow
+evidence. Source-valid cyclic PageLinks still refuse before effects. Independent
+native kind/resource expectations supplement the existing complete-save tests;
+the matrix names shared versus dedicated cases and prior deployed/Yjs boundaries.
+Parent trusts the reported checks and found no blocking architectural issue.
 
 ### B. Naming and path intent — small independent authoring completion
 
 **Ticket:** `leafbud-author-names`.
+
+**Active:** fresh Sol `ses_e3c29df03ffeKTX7z5IHA3nup5`, under the operator's
+continuing-work instruction. Owns implementation, tests, maintained usage/coverage
+and its own receipt; parent owns this report and integration review.
 
 **Payoff:** reconcile intentional filename/path choices without confusing them
 with native identity. This is the remaining open child of the author epic.
@@ -239,6 +239,19 @@ using independent naming witnesses. Normal push never renames files. A pathname
 change keeps local UUID and native binding; collision and conflicting direction
 require an explicit choice. Local path intent does not reserve or change a native
 public route. Preserve the established global/workspace selection conventions.
+
+The implementation must define filename/logical-path mapping and workspace versus
+external coordinates explicitly, use independent compact `names` witnesses, and
+expose read-only naming classification in status. Selectors compose as a union;
+dry-run has no source/rename/witness effects. Pending attempts block managed naming.
+
+Consequential review: no-clobber move plus witness/source update needs an honest
+failure ordering, not a claim of multi-file atomicity. Carry all explicit external
+operands through late duplicate checks; current tidy's single-operand early check
+must be strengthened for the new move path. Preserve native IDs, editor receipts,
+historical resolution, body comments and unrelated author bytes. A name settlement
+cannot conceal editor drift. The agent should checkpoint a material coordinate or
+transaction-policy fork before building a general mechanism.
 
 This can follow the new field/key patch helpers. Keep it separate from remote
 slug support: current source evidence says ordinary native publication chooses its
@@ -315,7 +328,8 @@ children reviewed, not duplicate implementation tickets.
 
 | Session | Disposition |
 | --- | --- |
-| `ses_e3c420e5affeLoQfS0oTd9wu5b` | **Active:** source fidelity + executable coverage; new 220–320k rotation window |
+| `ses_e3c29df03ffeKTX7z5IHA3nup5` | **Active:** filename/path reconciliation; 220–320k rotation window |
+| `ses_e3c420e5affeLoQfS0oTd9wu5b` | Completed source fidelity/coverage at 239,394 measured tokens; parent accepted 0.19 |
 | `ses_e3d511cf0ffeKLT5XsWr37v0r6` | Completed local metadata/rekey/list at ~215k; parent accepted 0.18 |
 | `ses_e3d6d728effe6RFnyZcrUtifT9` | Completed terminal recovery/no-op correction at ~263k; rotate rather than continue major work |
 | `ses_e3d96851dffeS2cPD2vPHjGklF` | Completed keyed save loop at ~276k; retired from major continuation |
@@ -353,9 +367,9 @@ was published or emailed, and no unrelated document or asset was cleaned up.
 1. Read this report, [AGENTS](/AGENTS.md), and the completed
    [local-tool receipt](local-authoring-tools0.gpt61s.md). No need to reload every
    historical design or rerun completed checks.
-2. Await the active source/coverage Sol return; do not duplicate its work or poll.
-   Review its evidence, then dispatch a fresh Sol high for naming reconciliation.
-3. Parent integration review of 0.18 is complete. Trust reported tests; add
+2. Await the active naming Sol return; do not duplicate its work or poll.
+   Review coordinate mapping, move/witness failure ordering and independent status.
+3. Parent integration review through 0.19 is complete. Trust reported tests; add
    targeted regressions only for new changes or actual unresolved concerns.
 4. Preserve predecessor commits before corrections. Use explicit owned jj paths;
    never `jj edit`, squash or push. Shared `.beads/issues.jsonl` changes may include
