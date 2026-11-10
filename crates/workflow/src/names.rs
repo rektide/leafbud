@@ -15,7 +15,8 @@ pub enum Direction {
 pub struct Evidence {
     pub disposition: &'static str,
     pub file: Option<String>,
-    pub path: NamePath,
+    /// None means unsupported author-field type, not a missing author field.
+    pub path: Option<NamePath>,
     pub accepted: Option<Names>,
     pub file_changed: Option<bool>,
     pub path_changed: Option<bool>,
@@ -50,7 +51,7 @@ pub fn inspect(root: &Path, file: &Path, document: &Document) -> Evidence {
             return Evidence {
                 disposition: "unsupported",
                 file: None,
-                path: NamePath::Missing,
+                path: None,
                 accepted: document.state.names.clone(),
                 file_changed: None,
                 path_changed: None,
@@ -102,7 +103,7 @@ pub fn inspect(root: &Path, file: &Path, document: &Document) -> Evidence {
     Evidence {
         disposition,
         file,
-        path,
+        path: Some(path),
         accepted,
         file_changed,
         path_changed,
@@ -123,6 +124,7 @@ pub(crate) struct Plan {
 pub(crate) fn plan(root: &Path, file: &Path, source: &str, direction: Option<Direction>) -> Result<Plan> {
     let document = leafbud_mdx::parse(source)?;
     ensure!(document.state.pending.is_none(), "pending native attempt; recover before naming");
+    let current_path = NamePath::from_author(&document.extra).map_err(anyhow::Error::msg)?;
     let evidence = inspect(root, file, &document);
     let selected = match direction {
         Some(direction) => Some(direction),
@@ -132,7 +134,7 @@ pub(crate) fn plan(root: &Path, file: &Path, source: &str, direction: Option<Dir
             "accepted-mismatch" => None,
             "file-changed" => Some(Direction::Filename),
             "path-changed" => Some(Direction::Path),
-            "unsupported" if evidence.path == NamePath::Missing && evidence.accepted.is_none() => None,
+            "unsupported" if current_path == NamePath::Missing && evidence.accepted.is_none() => None,
             _ => bail!(
                 "names need choice ({}); use --from filename|path or --accept; {}",
                 evidence.disposition,
@@ -156,12 +158,12 @@ pub(crate) fn plan(root: &Path, file: &Path, source: &str, direction: Option<Dir
             (current_file, Some(path.clone()), NamePath::Value(path))
         }
         Direction::Path => {
-            let NamePath::Value(path) = &evidence.path else {
+            let NamePath::Value(path) = &current_path else {
                 bail!("author path is unassigned; --from path cannot invent one");
             };
-            (mapped_file(path)?, None, evidence.path.clone())
+            (mapped_file(path)?, None, current_path.clone())
         }
-        Direction::Accept => (current_file, None, evidence.path.clone()),
+        Direction::Accept => (current_file, None, current_path),
     };
     let names = Names {
         file: target_file.clone(),

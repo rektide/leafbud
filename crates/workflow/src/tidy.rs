@@ -53,26 +53,10 @@ pub struct Item {
     pub error: Option<String>,
 }
 
-/// Managed-looking .mdx files under the workspace. Files that fail later
-/// parsing stay loud as failed items; unmanaged files are ignored.
+/// Reuse inventory selection; broken/unreadable managed candidates remain
+/// per-item failures instead of aborting discovery of their neighbors.
 fn managed_files(root: &Path) -> Result<Vec<PathBuf>> {
-    fn visit(path: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-        for entry in std::fs::read_dir(path)? {
-            let entry = entry?;
-            let kind = entry.file_type()?;
-            let path = entry.path();
-            if kind.is_dir() {
-                visit(&path, out)?;
-            } else if kind.is_file() && path.extension().is_some_and(|e| e == "mdx") && std::fs::read_to_string(&path)?.contains("@leafbud") {
-                out.push(path);
-            }
-        }
-        Ok(())
-    }
-    let mut out = vec![];
-    visit(root, &mut out)?;
-    out.sort();
-    Ok(out)
+    Ok(crate::inventory::scan(root, None)?.paths)
 }
 
 /// One durable proposed key: `b-<random>` for blocks, `p-<random>` for the
@@ -143,8 +127,25 @@ fn run_with(context: &config::Context, request: Request, hook: &mut impl FnMut(S
         direction: if request.accept { Some(names::Direction::Accept) } else { request.from },
         dry_run: request.dry_run,
     };
+    let mut planned_destinations = std::collections::BTreeSet::new();
     for path in &candidates {
-        let item = tidy_file(context, path, &report.workspace, &selection, &routes, &passes, hook);
+        let mut item = tidy_file(context, path, &report.workspace, &selection, &routes, &passes, hook);
+        // Preview has no filesystem effects to make an earlier target visible.
+        // Account for that selected destination explicitly, without inventing
+        // reorder/swap or overwrite behavior for the executing batch.
+        if request.dry_run
+            && item.outcome == "normalized"
+            && let Some(target) = &item.destination
+            && !planned_destinations.insert(target.clone())
+        {
+            item.outcome = "needs-choice";
+            item.keys_assigned = 0;
+            item.blocks_changed = 0;
+            item.error = Some(format!(
+                "destination {} is already selected by an earlier batch plan; choose distinct names",
+                target.display()
+            ));
+        }
         match item.outcome {
             "normalized" => report.normalized += 1,
             "unchanged" => report.unchanged += 1,

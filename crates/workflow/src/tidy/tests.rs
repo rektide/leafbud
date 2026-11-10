@@ -179,6 +179,20 @@ fn tidy_all_selects_managed_files_only() {
     assert_eq!(report.selected, 1);
     assert_eq!(report.items[0].path, managed.canonicalize().unwrap());
     assert_eq!(report.normalized, 1);
+    std::fs::write(root.path().join("unreadable.mdx"), [0xff, 0xfe]).unwrap();
+    let report = run(
+        &context(root.path()),
+        Request {
+            all: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (report.selected, report.unchanged, report.failed),
+        (2, 1, 1),
+        "invalid UTF-8 is a per-item failure, not a batch-wide discovery error"
+    );
 }
 
 #[test]
@@ -392,6 +406,19 @@ fn names_missing_null_equal_external_and_selectors_are_independent() {
     assert_eq!(read(&equal), before, "--all selects files, --markdown does not settle names");
     assert_eq!(naming(&ctx, &equal, None, false).normalized, 1);
     assert_eq!(disposition(root.path(), &equal), "equal");
+    let invalid = named(root.path(), "invalid-type.mdx", None);
+    let source = read(&invalid).replacen("\"@leafbud\":", "path: 42\n\"@leafbud\":", 1);
+    std::fs::write(&invalid, &source).unwrap();
+    for accept in [false, true] {
+        let report = naming(&ctx, &invalid, None, accept);
+        assert_eq!(report.needs_choice, 1);
+        assert_eq!(report.items[0].names.as_ref().unwrap().disposition, "unsupported");
+        assert!(
+            report.items[0].names.as_ref().unwrap().path.is_none(),
+            "an invalid type must not masquerade as missing path"
+        );
+        assert_eq!(read(&invalid), source);
+    }
 }
 
 #[test]
@@ -515,6 +542,23 @@ fn names_no_clobber_symlinks_aliases_and_batch_destination_conflicts() {
     let ctx = context(root.path());
     let a = named(root.path(), "a.mdx", Some("/target"));
     let b = named(root.path(), "b.mdx", Some("/target"));
+    let preview = run(
+        &ctx,
+        Request {
+            files: vec![a.clone(), b.clone()],
+            from: Some(names::Direction::Path),
+            dry_run: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (preview.normalized, preview.needs_choice),
+        (1, 1),
+        "preview accounts for common absent destinations too"
+    );
+    assert!(a.exists() && b.exists() && !root.path().join("target.mdx").exists());
+    assert_eq!(preview.items[0].destination, preview.items[1].destination);
     let report = run(
         &ctx,
         Request {
