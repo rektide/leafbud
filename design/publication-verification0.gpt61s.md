@@ -63,9 +63,12 @@ their existing acquisition boundary; digest mismatch and absent CID are separate
 stronger-API errors. Content addressing proves no actor/authorship, time, native
 association, semantic correspondence, repository signature or delivery.
 
-Four independent fixed JS vectors include Unicode, length-first key ordering,
+Five independent fixed JS vectors include Unicode, length-first key ordering,
 tag42/zero prefix, byte strings, plain strongRef CID strings, signed integer
-boundaries (JS BigInt), nested null/false/empty values and mutation mismatches.
+boundaries (JS BigInt), nested null/false/empty values, a modern raw-CID blob
+reference and mutation mismatches. Malformed modern blob wrappers refuse without
+permissive inference or dropping extra fields; hashing a valid reference does not
+verify referenced blob bytes or implement uploads/resources.
 `experiments/16-publication-verification/cid.mjs` reproduces exact literal bytes/CIDs
 without calling Rust. One relevant correction to loaded skill prose: DAG-CBOR
 sorts **encoded** keys, including type/length, not lexical UTF-8 payload alone;
@@ -150,8 +153,27 @@ Targeted CID/strict-JSON/stronger-read gate: **4/4**, nextest run
 context at this boundary: **184103** (lagging provider report). Final workspace
 verification follows the size checkpoint. Targeted publication gate: **11/11**,
 run `b3ee79ee-1472-4097-be23-621ba3192272`; independent native fixture reproduction
-passes. Reported context at this checkpoint: **222935**; scope is complete, so
+passes. The complete initial verification gate was **377/377**, six deployment
+skips, run `8db766ff-8500-4fea-9c78-eba8ed7afbc4`; strict all-target Clippy, fmt and
+four owned Markdown/OKF documents passed. A final modern-blob strictness refinement
+adds one test and an independent vector before the final gate below.
+Reported context at this checkpoint: **222935**; scope is complete, so
 only final gates/documentation/handoff remain in this session.
+
+### Final gate and commits
+
+Final regular workspace gate: **378/378**, six opt-in deployment skips, nextest
+run `2402d841-6530-41eb-abfc-11c45cdfd12a`. Strict workspace/all-target Clippy,
+`cargo fmt --all --check`, five owned Markdown/OKF documents, frozen pnpm install,
+five independent CID vectors and all six actual-native size fixtures pass.
+The independent harness runs are offline with respect to Leaflet/PDS; the only
+upload in those fixtures is an in-memory counter. No deployed proof is implied.
+
+Coherent code checkpoints: `12164f92` (separate canonical content addressing,
+coordinated 0.23) and `460320fc` (actual cumulative/native size bound plus preview
+fact-race invalidation). Final strict modern-blob refinement is a separate correction,
+not a changed publication resource profile. Last measured context before final
+receipt/handoff: **237667**; rotation occurs here at the completed major boundary.
 
 ## Fresh execution receiving brief
 

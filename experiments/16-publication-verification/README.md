@@ -16,7 +16,7 @@ sources:
 
 # Independent publication verification
 
-`pnpm install --frozen-lockfile && node cid.mjs` recomputes four fixed canonical
+`pnpm install --frozen-lockfile && node cid.mjs` recomputes five fixed canonical
 DAG-CBOR bytes/CIDs using `@ipld/dag-cbor` and `multiformats`; Rust is not called.
 `node cid.mjs --write` deliberately regenerates the checked-in Rust test fixture.
 Integer-limit inputs use JS BigInt rather than rounded JSON.parse numbers.

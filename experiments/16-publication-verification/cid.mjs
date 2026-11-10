@@ -16,6 +16,8 @@ const cases = [
     { $type: "example.test.record", values: [-9223372036854775808n, 9223372036854775807n, -9007199254740991, 9007199254740991, -25, -24, -1, 0, 23, 24, 255, 256, 65535, 65536, 4294967295, 4294967296] }],
   ["nested-null-false-empty", '{"$type":"example.test.record","n":null,"f":false,"s":"","a":[{},[],true,{"longer":0,"z":null}]}',
     { $type: "example.test.record", n: null, f: false, s: "", a: [{}, [], true, { longer: 0, z: null }] }],
+  ["modern-blob-raw-cid", '{"$type":"example.test.record","blob":{"$type":"blob","ref":{"$link":"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"},"mimeType":"application/octet-stream","size":0}}',
+    { $type: "example.test.record", blob: { $type: "blob", ref: CID.parse("bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"), mimeType: "application/octet-stream", size: 0 } }],
 ];
 const vectors = [];
 for (const [name, record_json, data] of cases) {

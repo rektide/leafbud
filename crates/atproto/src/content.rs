@@ -26,6 +26,8 @@ pub enum Error {
     RecordCodec,
     #[error("invalid RFC4648 standard base64 bytes")]
     Bytes,
+    #[error("invalid modern AT blob reference (raw CID, nonempty MIME type, nonnegative size required)")]
+    Blob,
     #[error("AT data nesting exceeds verification profile")]
     Nesting,
     #[error("canonical DAG-CBOR encoding failed")]
@@ -134,6 +136,18 @@ fn at_data(value: &Value, depth: usize) -> Result<RawData<'_>, Error> {
                 }
                 if values.get("$type").is_some_and(|value| !value.is_string()) {
                     return Err(Error::SpecialValue);
+                }
+                if values.get("$type").is_some_and(|value| value == "blob") {
+                    let reference = values.get("ref").and_then(Value::as_object).ok_or(Error::Blob)?;
+                    let link = reference.get("$link").and_then(Value::as_str).ok_or(Error::Blob)?;
+                    if values.len() != 4
+                        || reference.len() != 1
+                        || parse_cid(link)?.codec() != 0x55
+                        || values.get("mimeType").and_then(Value::as_str).is_none_or(str::is_empty)
+                        || values.get("size").and_then(Value::as_i64).is_none_or(|size| size < 0)
+                    {
+                        return Err(Error::Blob);
+                    }
                 }
                 RawData::Object(
                     values

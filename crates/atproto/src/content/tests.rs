@@ -4,7 +4,7 @@ use serde_json::json;
 #[test]
 fn independent_js_canonical_bytes_and_cids_not_a_self_roundtrip() {
     let vectors: Value = serde_json::from_str(include_str!("../../tests/fixtures/record-cids.json")).unwrap();
-    assert_eq!(vectors.as_array().unwrap().len(), 4);
+    assert_eq!(vectors.as_array().unwrap().len(), 5);
     for vector in vectors.as_array().unwrap() {
         let record: Value = serde_json::from_str(vector["record_json"].as_str().unwrap()).unwrap();
         let cid = vector["cid"].as_str().unwrap();
@@ -18,6 +18,28 @@ fn independent_js_canonical_bytes_and_cids_not_a_self_roundtrip() {
         let mut changed = record.clone();
         changed["another"] = json!(true);
         assert_eq!(verify_record_content(&changed, cid), Err(Error::DigestMismatch));
+    }
+}
+
+#[test]
+fn modern_blob_wrappers_refuse_invalid_data_without_inference_or_field_loss() {
+    let valid =
+        json!({"$type":"blob","ref":{"$link":"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"},"mimeType":"application/octet-stream","size":0});
+    assert!(record_content_cid(&json!({"blob":valid})).is_ok());
+    for case in 0..7 {
+        let mut value = valid.clone();
+        match case {
+            0 => {
+                value.as_object_mut().unwrap().remove("size");
+            }
+            1 => value["size"] = json!(-1),
+            2 => value["size"] = json!(1.5),
+            3 => value["mimeType"] = json!(""),
+            4 => value["ref"]["$link"] = json!("bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"),
+            5 => value["futureField"] = json!(true),
+            _ => value["ref"] = json!("bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"),
+        }
+        assert_eq!(record_content_cid(&json!({"blob":value})), Err(Error::Blob), "case {case}");
     }
 }
 

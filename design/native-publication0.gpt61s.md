@@ -8,6 +8,8 @@ generated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
+    title: "Added verification follow-up pointer and clarified publication-container-only gated cleanup scope; original 0.22 checkpoint preserved"
   - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
     title: "Bounded release-native contract/preflight checkpoint: clean pinned source review, no-email action transport fixtures, read-only readiness and exact default-theme correction; no execution workflow or live effects"
   - resource: /doc/release/README.md
@@ -289,3 +291,17 @@ as one coherent batch. `leafbud-release-delivery` remains dependent and uncommis
 No live proof is authorized; ticket acceptance cannot be closed from fixtures alone.
 This checkpoint measured about 200k context before final documentation/handoff and
 stops at the major boundary rather than continuing execution in this session.
+
+## Verification follow-up — 0.23
+
+The bounded [content-CID and native inline-size checkpoint](/design/publication-verification0.gpt61s.md)
+implements the two independent verification prerequisites described above, with
+fixed independent JS vectors and actual pinned native/Yjs size fixtures. It does
+not implement publication execution/recovery, release patching, delivery or live
+proof. Root `publish` remains unsupported and `leafbud-release-native` in progress.
+
+Scope clarification for the hidden-effect prose: `publishLeaflet` constructs
+`gatedImages` **only when `publication_uri` is present**; removeStale then runs for
+every such publication-container action. Standalone is not subject to that
+gated-image cleanup branch. The 0.22 preview already scoped its blocker correctly;
+this clarification does not resolve or relax the parent/operator policy question.

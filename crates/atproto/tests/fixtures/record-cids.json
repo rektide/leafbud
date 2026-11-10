@@ -22,5 +22,11 @@
     "record_json": "{\"$type\":\"example.test.record\",\"n\":null,\"f\":false,\"s\":\"\",\"a\":[{},[],true,{\"longer\":0,\"z\":null}]}",
     "dag_cbor_hex": "a5616184a080f5a2617af6666c6f6e676572006166f4616ef6617360652474797065736578616d706c652e746573742e7265636f7264",
     "cid": "bafyreibod6ww74bmikx2j62kbicqxjumeak7zwu5rgou4xko273fg72ry4"
+  },
+  {
+    "name": "modern-blob-raw-cid",
+    "record_json": "{\"$type\":\"example.test.record\",\"blob\":{\"$type\":\"blob\",\"ref\":{\"$link\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\"},\"mimeType\":\"application/octet-stream\",\"size\":0}}",
+    "dag_cbor_hex": "a264626c6f62a463726566d82a58250001551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8556473697a650065247479706564626c6f62686d696d655479706578186170706c69636174696f6e2f6f637465742d73747265616d652474797065736578616d706c652e746573742e7265636f7264",
+    "cid": "bafyreihb4rgwmjy5kalh5jmtlfgq2ylxkuucl6e4wb6u53l2bhc4pwdiiy"
   }
 ]

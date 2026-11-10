@@ -154,10 +154,10 @@ deployed publication/update or delivery success is claimed. The
 
 ### 0.23 verification prerequisites
 
-- [Content verifier](/crates/atproto/src/content/tests.rs): four independent JS
+- [Content verifier](/crates/atproto/src/content/tests.rs): five independent JS
   literal DAG-CBOR/CID vectors (Unicode, length-first map keys, tag42/bytes,
-  plain string strongRef and signed integer boundaries); digest mutation,
-  malformed special maps/base64/CID profiles and floats/out-of-range refusals.
+  plain string strongRef, modern blob wrapper and signed integer boundaries); digest mutation,
+  malformed special maps/base64/CID profiles/modern blobs and floats/out-of-range refusals.
   [Strict XRPC JSON](/crates/atproto/src/xrpc/json.rs) rejects duplicate keys.
 - [Stronger public read](/crates/workflow/src/release/tests.rs): explicit verified
   content acquisition, absent CID/digest mismatch versus existing fetch failures;
@@ -177,6 +177,10 @@ The [independent harness](/experiments/16-publication-verification/README.md)
 executes source from the clean pinned native revision, not a hand-ported publisher.
 The [verification receipt](/design/publication-verification0.gpt61s.md) owns the
 bound derivation and fresh execution join. No live proof or ticket completion.
+
+0.23 final gate: **378/378 regular tests**, six opt-in deployment skips, strict
+workspace/all-target Clippy, formatting, owned Markdown/OKF and both independent
+JS harnesses pass. The prior 0.22 gate above is retained historical evidence.
 
 ## Explicit unsupported native inventory
 
