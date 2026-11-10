@@ -105,11 +105,12 @@ explainers converged on this lean ([g](native-cleanup-question0.glm53m.md),
 [Sol](native-cleanup-question0.gpt61s.md)); the execution slice replaces the
 publication-scoped blocker with the disclosure.
 
-**Active agent:** g `ses_e39c64844ffeh98er3US2A0gQC` on `leafbud-editor-delete`
-(draft + published deliberate deletion; operator expanded scope 2026-11-10).
-The **publication execution/recovery Sol dispatches when the delete work
-returns** — same checkout, overlapping files; keep implementation agents serial.
-Rotate
+**Active agent:** fresh Sol high on **`leafbud-release-native` execution/recovery**
+(the last major slice): locked save-first `publish`, durable dispatch uncertainty,
+content-verified output, release patch authority and finite recovery. The delete
+work is parent-accepted (0.24.0, 397/397, live draft smoke passed; published
+record-deletion path **verified and implemented** — `deletePost` + `deleteLeaflet`
+in native order). Keep implementation agents serial in this checkout. Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 The user's latest request is a full status/architecture/road-ahead account; this
@@ -131,6 +132,7 @@ merely because context was compacted.
 | Filename/path reconciliation | Independent `names`, explicit/default tidy reconciliation, read-only classification, no-clobber move with unconfirmed-settlement reporting | [Naming receipt](naming0.gpt61s.md), `workflow::names/tidy`, `mdx::patch_names` |
 | Published editor and public evidence | Verified published binding/import/refresh/save; explicit lifecycle adoption; separate public status/diff with unknown imported baselines | [Public contract](/doc/release/README.md), [receipt](published-lifecycle0.gpt61s.md) |
 | Native publication foundation | Pinned `publishToPublication` contract, read-only readiness preview, content-CID verification, proven inline-size witness; execution not wired | [Action/preflight](native-publication0.gpt61s.md), [verification](publication-verification0.gpt61s.md) |
+| Deliberate native deletion | Preview-first `delete` for draft and published; record-first native order; observation-verified; clean local unbinding | [Delete receipt](native-delete0.glm53m.md), `web::delete`, `native::delete` |
 
 The supported native editor lifecycles are **draft and published**. Canvas,
 nested/task lists, richer interactive objects, uploads and native public-release
