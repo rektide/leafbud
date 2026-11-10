@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
+    title: "0.22 internal native publication action/preflight checkpoint; no root publish execution or confirmed release receipts"
+  - resource: /design/native-publication0.gpt61s.md
+    title: "Native action/effect contract, bounded implementation and fresh execution/recovery handoff"
   - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
     title: "0.21 verified published adoption/refresh/save, explicit lifecycle adoption and independent credential-free public status/diff; native/public CLI/HTTP/Phoenix verification"
   - resource: /doc/release/README.md
@@ -60,7 +64,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save and independent public status/diff, version 0.21.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save and independent public status/diff, version 0.22.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -88,6 +92,12 @@ and [executable content × operation coverage](doc/mdx/coverage.md). The matrix
 separates parser acceptance, native write preflight, CLI/HTTP/Phoenix fixtures,
 independent actual Yjs and earlier deployed evidence; unimplemented cells remain
 visible rather than being advertised as supported by a roundtrip alone.
+
+The [0.22 native publication foundation](design/native-publication0.gpt61s.md)
+adds a literal no-email action adapter and internal read-only preflight, not a
+user-facing publication workflow. Root `publish`/`--yes` still refuse before effects.
+Unavoidable native publication cleanup and output-size coverage need parent review;
+execution/recovery, verified release settlement and live proof remain open.
 
 ## Layout
 

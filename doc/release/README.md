@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
+    title: "Added bounded native action/preflight foundation, exact standalone default-theme correction, and explicit hidden-effect/execution boundaries"
+  - resource: /design/native-publication0.gpt61s.md
+    title: "Pinned native action contract and fresh execution/recovery handoff"
   - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
     title: "Implemented published native adoption/refresh/save and independent public evidence/Markdown diff; verified CLI, native/PDS HTTP and Phoenix fixtures"
   - resource: /design/published-lifecycle0.gpt61s.md
@@ -29,6 +33,23 @@ sources:
 **0.21 implements adoption/read/refresh, editor-only save, and read-only public
 status/diff—not publishing.** `publish` remains unimplemented. No subscriber
 email, share, upload, public record mutation, cleanup or migration is enabled.
+
+**0.22 adds an internal action/preflight foundation only.**
+`leafbud_web::publication` supplies current-origin/session action discovery, literal
+no-email arguments, explicit low-level transport and bounded results.
+`workflow::publication::preview` validates complete source before remote reads,
+reports missing keys/native page IDs, unsaved editor effects, actual owner/context
+and path/date normalization, and rechecks source/duplicates/native metadata after
+awaits. It writes nothing and is not exposed as root `publish`; `--yes` remains an
+honest unsupported-command refusal. No workflow invokes the effect adapter.
+
+Every preview retains execution/size-verification blockers. Publication context
+also blocks unavoidable native gated-image pruning, which has no suppression flag
+and cannot be ruled out from an image-free current source. Nonempty reply/schedule,
+unsupported inherited preferences/current output and incomplete authority evidence
+refuse or block. Native email is forced off; Bluesky sharing is a separate unused
+action, not an inferred guarantee that all native lifecycle effects are absent.
+See the [contract and receiving policy questions](/design/native-publication0.gpt61s.md).
 
 ## One source, verified identities
 
@@ -104,8 +125,12 @@ Explicit current limits:
   sources can adopt/refresh/save, but legacy release comparison refuses.
 - URL images lack resolved public blob byte identity. No image fetch/upload, fake
   blob equivalence or lossy omission. Offloaded/gated content, canvases, richer
-  blocks/facets, cover/theme/preferences/share references and unknown output fields
+  blocks/facets, cover/nondefault-theme/preferences/share references and unknown output fields
   refuse a complete comparison. Observed CID/change remains visible when possible.
+  The exact pinned standalone default theme (`showPageBackground:true` plus its
+  type discriminator only) now compares as default; any extra/nondefault property
+  still refuses. The publisher retains that object because its key-count test
+  includes the discriminator. Editor watermark remains separate.
 - Colored highlight slots needing native theme resolution refuse; default slot 1
   is supported. Nested/task lists, numbered restarts and adjacent separate
   same-style list boundaries refuse rather than flattening public meaning away.

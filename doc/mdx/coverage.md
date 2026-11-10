@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
+    title: "Added 0.22 literal native action/preflight fixtures and exact default-theme coverage without claiming execution/delivery"
+  - resource: /design/native-publication0.gpt61s.md
+    title: "Bounded action/effect findings and execution/recovery handoff"
   - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
     title: "Added published native/editor CLI/HTTP/Phoenix evidence, independent release projection/status/diff and explicit public coverage limitations"
   - resource: /doc/release/README.md
@@ -34,7 +38,7 @@ sources:
 
 # Executable content and operation fidelity coverage
 
-Scope: **0.21 native draft/published authoring and bounded public comparison**, not all Leaflet content or every
+Scope: **0.22 native draft/published authoring, bounded public comparison and internal publication preflight**, not all Leaflet content or every
 cross-product of kinds and operations. [Source ownership](README.md) is the
 source-shape contract; [project usage](/README.md) advertises only this bounded
 profile. Maintain this account when a capability or named fixture changes.
@@ -99,7 +103,7 @@ release meaning. Metadata/site/path/date and supported bylines do.
 Images without resolved blob identity, multiple working contributors (unordered
 native pull versus ordered publication), repeated/cyclic/unreachable page graphs,
 new pages without native identity, colored highlights needing theme resolution,
-legacy release output, richer/unknown public fields, offloading/gating, cover/theme/
+legacy release output, richer/unknown public fields, offloading/gating, cover/nondefault-theme/
 preferences/share references and richer list semantics **refuse**, not strip.
 No resource fetch/upload or PDS write is implemented by this comparison. S2 still
 exposes observed CID/output change when complete projection is unsupported.
@@ -117,6 +121,32 @@ record rehash/signature verification. S2's CID fixtures are explicitly independe
 syntax vectors used as reported revisions; record meaning has separate literal
 fixtures. Known/current, missing, unavailable, mismatch, unsupported, offline and
 not-requested evidence remain distinct; no status/diff invocation acknowledges it.
+
+## Native publication foundation coverage
+
+This is **not full publish/save-first/recovery or delivery proof**. Root `publish`
+remains unsupported, including `--yes`. In 0.22, eleven added pure/HTTP tests cover:
+
+- [Native adapter](/crates/leaflet/web/src/publication/tests.rs): literal success/
+  update/error shapes and actual Next POST headers/body; forced `sendEmail:false`,
+  no rkey/path/deletion/share escape hatch, session/token scoping, missing/ambiguous
+  discovery, unresolved/lost result, redirect/not-found/HTTP/non-Flight failures and
+  no retry. Publish registration fixtures are synthetic pinned-source examples,
+  not live discovery/execution evidence.
+- [Internal preview](/crates/workflow/src/publication/tests.rs): first/update in
+  both contexts, stable target despite configured defaults, no bytes/mtime/keys/
+  receipts/effect calls, ordinary new heading/paragraph preparation, full-body image
+  refusal before remote reads, unsaved editor effects, future-date/path disclosure,
+  preserved observed date, write-right/owner/linkage/inherited-field refusals and
+  source/late-duplicate races. Publication gated-image pruning remains an explicit
+  blocker; unresolved native output-size/offload coverage is not called ready.
+- [Projection](/crates/leaflet/records/src/projection.rs): the exact pinned standalone
+  default theme is equivalent to default absence; false and extra properties refuse.
+
+Gate: **368/368 regular tests**, six deployment skips, strict Clippy and formatting.
+No CID rehash, locked publication state machine, source release-patch authority,
+deployed publication/update or delivery success is claimed. The
+[checkpoint](/design/native-publication0.gpt61s.md) owns the next fresh-session slice.
 
 ## Explicit unsupported native inventory
 
