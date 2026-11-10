@@ -37,6 +37,22 @@ fn date(value: &Value) -> Result<String> {
         .to_string())
 }
 
+/// Bounded preference evidence. Draft rows may retain explicit Discover true;
+/// public records never do. Native's optional type tag is not an author field.
+pub fn decode_preferences(value: Option<&Value>, record: bool) -> Result<Option<leafbud_document::Preferences>> {
+    let Some(value) = value.filter(|v| !v.is_null()) else { return Ok(None) };
+    let mut value = value.as_object().context("preferences must be an object or null")?.clone();
+    if let Some(kind) = value.remove("$type") {
+        ensure!(kind == "pub.leaflet.publication#preferences", "unsupported preferences discriminator");
+    }
+    let preferences: leafbud_document::Preferences = serde_json::from_value(Value::Object(value)).context("unsupported post preferences")?;
+    ensure!(
+        !record || preferences.show_in_discover != Some(true),
+        "public showInDiscover:true is not native persisted output"
+    );
+    Ok(Some(preferences))
+}
+
 /// Convert supported current source to the actual native public record shape,
 /// then use the same public decoder/canonicalization as the fetched endpoint.
 pub fn working(source: &Document) -> Result<Projection> {
@@ -70,11 +86,17 @@ pub fn working(source: &Document) -> Result<Projection> {
     if record["description"].is_null() {
         record.as_object_mut().expect("record").remove("description");
     }
+    if let Some(preferences) = &source.preferences {
+        let value = preferences.record();
+        if value != json!({}) {
+            record["preferences"] = value;
+        }
+    }
     from_record(&record, source)
 }
 
 fn supported_metadata(source: &Document) -> Result<()> {
-    for name in ["cover", "coverImage", "delivery", "preferences"] {
+    for name in ["cover", "coverImage", "delivery"] {
         ensure!(!source.extra.contains_key(name), "release intent {name} has no supported projection");
     }
     Ok(())
@@ -307,9 +329,15 @@ pub fn from_record(record: &Value, template: &Document) -> Result<Projection> {
             "contributors",
             "content",
             "theme",
+            "preferences",
         ],
     )?;
     let site = text(record, "site")?;
+    ensure!(
+        record.get("preferences").is_none_or(|v| !v.is_null()),
+        "public preferences must be an object when present"
+    );
+    let preferences = decode_preferences(record.get("preferences"), true)?;
     // Pinned extractThemeFromFacts always includes $type, so the publisher's
     // Object.keys(extracted).length > 1 retains even this exact default theme.
     // No arbitrary theme, page color, image or nondefault property is ignored.
@@ -355,6 +383,7 @@ pub fn from_record(record: &Value, template: &Document) -> Result<Projection> {
     document.description = canonical_description(description).map(str::to_owned);
     document.tags = tags;
     document.theme = None; // native publication ignores editor watermark, not a theme wildcard
+    document.preferences = Some(preferences.clone().unwrap_or_default());
     document.extra = BTreeMap::from([
         ("contributors".into(), json!(contributors)),
         ("path".into(), json!(path)),
@@ -391,7 +420,8 @@ pub fn from_record(record: &Value, template: &Document) -> Result<Projection> {
         document.pages.push(Page { key, blocks });
     }
     document.state.main_page = Some(document.pages[0].key.clone());
-    let metadata = json!({"title":document.title,"description":document.description,"tags":document.tags,"site":site,"path":path,"publishedAt":published_at,"contributors":contributors});
+    let metadata = json!({"title":document.title,"description":document.description,"tags":document.tags,"site":site,"path":path,"publishedAt":published_at,"contributors":contributors,
+        "preferences":preferences.unwrap_or_default().meaning()});
     let mut projected_pages: Vec<_> = document
         .pages
         .iter()
@@ -520,6 +550,38 @@ mod tests {
         json!({"$type":"site.standard.document","site":"https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx","title":"Title","path":"/post","publishedAt":"2026-10-01T10:00:00.000Z","content":{"$type":"pub.leaflet.content","pages":[{"$type":"pub.leaflet.pages.linearDocument","id":"native-page","blocks":[{"$type":"pub.leaflet.pages.linearDocument#block","block":{"$type":"pub.leaflet.blocks.text","plaintext":"Hi 🦋 café","facets":[{"index":{"byteStart":3,"byteEnd":7},"features":[{"$type":"pub.leaflet.richtext.facet#bold"},{"$type":"pub.leaflet.richtext.facet#link","uri":"https://example.com"}]}]}}]}]}})
     }
     #[test]
+    fn preferences_supported_subset_and_default_meaning_are_complete() {
+        let plain = from_record(&record(), &template()).unwrap();
+        for key in leafbud_document::PREFERENCE_KEYS {
+            for value in [true, false] {
+                let mut native = record();
+                native["preferences"] = json!({"$type":"pub.leaflet.publication#preferences",key:value});
+                if key == "showInDiscover" && value {
+                    assert!(from_record(&native, &template()).is_err());
+                    continue;
+                }
+                let projected = from_record(&native, &template()).unwrap();
+                assert_eq!(projected.value == plain.value, value, "{key}={value}");
+                assert_eq!(projected.metadata["preferences"][key], value);
+                assert_eq!(working(&projected.document).unwrap().value, projected.value);
+                native["preferences"].as_object_mut().unwrap().remove("$type");
+                assert_eq!(from_record(&native, &template()).unwrap().value, projected.value);
+            }
+        }
+        for bad in [
+            Value::Null,
+            json!({"unknown":false}),
+            json!({"showComments":"false"}),
+            json!({"showMentions":null}),
+            json!([]),
+            json!({"$type":"future.preferences"}),
+        ] {
+            let mut native = record();
+            native["preferences"] = bad;
+            assert!(from_record(&native, &template()).is_err());
+        }
+    }
+    #[test]
     fn pinned_standalone_publisher_default_theme_is_exact_not_an_arbitrary_wildcard() {
         let plain = from_record(&record(), &template()).unwrap();
         let mut native = record();
@@ -599,7 +661,7 @@ mod tests {
                 2 => block["facets"][0]["index"]["byteEnd"] = json!(4),
                 3 => block["facets"][0]["features"][0]["$type"] = json!("pub.leaflet.richtext.facet#footnote"),
                 4 => block["textSize"] = json!("large"),
-                5 => record["preferences"] = json!({"$type":"pub.leaflet.publication#preferences","showInDiscover":false}),
+                5 => record["preferences"] = json!({"$type":"pub.leaflet.publication#preferences","showInDiscover":true}),
                 _ => record["content"] = json!({"$type":"pub.leaflet.content","pages":[],"pagesBlob":{"$type":"blob"}}),
             }
             assert!(from_record(&record, &template()).is_err(), "case={case}");

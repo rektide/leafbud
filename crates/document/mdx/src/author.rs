@@ -12,6 +12,8 @@ pub struct MetadataEdit {
     pub tags: Option<Vec<String>>,
     /// Explicit offset-bearing datetime; a caller resolves `--now` once.
     pub published_at: Option<String>,
+    /// Merge selected keys; Some(empty) explicitly writes preferences: {}.
+    pub preferences: Option<leafbud_document::Preferences>,
 }
 
 /// Validate before planning; return proposed bytes only. Future owned state,
@@ -54,6 +56,20 @@ pub fn edit_metadata(input: &str, edit: &MetadataEdit) -> Result<String> {
             .to_string();
         if header.get("publishedAt") != Some(&json!(date)) {
             updates.push(("publishedAt", json!(date)));
+        }
+    }
+    if let Some(preferences) = &edit.preferences {
+        let mut value = serde_json::to_value(preferences)?;
+        if value != json!({}) {
+            let mut merged = serde_json::to_value(existing.preferences.as_ref().cloned().unwrap_or_default())?;
+            merged
+                .as_object_mut()
+                .expect("preferences mapping")
+                .extend(value.as_object().expect("preferences mapping").clone());
+            value = merged;
+        }
+        if header.get("preferences") != Some(&value) {
+            updates.push(("preferences", value));
         }
     }
     if updates.is_empty() {

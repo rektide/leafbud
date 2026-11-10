@@ -190,6 +190,15 @@ impl Store {
                                         self.extras.insert(format!("publication_{field}"), value.clone());
                                     }
                                 }
+                                if let Some(value) = args.get("preferences") {
+                                    self.extras.insert("post_preferences".into(), value.clone());
+                                    let table = if self.data["leaflets_in_publications"].as_array().is_some_and(|v| !v.is_empty()) {
+                                        "leaflets_in_publications"
+                                    } else {
+                                        "leaflets_to_documents"
+                                    };
+                                    self.data[table][0]["preferences"] = value.clone();
+                                }
                             }
                             name => panic!("unexpected mutation {name}"),
                         }

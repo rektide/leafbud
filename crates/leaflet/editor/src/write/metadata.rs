@@ -15,11 +15,18 @@ pub(super) fn prepare(builder: &mut Builder<'_>, current: &Document, persisted_t
     let binding = desired.state.binding.as_ref().expect("bound");
     if binding.publication.is_some() || binding.uri.is_some() {
         let tags = (desired.tags != current.tags).then(|| desired.tags.clone());
-        if title.is_some() || description_changed || tags.is_some() {
+        let preferences = desired
+            .preferences
+            .as_ref()
+            .filter(|p| Some(*p) != current.preferences.as_ref())
+            .map(|p| serde_json::from_value(serde_json::to_value(p).expect("preferences JSON")))
+            .transpose()?;
+        if title.is_some() || description_changed || tags.is_some() || preferences.is_some() {
             builder.result.mutations.push(NativeMutation::UpdatePublicationDraft(PublicationMetadata {
                 title,
                 description: description_changed.then(|| description.unwrap_or_default().to_owned()),
                 tags,
+                preferences,
             }));
         }
     } else {

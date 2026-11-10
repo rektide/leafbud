@@ -311,7 +311,7 @@ enum Command {
         json: bool,
     },
     /// Explicit local metadata edits (date alternatives are mutually exclusive)
-    #[command(group(clap::ArgGroup::new("edit_fields").required(true).multiple(true).args(["title", "description", "tag", "clear_tags", "published_at", "now"])))]
+    #[command(group(clap::ArgGroup::new("edit_fields").required(true).multiple(true).args(["title", "description", "tag", "clear_tags", "published_at", "now", "preference", "clear_preferences"])))]
     Edit {
         file: PathBuf,
         #[arg(long)]
@@ -324,6 +324,12 @@ enum Command {
         /// Explicitly replace tags with [] (not additive/removal by name)
         #[arg(long)]
         clear_tags: bool,
+        /// Merge one of showInDiscover/showComments/showMentions/showRecommends=true|false
+        #[arg(long, value_name = "KEY=BOOL", conflicts_with = "clear_preferences", value_parser = preference)]
+        preference: Vec<(String, bool)>,
+        /// Explicitly clear native overrides (writes preferences: {})
+        #[arg(long)]
+        clear_preferences: bool,
         #[arg(long, value_name = "TIME")]
         published_at: Option<String>,
         #[arg(long, conflicts_with = "published_at")]
@@ -458,6 +464,19 @@ enum ConfigCommand {
     },
 }
 
+fn preference(value: &str) -> Result<(String, bool), String> {
+    let (key, value) = value.split_once('=').ok_or("preference requires KEY=true|false")?;
+    if !leafbud_workflow::author::PREFERENCE_KEYS.contains(&key) {
+        return Err(format!("unknown post preference {key}"));
+    }
+    let value = match value {
+        "true" => true,
+        "false" => false,
+        _ => return Err("preference value must be true or false".into()),
+    };
+    Ok((key.into(), value))
+}
+
 #[tokio::main]
 async fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -497,6 +516,8 @@ async fn main() -> ExitCode {
             description,
             tag,
             clear_tags,
+            preference,
+            clear_preferences,
             published_at,
             now,
         } => Some((
@@ -505,6 +526,16 @@ async fn main() -> ExitCode {
                 title: title.clone(),
                 description: description.clone(),
                 tags: if *clear_tags || !tag.is_empty() { Some(tag.clone()) } else { None },
+                preferences: if *clear_preferences || !preference.is_empty() {
+                    Some(
+                        serde_json::from_value(
+                            serde_json::to_value(preference.iter().cloned().collect::<std::collections::BTreeMap<_, _>>()).expect("boolean mapping"),
+                        )
+                        .expect("validated preference keys"),
+                    )
+                } else {
+                    None
+                },
                 published_at: if *now {
                     Some(jiff::Timestamp::now().to_string())
                 } else {

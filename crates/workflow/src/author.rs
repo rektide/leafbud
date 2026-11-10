@@ -2,6 +2,7 @@
 //! inventory ambiguity check and adjacent original-byte write guard.
 use crate::{config, files, inventory, lock};
 use anyhow::{Context, Result, ensure};
+pub use leafbud_document::PREFERENCE_KEYS;
 pub use leafbud_mdx::MetadataEdit;
 use std::path::{Path, PathBuf};
 

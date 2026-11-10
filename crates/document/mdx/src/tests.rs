@@ -68,6 +68,7 @@ fn document() -> Document {
         tags: vec![],
         publication: Publication::Standalone,
         theme: None,
+        preferences: None,
         extra: BTreeMap::new(),
         pages: vec![Page {
             key: "p-main".into(),

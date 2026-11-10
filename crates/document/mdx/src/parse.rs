@@ -1071,6 +1071,7 @@ mod tests {
             tags: vec![],
             publication: Publication::Inherit,
             theme: None,
+            preferences: None,
             extra: BTreeMap::new(),
             pages: vec![],
             state,

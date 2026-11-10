@@ -53,6 +53,7 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
         tags: vec![],
         publication: request.publication.clone(),
         theme: None,
+        preferences: None,
         extra: Default::default(),
         pages: vec![Page {
             key: leafbud_mdx::PROVISIONAL_MAIN_PAGE.into(),

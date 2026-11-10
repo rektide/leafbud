@@ -73,19 +73,24 @@ async fn preview_first_execute_update_noop_and_uncertain_recovery_cli_both_conte
                     if loss.load(Ordering::SeqCst) { return (503,vec![],"lost".into()); }
                     let doc=leafbud_mdx::parse(&std::fs::read_to_string(&source).unwrap()).unwrap();
                     assert!(matches!(doc.state.publication_attempt.unwrap().stage,leafbud_document::PublicationStage::Dispatched{..}));
-                    let args=r.body_json()[0].clone(); assert_eq!(args["sendEmail"],false);
+                     let args=r.body_json()[0].clone(); assert_eq!(args["sendEmail"],false);
+                     assert_eq!(args["postPreferences"],json!({"showComments":false}));
+                     assert_eq!(args["showInDiscover"],true);
                     let blocks:Vec<_>=doc.pages[0].blocks.iter().map(|b|{
                         let BlockKind::Paragraph{content}=&b.kind else{panic!("fixture paragraph")};
                         let text=content.iter().map(|i|match i{Inline::Run{text,..}=>text.as_str(),Inline::HardBreak=>"\n"}).collect::<String>();
                         json!({"$type":"pub.leaflet.pages.linearDocument#block","block":{"$type":"pub.leaflet.blocks.text","plaintext":text}})
                     }).collect();
                     let mut record=json!({"$type":"site.standard.document","site":if publication{PUB.to_owned()}else{format!("https://leaflet.pub/p/{OWNER}")},"title":args["title"],"description":args["description"],"tags":args["tags"],"path":"/post","publishedAt":"2026-11-01T00:00:00Z","content":{"$type":"pub.leaflet.content","pages":[{"$type":"pub.leaflet.pages.linearDocument","id":store::PAGE,"blocks":blocks}]}});
-                    if publication{record["contributors"]=json!([{"did":OWNER}]);state.extras.insert("draft_contributors".into(),json!([OWNER]));}
+                     if publication{record["contributors"]=json!([{"did":OWNER}]);state.extras.insert("draft_contributors".into(),json!([OWNER]));}
+                     record["preferences"]=json!({"$type":"pub.leaflet.publication#preferences","showComments":false});
                     let table=if publication{"leaflets_in_publications"}else{"leaflets_to_documents"};
                     let first=state.data[table][0][if publication{"doc"}else{"document"}].is_null();
                     if !publication{state.data[table]=json!([{"leaflet":store::TOKEN,"preferences":null}]);}
                     state.data[table][0][if publication{"doc"}else{"document"}]=json!(URI);
-                    state.data[table][0]["documents"]=json!({"uri":URI,"data":record});
+                     state.data[table][0]["documents"]=json!({"uri":URI,"data":record});
+                     state.data[table][0]["preferences"]=json!({"showComments":false});
+                     state.extras.insert("post_preferences".into(),json!({"showComments":false}));
                     for key in ["title","description","tags"] {state.extras.insert(format!("publication_{key}"),args[key].clone());}
                     return (200,vec![("Content-Type".into(),"text/x-component".into())],format!("12:X\n0:{{\"a\":\"$@1\"}}\n1:{}\n12:C\n",json!({"success":true,"uri":URI,"rkey":"post","record":record,"firstPublish":first,"blocks":blocks.len(),"reply":"$undefined"})));
                 }
@@ -97,6 +102,15 @@ async fn preview_first_execute_update_noop_and_uncertain_recovery_cli_both_conte
             }; (200,vec![],response)
         })).await;
         std::fs::write(&path,format!("---\nformat: leafbud-mdx/2\ntitle: CLI publish\npublication: {}\npublishedAt: 2026-11-01T00:00:00Z\n\"@leafbud\": {{id: \"{}\",state: draft}}\n---\n\nA paragraph.\n",if publication{format!("\"{PUB}\"")}else{"null".into()},leafbud_document::Uuid::new_v4())).unwrap();
+        let edited = cli(
+            &server.base_url,
+            root.path(),
+            &["edit", "doc.mdx", "--preference", "showComments=false", "--preference", "showInDiscover=true"],
+        )
+        .output()
+        .await
+        .unwrap();
+        assert!(edited.status.success(), "{}", String::from_utf8_lossy(&edited.stderr));
         let bytes = std::fs::read(&path).unwrap();
         let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
         assert_eq!(

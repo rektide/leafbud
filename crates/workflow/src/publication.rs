@@ -26,6 +26,7 @@ pub struct Preview {
     pub uri: Option<String>,
     pub path: Value,
     pub date: Value,
+    pub preferences: Value,
     pub send_email: bool,
     pub bluesky_share: bool,
     pub native_effects: Vec<&'static str>,
@@ -117,6 +118,7 @@ pub async fn preview(
         uri,
         path: Value::Null,
         date: Value::Null,
+        preferences: unobserved_preferences(&desired),
         send_email: false,
         bluesky_share: false,
         native_effects: vec![
@@ -210,6 +212,7 @@ pub async fn preview(
     }
     normalize(&desired, associated.as_ref().map(|association| &association.record), now, &mut result)?;
     inspect_effect_fields(&observed.data, &mut result)?;
+    inspect_preferences(&desired, &observed.data, &mut result)?;
     let preparation = remote.client.prepare_publication(binding.token).await;
     check()?;
     let preparation = preparation?;
@@ -319,15 +322,94 @@ pub(crate) fn inspect_effect_fields(data: &leafbud_web::LeafletData, result: &mu
         if link.get("email_only").is_some_and(|value| value != false && !value.is_null()) {
             result.blockers.push("native email-only draft cannot be published as a post".into());
         }
-        // The action inherits these when omitted; do not smuggle them through
-        // a model that currently cannot compare preferences/discovery output.
         ensure!(link.get("preferences").is_some(), "native action preferences witness missing");
-        if !link["preferences"].is_null() && link["preferences"] != json!({}) {
-            result
-                .blockers
-                .push("native nondefault preferences/discovery output has no supported release mapping".into());
+    }
+    Ok(())
+}
+
+/// Local intent disclosure only; never label an unobserved default as evidence.
+fn unobserved_preferences(document: &Document) -> Value {
+    let authored = document.preferences.as_ref().map(|p| serde_json::to_value(p).expect("preferences JSON"));
+    let clear = authored.as_ref() == Some(&json!({}));
+    let resolution: serde_json::Map<String, Value> = leafbud_document::PREFERENCE_KEYS
+        .into_iter()
+        .map(|key| {
+            let explicit = authored.as_ref().and_then(|p| p.get(key));
+            (
+                key.into(),
+                json!({"explicitSent":document.preferences.is_some() && (key=="showInDiscover"||explicit.is_some()),
+            "value":explicit.cloned().or_else(||clear.then(||json!(true))),
+            "source":if clear {"explicit-clear-default"} else if explicit.is_some(){"authored"}else{"inherit-or-default-needs-observation"}}),
+            )
+        })
+        .collect();
+    json!({"authored":authored,"resolution":resolution,"evidence":"not-observed","record":"needs-native-observation"})
+}
+
+/// Explicit objects replace, never merge, the row. Empty means clear, including
+/// Discover: postPreferences:{} alone would retain a record's opt-out.
+pub(crate) fn preference_wire(document: &Document, discover: bool) -> Value {
+    match &document.preferences {
+        None => json!({}),
+        Some(preferences) => {
+            let mut base = serde_json::to_value(preferences).expect("preferences JSON");
+            base.as_object_mut().expect("mapping").remove("showInDiscover");
+            json!({"postPreferences":base,"showInDiscover":discover})
         }
     }
+}
+
+pub(crate) fn inspect_preferences(document: &Document, data: &leafbud_web::LeafletData, result: &mut Preview) -> Result<()> {
+    let table = if result.publication.is_some() {
+        "leaflets_in_publications"
+    } else {
+        "leaflets_to_documents"
+    };
+    let links = data.raw[table].as_array().context("native action linkage evidence missing")?;
+    let draft = links.first().and_then(|row| row.get("preferences"));
+    let associated = published::association(data)?;
+    let record = associated.as_ref().and_then(|a| a.record.get("preferences"));
+    let record_preferences = projection::decode_preferences(record, true)?;
+    let authored = document.preferences.as_ref();
+    let explicit_clear = authored.is_some_and(|p| serde_json::to_value(p).is_ok_and(|v| v == json!({})));
+    // postPreferences selects ONE whole object, not a per-key merge. The save
+    // before publication also replaces the draft row with the authored object.
+    let selected = match authored {
+        Some(p) => p.clone(),
+        None => projection::decode_preferences(draft, false)
+            .context("inherited preferences are outside the supported subset")?
+            .unwrap_or_default(),
+    };
+    let discover = if explicit_clear {
+        true
+    } else {
+        selected
+            .show_in_discover
+            .or(record_preferences.as_ref().and_then(|p| p.show_in_discover))
+            .unwrap_or(true)
+    };
+    let mut predicted = selected.clone();
+    predicted.show_in_discover = Some(discover);
+    if predicted.meaning() != authored.cloned().unwrap_or_default().meaning() {
+        result.blockers.push(
+            "native nondefault inherited preferences require explicit source values (set showInDiscover explicitly to control an existing opt-out)".into(),
+        );
+    }
+    let mut resolution = serde_json::Map::new();
+    let authored_value = authored.map(|p| serde_json::to_value(p).expect("preferences JSON"));
+    let values = predicted.meaning();
+    for key in leafbud_document::PREFERENCE_KEYS {
+        let sent = authored.is_some() && (key == "showInDiscover" || authored_value.as_ref().is_some_and(|v| v.get(key).is_some()));
+        resolution.insert(key.into(), json!({"explicitSent":sent,"value":values[key],
+            "source":if explicit_clear {"explicit-clear-default"} else if authored_value.as_ref().is_some_and(|v| v.get(key).is_some()) {"authored"}
+            else if key == "showInDiscover" && selected.show_in_discover.is_none() && record_preferences.as_ref().is_some_and(|p|p.show_in_discover.is_some()) {"inherited-record"}
+            else if authored.is_none() && draft.is_some_and(|v|v.get(key).is_some()) {"inherited-draft"}
+            else {"native-default"}}));
+    }
+    result.preferences = json!({"authored":document.preferences,"wire":preference_wire(document, discover),
+        "record":predicted.record(),"resolution":resolution,"replacesDraftRow":authored.is_some(),
+        "observed":{"draftRow":draft,"record":record},
+        "discoverTrue":"dispatch-only; true is never persisted; records carry only the false opt-out"});
     Ok(())
 }
 

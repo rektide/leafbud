@@ -319,6 +319,15 @@ pub(crate) fn adopt(existing: &Document, fresh: &Document) -> Document {
         tags: fresh.tags.clone(),
         publication: fresh.publication.clone(),
         theme: fresh.theme.clone(),
+        preferences: if existing.preferences.is_none()
+            || existing.state.binding.as_ref().is_some_and(|b| b.publication.is_none() && b.uri.is_none())
+            || existing.preferences.as_ref().map(leafbud_document::Preferences::meaning)
+                == Some(fresh.preferences.as_ref().cloned().unwrap_or_default().meaning())
+        {
+            existing.preferences.clone()
+        } else {
+            Some(fresh.preferences.clone().unwrap_or_default())
+        },
         extra,
         pages,
         state: State {

@@ -132,6 +132,21 @@ impl RemoteReader {
         let mut desired = candidate(&source.document, owner, contributor.as_deref(), date, Some((&associated.uri, actual_date)))?;
         ensure!(core_hash(&desired)? == *expected_hash, "pending complete public core differs from source");
         let expected = projection::working(&desired)?.value;
+        let table = if binding.publication.is_some() {
+            "leaflets_in_publications"
+        } else {
+            "leaflets_to_documents"
+        };
+        let links = data.raw[table].as_array().context("published direct linkage missing")?;
+        ensure!(
+            links.len() == 1 && links[0]["leaflet"] == binding.token.to_string(),
+            "published direct linkage/token mismatch"
+        );
+        let row_preferences = links[0].get("preferences").context("published linkage preferences witness missing")?;
+        ensure!(
+            projection::decode_preferences(Some(row_preferences), true)?.unwrap_or_default().meaning() == expected["metadata"]["preferences"],
+            "published linkage preferences differ from dispatched intent"
+        );
         ensure!(
             projection::from_record(&record.value, &desired)?.value == expected,
             "content-verified public meaning differs from full dispatched intent"
@@ -237,6 +252,7 @@ impl RemoteReader {
             ..Default::default()
         };
         crate::publication::inspect_effect_fields(data, &mut summary)?;
+        crate::publication::inspect_preferences(document, data, &mut summary)?;
         let preparation = self.client.prepare_publication(binding.token).await?;
         source.check()?;
         crate::publication::verify_owner(document, data, preparation.actor(), &mut summary)?;
@@ -352,6 +368,14 @@ impl RemoteReader {
                 import::hash(&p.value) == receipt.input_hash
                     && projection::from_record(&current.record().value, &source.document).is_ok_and(|out| out.value == p.value)
                     && current.record().cid.as_deref() == Some(&receipt.cid)
+                    // Explicit {} and explicit true are real sends, even when
+                    // default meaning matches an older differently shaped
+                    // output. Discover true alone is dispatch-only, so compare
+                    // its actual persisted prediction, not the authored map.
+                    && source.document.preferences.as_ref().is_none_or(|preferences| {
+                        projection::decode_preferences(current.record().value.get("preferences"),true)
+                            .is_ok_and(|actual| actual.unwrap_or_default().record() == preferences.record())
+                    })
             }) {
                 let observed = self.observe_editor(&source.document).await.map_err(|e| anyhow::anyhow!("{}", e.message))?;
                 source.check()?;
@@ -491,6 +515,14 @@ fn arguments(document: &Document) -> Result<Arguments> {
         title: document.title.clone(),
         description: document.description.clone().unwrap_or_default(),
         tags: document.tags.clone(),
+        post_preferences: document.preferences.as_ref().map(|p| {
+            let mut value = serde_json::to_value(p).expect("preferences JSON");
+            value.as_object_mut().expect("mapping").remove("showInDiscover");
+            serde_json::from_value(value).expect("boolean mapping")
+        }),
+        // Successful preflight requires source control of nondefault inherited
+        // Discover, making this explicit dispatch deterministic.
+        show_in_discover: document.preferences.as_ref().map(|p| p.show_in_discover.unwrap_or(true)),
         published_at: document
             .extra
             .get("publishedAt")

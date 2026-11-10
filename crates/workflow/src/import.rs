@@ -78,10 +78,11 @@ pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot) -> String {
     if data.observed_state() == LeafletState::Published {
         // Joined documents.data is released output, NOT working metadata.
         // The full current facts/extras retain conservative editor coverage;
-        // only native/public identity belongs to the association witness here.
+        // Native/public identity and working-row preferences belong here;
+        // released record preferences do not.
         let associations:Vec<_>=data.association_rows().iter().map(|row|json!({
-            "publication":row["leaflets_in_publications"].as_array().into_iter().flatten().map(|link|json!({"publication":link["publication"],"doc":link["doc"]})).collect::<Vec<_>>(),
-            "standalone":row["leaflets_to_documents"].as_array().into_iter().flatten().map(|link|json!({"document":link["document"]})).collect::<Vec<_>>()
+            "publication":row["leaflets_in_publications"].as_array().into_iter().flatten().map(|link|json!({"publication":link["publication"],"doc":link["doc"],"preferences":link["preferences"]})).collect::<Vec<_>>(),
+            "standalone":row["leaflets_to_documents"].as_array().into_iter().flatten().map(|link|json!({"document":link["document"],"preferences":link["preferences"]})).collect::<Vec<_>>()
         })).collect();
         return hash(&leafbud_editor::witness(
             &pull.facts,
@@ -151,10 +152,10 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
                 // omission. First binding records it without inventing a byline.
                 extra.insert("contributors".into(), json!(contributors));
             }
-            "post_preferences" => ensure!(
-                value.is_null() || value == &json!({}),
-                "post preferences require a supported author metadata mapping"
-            ),
+            // Unreadable preference evidence stays in the conservative raw
+            // witness. Inherit remains representable; publication separately
+            // refuses it unless explicit source intent replaces the row.
+            "post_preferences" => {}
             _ => bail!("unsupported editor extra: {key}"),
         }
     }
@@ -184,6 +185,19 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     };
     let nodes: BTreeMap<String, Node> = content.nodes;
     let main_page = content.pages.first().map(|page| page.key.clone()).context("entry page missing")?;
+    let table = if publication_uri.is_some() {
+        "leaflets_in_publications"
+    } else {
+        "leaflets_to_documents"
+    };
+    let row_preferences = data.raw[table].as_array().and_then(|rows| rows.first()).and_then(|row| row.get("preferences"));
+    // The working row, not the released record or local file, is authoritative.
+    // Preserve unreadable native evidence in the raw witness: absent source
+    // intent inherits it; an explicit supported object may replace it. Public
+    // output and inherited publication prediction still decode strictly.
+    let preferences = leafbud_records::projection::decode_preferences(row_preferences.or_else(|| pull.extras.get("post_preferences")), false)
+        .ok()
+        .flatten();
     let mut document = Document {
         format: FORMAT.into(),
         title,
@@ -191,6 +205,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         tags,
         publication: publication.clone(),
         theme: content.theme,
+        preferences,
         extra,
         pages: content.pages,
         state: State {

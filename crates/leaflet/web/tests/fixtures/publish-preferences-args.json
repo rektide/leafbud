@@ -1,0 +1,5 @@
+[
+  [{"root_entity":"00000000-0000-0000-0000-000000000000","leaflet_id":"01999000-0000-7aaa-8000-000000000001","title":"Title","description":"","tags":["ordered"],"sendEmail":false}],
+  [{"root_entity":"00000000-0000-0000-0000-000000000000","leaflet_id":"01999000-0000-7aaa-8000-000000000001","title":"Title","description":"","tags":["ordered"],"sendEmail":false,"postPreferences":{},"showInDiscover":true}],
+  [{"root_entity":"00000000-0000-0000-0000-000000000000","leaflet_id":"01999000-0000-7aaa-8000-000000000001","title":"Title","description":"","tags":["ordered"],"sendEmail":false,"postPreferences":{"showComments":false,"showMentions":true,"showRecommends":false},"showInDiscover":false}]
+]

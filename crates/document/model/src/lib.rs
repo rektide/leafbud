@@ -8,6 +8,8 @@ mod attempt;
 pub use attempt::*;
 mod publication;
 pub use publication::*;
+mod preferences;
+pub use preferences::*;
 
 /// Source format this model reads and writes (`leafbud-mdx/2`). Local data is
 /// rebuildable; there is no compatibility surface for the retired format 1.
@@ -186,6 +188,9 @@ pub struct Document {
     pub publication: Publication,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub theme: Option<Theme>,
+    /// Missing/null inherits; Some(empty) explicitly clears native overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferences: Option<Preferences>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
     #[serde(rename = "@leafbud")]
@@ -546,7 +551,7 @@ impl Document {
         };
         let extra: BTreeMap<_, _> = self.extra.iter().filter(|(key, _)| EDITOR_OWNED_EXTRA.contains(&key.as_str())).collect();
         serde_json::json!({"profile":EDITOR_PROFILE,"title":self.title,"description":canonical_description(self.description.as_deref()),
-            "tags":self.tags,"publication":self.publication.value(),"theme":self.theme,"extra":extra,
+            "tags":self.tags,"publication":self.publication.value(),"theme":self.theme,"preferences":self.preferences.as_ref().map(Preferences::meaning),"extra":extra,
             "main":self.pages.first().map(page),"definitions":definitions,"retired":retired})
     }
 
@@ -554,7 +559,7 @@ impl Document {
     /// receipt hashes; includes source identities/order and represented meaning.
     pub fn semantic_value(&self) -> Value {
         serde_json::json!({"format":self.format,"title":self.title,"description":canonical_description(self.description.as_deref()),"tags":self.tags,
-            "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,
+            "publication":self.publication.value(),"theme":self.theme,"preferences":self.preferences,"extra":self.extra,
             "mainPage":self.state.main_page,"pages":self.pages,"nodes":self.state.nodes})
     }
 
@@ -565,6 +570,6 @@ impl Document {
     /// this value untouched.
     pub fn authored_value(&self) -> Value {
         serde_json::json!({"format":self.format,"title":self.title,"description":self.description,"tags":self.tags,
-            "publication":self.publication.value(),"theme":self.theme,"extra":self.extra,"pages":self.pages})
+            "publication":self.publication.value(),"theme":self.theme,"preferences":self.preferences,"extra":self.extra,"pages":self.pages})
     }
 }

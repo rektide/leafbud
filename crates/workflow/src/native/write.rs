@@ -670,6 +670,9 @@ pub(super) fn protection(before: &Observation, compiled: &Compiled) -> Result<Pr
                 if meta.tags.is_some() {
                     fields.insert("tags".to_owned());
                 }
+                if meta.preferences.is_some() {
+                    fields.insert("preferences".to_owned());
+                }
             }
             NativeMutation::CreateEntity(_) => {}
         }
@@ -713,7 +716,11 @@ fn protection_hash(observed: &Observation, protection: &Protection) -> String {
     let fields = &protection.metadata_fields;
     let mut extras = observed.snapshot.extras.clone();
     for field in fields {
-        extras.remove(&format!("publication_{field}"));
+        extras.remove(&if field == "preferences" {
+            "post_preferences".into()
+        } else {
+            format!("publication_{field}")
+        });
     }
     import::hash(&leafbud_editor::witness(
         &facts,
@@ -732,6 +739,28 @@ fn verify_desired(existing: &Document, targets: &BTreeMap<String, Node>, observe
         &observed.snapshot,
     )?;
     crate::editor_state::same_identity(existing.state.binding.as_ref().expect("above"), &fresh)?;
+    let binding = existing.state.binding.as_ref().expect("above");
+    if let Some(preferences) = &existing.preferences
+        && (binding.publication.is_some() || binding.uri.is_some())
+    {
+        let table = if binding.publication.is_some() {
+            "leaflets_in_publications"
+        } else {
+            "leaflets_to_documents"
+        };
+        let row = observed.data.raw[table]
+            .as_array()
+            .filter(|v| v.len() == 1)
+            .context("unique working preference row missing")?;
+        ensure!(
+            leafbud_records::projection::decode_preferences(row[0].get("preferences"), false)?.as_ref() == Some(preferences),
+            "working row preferences differ from explicit source replacement"
+        );
+        ensure!(
+            leafbud_records::projection::decode_preferences(observed.snapshot.extras.get("post_preferences"), false)?.as_ref() == Some(preferences),
+            "working client preferences differ from explicit source replacement"
+        );
+    }
     let mut expected = existing.clone();
     expected.state.nodes.extend(targets.clone());
     let merged = crate::editor_state::adopt(&expected, &fresh);

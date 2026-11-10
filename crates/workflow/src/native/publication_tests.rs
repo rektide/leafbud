@@ -70,6 +70,23 @@ fn record(store: &mut store::Store, publication: bool, args: &Value) -> Value {
     if publication {
         record["contributors"] = json!([{"did":OWNER}]);
     }
+    // Literal pinned native resolution, independent of Leafbud's predictor.
+    let table = if publication { "leaflets_in_publications" } else { "leaflets_to_documents" };
+    let old = &store.data[table][0];
+    let selected = args.get("postPreferences").unwrap_or(&old["preferences"]);
+    let mut preferences = selected.as_object().cloned().unwrap_or_default();
+    let row_discover = preferences.remove("showInDiscover");
+    let discover = args
+        .get("showInDiscover")
+        .or(row_discover.as_ref())
+        .or_else(|| old["documents"]["data"]["preferences"].get("showInDiscover"));
+    if discover == Some(&json!(false)) {
+        preferences.insert("showInDiscover".into(), json!(false));
+    }
+    if !preferences.is_empty() {
+        preferences.insert("$type".into(), json!("pub.leaflet.publication#preferences"));
+        record["preferences"] = Value::Object(preferences);
+    }
     if record["publishedAt"].as_str().unwrap().parse::<jiff::Timestamp>().unwrap() > jiff::Timestamp::now() {
         record["publishedAt"] = json!(jiff::Timestamp::now().to_string());
     }
@@ -153,6 +170,15 @@ impl Server {
                     }
                     store.data[table][0][if publication { "doc" } else { "document" }] = json!(URI);
                     store.data[table][0]["documents"] = json!({"uri":URI,"data":record});
+                    let mut preferences = record.get("preferences").cloned().unwrap_or(Value::Null);
+                    if let Some(preferences) = preferences.as_object_mut() {
+                        preferences.remove("$type");
+                    }
+                    store.data[table][0]["preferences"] = preferences.clone();
+                    store.extras.insert("post_preferences".into(), preferences);
+                    if mode == 14 {
+                        store.data[table][0]["preferences"] = json!({"showComments":false});
+                    }
                     for key in ["title", "description", "tags"] {
                         store.extras.insert(format!("publication_{key}"), args[key].clone());
                     }
@@ -223,6 +249,187 @@ fn draft(path: &Path, publication: bool) {
 }
 fn read(path: &Path) -> Document {
     leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[tokio::test]
+async fn preferences_full_save_publish_replace_clear_and_clean_repeat_both_contexts() {
+    for publication in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("post.mdx");
+        draft(&path, publication);
+        let initial = std::fs::read_to_string(&path).unwrap().replace(
+            "# retain author comment",
+            "preferences: {showInDiscover: false, showComments: false, showMentions: false, showRecommends: false}\n# retain author comment",
+        );
+        std::fs::write(&path, &initial).unwrap();
+        let server = Server::new(publication, path.clone()).await;
+        let reader = server.reader();
+        let context = server.context(root.path());
+        if publication {
+            let mut store = server.store.lock().unwrap();
+            store.data["leaflets_in_publications"][0]["preferences"] = json!({"future":true});
+            store.extras.insert("post_preferences".into(), json!({"future":true}));
+        }
+        for (index, preferences) in [
+            json!({"showInDiscover":false,"showComments":false,"showMentions":false,"showRecommends":false}),
+            json!({"showInDiscover":true,"showComments":true}),
+            json!({}),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if index > 0 {
+                let mut doc = read(&path);
+                doc.preferences = Some(serde_json::from_value(preferences.clone()).unwrap());
+                std::fs::write(&path, leafbud_mdx::render(&doc).unwrap()).unwrap();
+            }
+            let report = reader
+                .publish_native(
+                    &context,
+                    &path,
+                    Selection::default(),
+                    PublishOptions {
+                        yes: true,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+            assert_eq!(report.outcome, "published", "{publication} {index}: {report:?}");
+            assert_eq!(
+                serde_json::to_value(read(&path).preferences.as_ref().unwrap()).unwrap(),
+                preferences,
+                "settlement must preserve authored Discover:true"
+            );
+            let sent = server
+                .http
+                .requests()
+                .into_iter()
+                .rfind(|r| r.method == "POST" && r.path.ends_with("/publish"))
+                .unwrap()
+                .body_json()[0]
+                .clone();
+            let mut expected = preferences.clone();
+            expected.as_object_mut().unwrap().remove("showInDiscover");
+            assert_eq!(sent["postPreferences"], expected);
+            assert_eq!(sent["showInDiscover"], preferences.get("showInDiscover").cloned().unwrap_or(json!(true)));
+            {
+                let store = server.store.lock().unwrap();
+                let table = if publication { "leaflets_in_publications" } else { "leaflets_to_documents" };
+                assert_ne!(store.data[table][0]["preferences"]["showInDiscover"], true);
+                if index > 0 {
+                    assert!(store.data[table][0]["preferences"].get("showMentions").is_none(), "replace not merge");
+                }
+                if index == 2 {
+                    assert!(store.data[table][0]["preferences"].is_null());
+                }
+            }
+            let bytes = std::fs::read(&path).unwrap();
+            let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+            let calls = server.calls.load(Ordering::SeqCst);
+            let report = reader
+                .publish_native(
+                    &context,
+                    &path,
+                    Selection::default(),
+                    PublishOptions {
+                        yes: true,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+            assert_eq!(report.outcome, "unchanged", "{report:?}");
+            assert_eq!(server.calls.load(Ordering::SeqCst), calls);
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+            assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+        }
+        let writes: Vec<_> = server
+            .http
+            .requests()
+            .into_iter()
+            .filter(|r| r.path == "/api/rpc/push")
+            .flat_map(|r| r.body_json()["pushRequest"]["mutations"].as_array().unwrap().clone())
+            .filter(|m| m["name"] == "updatePublicationDraft")
+            .collect();
+        assert!(
+            writes
+                .iter()
+                .any(|m| m["args"]["preferences"] == json!({"showComments":true,"showInDiscover":true})),
+            "save carries the full four-key authored subset"
+        );
+        assert!(writes.iter().any(|m| m["args"]["preferences"] == json!({})), "save clear is explicit");
+    }
+}
+
+#[tokio::test]
+async fn preferences_linkage_mismatch_prevents_settlement_even_with_matching_pds_and_action() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("post.mdx");
+    draft(&path, false);
+    let server = Server::new(false, path.clone()).await;
+    server.mode.store(14, Ordering::SeqCst);
+    let report = server
+        .reader()
+        .publish_native(
+            &server.context(root.path()),
+            &path,
+            Selection::default(),
+            PublishOptions {
+                yes: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.outcome, "partial-unsupported", "{report:?}");
+    assert!(report.message.unwrap().contains("linkage preferences differ"));
+    assert!(read(&path).state.released.is_none());
+    assert!(read(&path).state.publication_attempt.is_some());
+    assert_eq!(server.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn inherited_preferences_default_shape_accepts_nondefault_or_unknown_requires_source_control() {
+    for value in [json!({"showComments":true}), json!({"showComments":false}), json!({"future":true})] {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("post.mdx");
+        draft(&path, true);
+        let server = Server::new(true, path.clone()).await;
+        {
+            let mut store = server.store.lock().unwrap();
+            store.data["leaflets_in_publications"][0]["preferences"] = value.clone();
+            store.extras.insert("post_preferences".into(), value.clone());
+        }
+        let report = server
+            .reader()
+            .publish_native(
+                &server.context(root.path()),
+                &path,
+                Selection::default(),
+                PublishOptions {
+                    yes: true,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let succeeds = value == json!({"showComments":true});
+        assert_eq!(report.outcome, if succeeds { "published" } else { "pending" }, "{value}: {report:?}");
+        assert_eq!(server.calls.load(Ordering::SeqCst), usize::from(succeeds));
+        if succeeds {
+            assert!(read(&path).preferences.is_none(), "inherit remains inherit at settlement");
+            let requests = server.http.requests();
+            let sent = requests
+                .iter()
+                .find(|r| r.method == "POST" && r.path.ends_with("/publish"))
+                .unwrap()
+                .body_json();
+            assert!(sent[0].get("postPreferences").is_none() && sent[0].get("showInDiscover").is_none());
+        } else {
+            assert_eq!(server.store.lock().unwrap().pushes, 0, "guard precedes authored save");
+        }
+    }
 }
 
 #[test]

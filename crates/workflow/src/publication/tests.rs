@@ -61,6 +61,109 @@ fn document(fixture: &Value, base: &str) -> Document {
     import::build(base, &support::data(fixture), &parse_pull(fixture["response"].clone()).unwrap()).unwrap()
 }
 
+#[test]
+fn preferences_resolution_matrix_discloses_send_inherit_replace_and_discover() {
+    for publication in [false, true] {
+        for key in ["showComments", "showMentions", "showRecommends"] {
+            for authored in [
+                None,
+                Some(json!({})),
+                Some(json!({key:true})),
+                Some(json!({key:false})),
+                Some(json!({key:false,"showInDiscover":true})),
+                Some(json!({key:false,"showInDiscover":false})),
+                Some(json!({key:true,"showInDiscover":true})),
+                Some(json!({key:true,"showInDiscover":false})),
+                Some(json!({"showInDiscover":true})),
+                Some(json!({"showInDiscover":false})),
+            ] {
+                for draft in [
+                    Value::Null,
+                    json!({}),
+                    json!({key:true}),
+                    json!({key:false}),
+                    json!({key:true,"showInDiscover":true}),
+                    json!({key:true,"showInDiscover":false}),
+                    json!({key:false,"showInDiscover":true}),
+                    json!({key:false,"showInDiscover":false}),
+                    json!({"showInDiscover":true}),
+                    json!({"showInDiscover":false}),
+                ] {
+                    for record_discover in [None, Some(false)] {
+                        let mut fixture = fixture(publication, true);
+                        let mut doc = document(&fixture, "https://leaflet.pub");
+                        doc.preferences = authored.as_ref().map(|v| serde_json::from_value(v.clone()).unwrap());
+                        let table = if publication { "leaflets_in_publications" } else { "leaflets_to_documents" };
+                        fixture["leaflet_data"][table][0]["preferences"] = draft.clone();
+                        if let Some(discover) = record_discover {
+                            fixture["leaflet_data"][table][0]["documents"]["data"]["preferences"] = json!({"showInDiscover":discover});
+                        }
+                        let mut result = Preview {
+                            publication: publication.then(|| PUBLICATION.into()),
+                            ..Default::default()
+                        };
+                        inspect_effect_fields(&support::data(&fixture), &mut result).unwrap();
+                        inspect_preferences(&doc, &support::data(&fixture), &mut result).unwrap();
+                        let base = authored.as_ref().unwrap_or(&draft);
+                        let clear = authored.as_ref() == Some(&json!({}));
+                        let discover = if clear {
+                            true
+                        } else {
+                            base.get("showInDiscover").and_then(Value::as_bool).or(record_discover).unwrap_or(true)
+                        };
+                        assert_eq!(result.preferences["resolution"]["showInDiscover"]["value"], discover);
+                        assert_eq!(
+                            result.preferences["resolution"][key]["value"],
+                            base.get(key).and_then(Value::as_bool).unwrap_or(true)
+                        );
+                        assert_eq!(result.preferences["wire"].get("postPreferences").is_some(), authored.is_some());
+                        if authored.is_some() {
+                            assert_eq!(result.preferences["wire"]["showInDiscover"], discover);
+                        }
+                        assert_ne!(result.preferences["record"]["showInDiscover"], true);
+                        let expected = doc.preferences.as_ref().cloned().unwrap_or_default().meaning();
+                        let actual = leafbud_records::projection::decode_preferences(Some(&result.preferences["record"]), true)
+                            .unwrap()
+                            .unwrap()
+                            .meaning();
+                        assert_eq!(result.blockers.is_empty(), actual == expected);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn unreadable_draft_preferences_require_explicit_replacement_and_default_shapes_are_not_blocked() {
+    let mut fixture = fixture(true, true);
+    let mut doc = document(&fixture, "https://leaflet.pub");
+    for draft in [json!({"future":true}), json!({"showComments":"false"}), json!([])] {
+        fixture["leaflet_data"]["leaflets_in_publications"][0]["preferences"] = draft;
+        let mut result = Preview {
+            publication: Some(PUBLICATION.into()),
+            ..Default::default()
+        };
+        assert!(inspect_preferences(&doc, &support::data(&fixture), &mut result).is_err());
+        doc.preferences = Some(Default::default());
+        inspect_preferences(&doc, &support::data(&fixture), &mut result).unwrap();
+        assert!(result.blockers.is_empty());
+        assert_eq!(result.preferences["wire"], json!({"postPreferences":{},"showInDiscover":true}));
+        doc.preferences = None;
+    }
+    fixture["leaflet_data"]["leaflets_in_publications"][0]["preferences"] = json!({"showComments":true});
+    let mut result = Preview {
+        publication: Some(PUBLICATION.into()),
+        ..Default::default()
+    };
+    inspect_preferences(&doc, &support::data(&fixture), &mut result).unwrap();
+    assert!(result.blockers.is_empty());
+    assert_eq!(
+        result.preferences["resolution"]["showComments"],
+        json!({"explicitSent":false,"value":true,"source":"inherited-draft"})
+    );
+}
+
 #[tokio::test]
 async fn first_and_update_preview_normalization_no_file_or_effect_changes() {
     for publication in [false, true] {
@@ -119,6 +222,11 @@ async fn unbound_new_structure_and_unsupported_body_preflight_before_remote_read
     assert!(report.inline_size.is_none());
     assert!(report.blockers.iter().any(|s| s.contains("inline size not witnessed")));
     assert_eq!(report.uri, None);
+    assert_eq!(report.preferences["resolution"]["showComments"]["explicitSent"], false);
+    assert!(
+        report.preferences["resolution"]["showComments"]["value"].is_null(),
+        "no invented observed default"
+    );
     assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
     let server = serving(fixture(false, false), OWNER, || {}).await;
     let remote = RemoteReader::new(LeafletClient::new(&server.base_url, Some("synthetic")).unwrap());
@@ -221,7 +329,7 @@ async fn source_and_late_duplicate_races_refuse_after_remote_await() {
 
 #[tokio::test]
 async fn rights_owner_binding_and_inherited_public_fields_refuse_without_effects() {
-    for case in 0..4 {
+    for case in 0..5 {
         let root = tempfile::tempdir().unwrap();
         let context = context(root.path());
         let baseline = fixture(false, true);
@@ -233,14 +341,24 @@ async fn rights_owner_binding_and_inherited_public_fields_refuse_without_effects
                 changed["leaflet_data"]["leaflets_to_documents"][0]["documents"]["data"]["preferences"] =
                     json!({"$type":"pub.leaflet.publication#preferences","showInDiscover":false})
             }
-            _ => changed["leaflet_data"]["leaflets_to_documents"][0]["document"] = json!("at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/other"),
+            3 => changed["leaflet_data"]["leaflets_to_documents"][0]["document"] = json!("at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/other"),
+            _ => changed["leaflet_data"]["leaflets_to_documents"][0]["documents"]["data"]["preferences"] = json!({"future":true}),
         }
         let server = serving(changed, if case == 1 { "did:plc:intruder" } else { OWNER }, || {}).await;
         let path = root.path().join("post.mdx");
-        let source = leafbud_mdx::render(&document(&baseline, &server.base_url)).unwrap();
+        let mut doc = document(&baseline, &server.base_url);
+        if case == 4 {
+            doc.preferences = Some(Default::default());
+        }
+        let source = leafbud_mdx::render(&doc).unwrap();
         std::fs::write(&path, &source).unwrap();
         let remote = RemoteReader::new(LeafletClient::new(&server.base_url, Some("synthetic")).unwrap());
-        assert!(preview(&context, &path, Default::default(), Some(&remote), now()).await.is_err(), "case {case}");
+        let report = preview(&context, &path, Default::default(), Some(&remote), now()).await;
+        if case == 2 {
+            assert!(report.unwrap().blockers.iter().any(|s| s.contains("nondefault inherited preferences")));
+        } else {
+            assert!(report.is_err(), "case {case}");
+        }
         assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
         assert!(
             server
@@ -269,6 +387,7 @@ fn explicit_future_dates_preservation_and_native_effect_blockers() {
         uri: doc.state.binding.as_ref().unwrap().uri.clone(),
         path: Value::Null,
         date: Value::Null,
+        preferences: Value::Null,
         send_email: false,
         bluesky_share: false,
         native_effects: vec![],

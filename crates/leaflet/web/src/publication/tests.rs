@@ -19,6 +19,45 @@ fn args() -> Arguments {
         description: "".into(),
         tags: vec!["ordered".into()],
         published_at: None,
+        post_preferences: None,
+        show_in_discover: None,
+    }
+}
+
+#[tokio::test]
+async fn publication_preferences_literal_wire_omission_clear_and_values() {
+    let fixtures: Vec<Value> = serde_json::from_str(include_str!("../../tests/fixtures/publish-preferences-args.json")).unwrap();
+    for (index, fixture) in fixtures.into_iter().enumerate() {
+        let expected = fixture.clone();
+        let server = TestServer::spawn_headers(Arc::new(move |r| {
+            let body = match (r.method.as_str(), r.path.as_str()) {
+                (_, "/home") => home(),
+                (_, "/_next/static/publish.js") => JS.into(),
+                ("GET", _) => "<script src=\"/_next/static/publish.js\"></script>".into(),
+                ("POST", _) => {
+                    assert_eq!(r.body_json(), expected);
+                    SUCCESS.into()
+                }
+                _ => panic!("unexpected request"),
+            };
+            (200, vec![("Content-Type".into(), "text/x-component".into())], body)
+        }))
+        .await;
+        let client = LeafletClient::new(&server.base_url, Some("synthetic")).unwrap();
+        let prepared = client.prepare_publication(TOKEN.parse().unwrap()).await.unwrap();
+        let mut arguments = args();
+        if index > 0 {
+            arguments.post_preferences = Some(serde_json::from_value(fixture[0]["postPreferences"].clone()).unwrap());
+            arguments.show_in_discover = fixture[0]["showInDiscover"].as_bool();
+        }
+        let mut invalid = arguments.clone();
+        invalid.post_preferences = Some(std::collections::BTreeMap::from([("unknown".into(), true)]));
+        invalid.show_in_discover = Some(true);
+        assert!(client.invoke_publication(&prepared, &invalid).await.is_err());
+        invalid.post_preferences = None;
+        assert!(client.invoke_publication(&prepared, &invalid).await.is_err());
+        client.invoke_publication(&prepared, &arguments).await.unwrap();
+        assert_eq!(server.requests().iter().filter(|r| r.method == "POST").count(), 1);
     }
 }
 

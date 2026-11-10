@@ -18,6 +18,9 @@ pub struct Arguments {
     pub description: String,
     pub tags: Vec<String>,
     pub published_at: Option<String>,
+    /// Explicit prepared source intent. None inherits; Some(empty) clears.
+    pub post_preferences: Option<std::collections::BTreeMap<String, bool>>,
+    pub show_in_discover: Option<bool>,
 }
 impl Arguments {
     pub fn wire(&self) -> Value {
@@ -29,8 +32,12 @@ impl Arguments {
         if let Some(date) = &self.published_at {
             value["publishedAt"] = json!(date);
         }
-        // Preferences/discovery are inherited by the real action. The workflow
-        // must verify their supported values; omission is not a quiet publish.
+        if let Some(preferences) = &self.post_preferences {
+            value["postPreferences"] = json!(preferences);
+        }
+        if let Some(discover) = self.show_in_discover {
+            value["showInDiscover"] = json!(discover);
+        }
         json!([value])
     }
 }
@@ -88,6 +95,16 @@ impl LeafletClient {
     pub async fn invoke_publication(&self, preparation: &Preparation, arguments: &Arguments) -> Result<Outcome, Error> {
         if self.base_url() != preparation.base || self.session != preparation.session || !self.has_cookie || arguments.leaflet_id != preparation.token {
             return Err(Error::Native("publication preparation belongs to another origin/session/token"));
+        }
+        if arguments.post_preferences.is_some() != arguments.show_in_discover.is_some()
+            || arguments
+                .post_preferences
+                .as_ref()
+                .is_some_and(|p| p.keys().any(|key| !matches!(key.as_str(), "showComments" | "showMentions" | "showRecommends")))
+        {
+            return Err(Error::Native(
+                "publication preferences require the supported three-key object and a paired Discover boolean",
+            ));
         }
         let response = self
             .http

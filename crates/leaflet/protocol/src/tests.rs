@@ -98,6 +98,27 @@ fn target_reference_fact_and_metadata_context_cannot_be_injected() {
 }
 
 #[test]
+fn publication_preferences_wire_full_replacement_clear_and_unknown_refusal() {
+    let (target, writer, mut scope) = setup();
+    scope.publication = true;
+    for args in [
+        json!({"preferences":{}}),
+        json!({"preferences":{"showComments":false,"showMentions":true,"showRecommends":false,"showInDiscover":true}}),
+    ] {
+        let expected = json!({"name":"updatePublicationDraft","args":args});
+        let mutation: NativeMutation = serde_json::from_value(expected.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&mutation).unwrap(), expected);
+        let batches = encode_pushes(target, writer, 1, 0, &[mutation], &scope, BatchLimits::default()).unwrap();
+        let body: Value = serde_json::from_slice(batches[0].bytes()).unwrap();
+        assert_eq!(body["pushRequest"]["mutations"][0]["args"], args);
+    }
+    for preferences in [json!({"showComments":"false"}), json!({"showComments":null}), json!({"future":true})] {
+        let mutation = serde_json::from_value::<NativeMutation>(json!({"name":"updatePublicationDraft","args":{"preferences":preferences}}));
+        assert!(mutation.is_err() || mutation.unwrap().validate(target, &scope).is_err());
+    }
+}
+
+#[test]
 fn full_view_keeps_unknown_witness_fields_and_validates_processing_evidence() {
     let (target, writer, _) = setup();
     let id = Uuid::new_v4();

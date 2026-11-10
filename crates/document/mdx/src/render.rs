@@ -571,7 +571,8 @@ pub fn render(document: &Document) -> Result<String> {
 
 pub(crate) fn metadata_value(document: &Document) -> Value {
     let mut metadata = json!({"title": document.title, "description": canonical_description(document.description.as_deref()),
-        "tags": document.tags, "publication": document.publication.value(), "theme": document.theme});
+        "tags": document.tags, "publication": document.publication.value(), "theme": document.theme,
+        "preferences":document.preferences.as_ref().map(Preferences::meaning)});
     if let Some(map) = metadata.as_object_mut() {
         for name in EDITOR_OWNED_EXTRA {
             if let Some(value) = document.extra.get(*name) {

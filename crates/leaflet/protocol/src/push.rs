@@ -79,6 +79,9 @@ pub struct PublicationMetadata {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    /// Full replacement, including {} clear; never delivery/publication prefs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferences: Option<BTreeMap<String, bool>>,
 }
 
 /// Explicit allowed native IDs from current facts and planned new targets.
@@ -212,7 +215,15 @@ impl NativeMutation {
             }
             Self::UpdateLeafletMetadata(_) if scope.publication => return Err(Error("standalone metadata in publication context")),
             Self::UpdatePublicationDraft(_) if !scope.publication => return Err(Error("publication metadata in standalone context")),
-            Self::UpdateLeafletMetadata(_) | Self::UpdatePublicationDraft(_) => {}
+            Self::UpdatePublicationDraft(metadata) => {
+                if metadata.preferences.as_ref().is_some_and(|p| {
+                    p.keys()
+                        .any(|k| !matches!(k.as_str(), "showInDiscover" | "showComments" | "showMentions" | "showRecommends"))
+                }) {
+                    return Err(Error("unsupported post preference"));
+                }
+            }
+            Self::UpdateLeafletMetadata(_) => {}
         }
         Ok(())
     }

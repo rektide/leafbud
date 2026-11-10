@@ -278,11 +278,11 @@ impl State {
                     || protection.facts.len() > MAX_TARGETS
                     || protection.entities.len() > MAX_TARGETS
                     || protection.verification_roots.len() > MAX_TARGETS
-                    || protection.metadata_fields.len() > 3
+                    || protection.metadata_fields.len() > 4
                     || protection
                         .metadata_fields
                         .iter()
-                        .any(|v| !matches!(v.as_str(), "title" | "description" | "tags"))
+                        .any(|v| !matches!(v.as_str(), "title" | "description" | "tags" | "preferences"))
                 {
                     return Err("invalid protected-scope witness");
                 }

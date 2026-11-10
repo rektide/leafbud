@@ -8,6 +8,62 @@ fn input(body: &str) -> String {
 }
 
 #[test]
+fn preferences_tristate_strict_types_merge_clear_and_source_preservation() {
+    let base = input("\n<Key id='b' />\nbody 😀\n");
+    assert!(parse(&base).unwrap().preferences.is_none());
+    for value in ["null", "{}", "{showComments: false, showInDiscover: true}"] {
+        let source = base.replace("title: T", &format!("preferences: {value}\ntitle: T"));
+        let document = parse(&source).unwrap();
+        assert_eq!(document.preferences.is_none(), value == "null");
+        assert_eq!(parse(&render(&document).unwrap()).unwrap(), document);
+    }
+    for value in [
+        "false",
+        "[]",
+        "{unknown: true}",
+        "{showComments: null}",
+        "{showComments: 'false'}",
+        "{showComments: 1}",
+        "{showComments: false, showComments: true}",
+    ] {
+        assert!(parse(&base.replace("title: T", &format!("preferences: {value}\ntitle: T"))).is_err(), "{value}");
+    }
+    let source = base.replace("title: T", "preferences:\n  showMentions: false # retain pref comment\ntitle: T");
+    let flow = format!("---\n{}\n---\n{}", header(&source).unwrap(), patch::split_managed(&source).unwrap().1);
+    let edit = MetadataEdit {
+        preferences: Some(Preferences {
+            show_comments: Some(false),
+            show_in_discover: Some(true),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    for source in [source, flow] {
+        let source = format!("\u{feff}{}", source.replace('\n', "\r\n"));
+        let output = edit_metadata(&source, &edit).unwrap();
+        assert_eq!(
+            header(&output).unwrap()["preferences"],
+            json!({"showComments":false,"showMentions":false,"showInDiscover":true})
+        );
+        let mut before = header(&source).unwrap();
+        let mut after = header(&output).unwrap();
+        before.as_object_mut().unwrap().remove("preferences");
+        after.as_object_mut().unwrap().remove("preferences");
+        assert_eq!(before, after);
+        assert_eq!(patch::split_managed(&source).unwrap().1, patch::split_managed(&output).unwrap().1);
+        assert_eq!(edit_metadata(&output, &edit).unwrap(), output);
+        let clear = MetadataEdit {
+            preferences: Some(Preferences::default()),
+            ..Default::default()
+        };
+        let output = edit_metadata(&output, &clear).unwrap();
+        assert_eq!(header(&output).unwrap()["preferences"], json!({}));
+        assert_eq!(edit_metadata(&output, &clear).unwrap(), output);
+        assert!(!output.replace("\r\n", "").contains('\n'));
+    }
+}
+
+#[test]
 fn naming_authority_flow_comments_presence_and_exact_body_proof() {
     for source in [
         input("\n{/* exact 😀 */}\n<Key id='b' />\nBody.\n").replacen("title: T", "path: '/old' # path comment\ntitle: T", 1),

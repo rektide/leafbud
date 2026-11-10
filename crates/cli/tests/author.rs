@@ -86,6 +86,58 @@ async fn edit_flags_dates_tags_clear_noops_and_keys_are_offline() {
 }
 
 #[tokio::test]
+async fn preference_flags_merge_clear_noops_and_validate_offline() {
+    let root = tempfile::tempdir().unwrap();
+    run(root.path(), &["create", "post.mdx", "--title", "Preferences"], 0).await;
+    let path = root.path().join("post.mdx");
+    run(
+        root.path(),
+        &["edit", "post.mdx", "--preference", "showComments=false", "--preference", "showMentions=false"],
+        0,
+    )
+    .await;
+    run(
+        root.path(),
+        &["edit", "post.mdx", "--preference", "showComments=true", "--preference", "showInDiscover=false"],
+        0,
+    )
+    .await;
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert_eq!(
+        leafbud_mdx::header(&text).unwrap()["preferences"],
+        serde_json::json!({"showComments":true,"showMentions":false,"showInDiscover":false})
+    );
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    run(root.path(), &["edit", "post.mdx", "--preference", "showComments=true"], 0).await;
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+    for value in [
+        "unknown=true",
+        "showComments=True",
+        "showComments=0",
+        "showComments=",
+        "showComments",
+        "showComments=true=false",
+    ] {
+        run(root.path(), &["edit", "post.mdx", "--preference", value], 2).await;
+    }
+    run(
+        root.path(),
+        &["edit", "post.mdx", "--clear-preferences", "--preference", "showComments=false"],
+        2,
+    )
+    .await;
+    run(root.path(), &["publish", "post.mdx", "--preference", "showComments=false"], 2).await;
+    run(root.path(), &["edit", "post.mdx", "--clear-preferences"], 0).await;
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    assert_eq!(leafbud_mdx::header(&text).unwrap()["preferences"], serde_json::json!({}));
+    run(root.path(), &["edit", "post.mdx", "--clear-preferences"], 0).await;
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+}
+
+#[tokio::test]
 async fn offline_naming_directions_preview_selectors_status_and_noop() {
     use serde_json::Value;
     let root = tempfile::tempdir().unwrap();

@@ -400,6 +400,7 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
         ),
         ("tags", json!(existing.tags), json!(document.tags)),
         ("theme", json!(existing.theme), json!(document.theme)),
+        ("preferences", json!(existing.preferences), json!(document.preferences)),
         (
             "contributors",
             json!(existing.extra.get("contributors")),
