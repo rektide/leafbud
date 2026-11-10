@@ -1755,9 +1755,12 @@ fn page_links_may_reference_forward_definitions() {
 /// dead server objects, for draft and published sources alike.
 #[test]
 fn unbind_deleted_preserves_authored_material_and_drops_dead_native_state() {
-    use leafbud_document::{NamePath, Names, Released, RELEASE_PROFILE, WriterState};
+    use leafbud_document::{NamePath, Names, RELEASE_PROFILE, Released, WriterState};
     let mut draft = document();
-    draft.state.names = Some(Names { file: "drafts/essay.mdx".into(), path: NamePath::Missing });
+    draft.state.names = Some(Names {
+        file: "drafts/essay.mdx".into(),
+        path: NamePath::Missing,
+    });
     draft.state.writer = Some(WriterState::fresh());
     let mut published = draft.clone();
     published.state.state = "published".into();
@@ -1807,7 +1810,13 @@ fn unbind_deleted_preserves_authored_material_and_drops_dead_native_state() {
         effect: Effect::Push {
             range,
             stage: PushStage::Prepared,
-            protection: Protection { hash, facts: vec![], entities: vec![], metadata_fields: vec![], verification_roots: vec![] },
+            protection: Protection {
+                hash,
+                facts: vec![],
+                entities: vec![],
+                metadata_fields: vec![],
+                verification_roots: vec![],
+            },
             targets: Default::default(),
             created_entities: vec![],
         },

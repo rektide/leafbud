@@ -117,7 +117,10 @@ impl LeafletClient {
     /// precede the record effects in inspected native branches; anything else
     /// is uncertain and must be resolved by observing the record.
     pub async fn invoke_delete_post(&self, preparation: &DeletePreparation, document_uri: &str) -> Result<PostOutcome, Error> {
-        let reference = preparation.post_reference.as_deref().ok_or(Error::Native("deletePost action unavailable on this origin; published deletion unsupported"))?;
+        let reference = preparation
+            .post_reference
+            .as_deref()
+            .ok_or(Error::Native("deletePost action unavailable on this origin; published deletion unsupported"))?;
         if self.base_url() != preparation.base || self.session != preparation.session || !self.has_cookie {
             return Err(Error::Native("delete preparation belongs to another origin/session"));
         }

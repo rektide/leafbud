@@ -34,10 +34,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use leafbud_workflow::{
-    LeafletState, RemoteOptions,
-    native::DeleteOptions,
-};
+use leafbud_workflow::{LeafletState, RemoteOptions, native::DeleteOptions};
 
 mod author;
 mod config;
@@ -531,16 +528,7 @@ async fn main() -> ExitCode {
         };
     }
     if let Command::Delete { file, yes, purge, json } = &cli.command {
-        return match delete::run(
-            options,
-            cli.root.as_deref(),
-            &flags,
-            file,
-            DeleteOptions { yes: *yes, purge: *purge },
-            *json,
-        )
-        .await
-        {
+        return match delete::run(options, cli.root.as_deref(), &flags, file, DeleteOptions { yes: *yes, purge: *purge }, *json).await {
             Ok(code) => code,
             Err(error) => {
                 eprintln!("leafbud: {error}");

@@ -39,7 +39,13 @@ async fn origin(deleted: Arc<AtomicBool>) -> (testserver::TestServer, tempfile::
             vec![("Content-Type".into(), "text/html".into())],
             format!(
                 "<script src=\"/_next/static/delete.js\"></script><script>self.__next_f.push({})</script>",
-                json!([1, format!("0:{}", json!({"atp_did":DID,"bsky_profiles":null,"permission_token_on_homepage":[],"contributor_leaflets":[]}))])
+                json!([
+                    1,
+                    format!(
+                        "0:{}",
+                        json!({"atp_did":DID,"bsky_profiles":null,"permission_token_on_homepage":[],"contributor_leaflets":[]})
+                    )
+                ])
             ),
         ),
         ("GET", "/_next/static/delete.js") => (200, vec![("Content-Type".into(), "text/javascript".into())], JS.into()),

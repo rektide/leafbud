@@ -55,7 +55,10 @@ async fn authorized_disposable_draft_delete_smoke() -> Result<()> {
             &context,
             &path,
             Selection { operands: vec![path.clone()] },
-            crate::native::SaveOptions { yes: true, ..Default::default() },
+            crate::native::SaveOptions {
+                yes: true,
+                ..Default::default()
+            },
         )
         .await?;
     ensure!(
@@ -82,9 +85,15 @@ async fn authorized_disposable_draft_delete_smoke() -> Result<()> {
     );
     ensure!(report.observed.as_ref().is_some_and(|observed| observed.token_gone), "token not observed gone");
     // Independent re-observation: the token must not resolve.
-    ensure!(matches!(remote.client.get(binding.token).await, Err(leafbud_web::Error::NotFound)), "token still resolves after deletion");
+    ensure!(
+        matches!(remote.client.get(binding.token).await, Err(leafbud_web::Error::NotFound)),
+        "token still resolves after deletion"
+    );
     let after = leafbud_mdx::parse(&std::fs::read_to_string(&path)?)?;
-    ensure!(after.state.binding.is_none() && after.state.state == "draft" && after.state.id == id, "local source not cleanly unbound");
+    ensure!(
+        after.state.binding.is_none() && after.state.state == "draft" && after.state.id == id,
+        "local source not cleanly unbound"
+    );
     ensure!(std::fs::read_to_string(&path)?.contains("Disposable paragraph"), "authored content lost");
     eprintln!(
         "delete smoke complete: minted {}, verified, deleted, token 404, local unbound; private receipt written",

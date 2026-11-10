@@ -7,9 +7,9 @@
 //! [`unbind_deleted`] is the deliberate post-native-deletion conversion.
 use super::{parse, yaml};
 use anyhow::{Context, Result, bail, ensure};
-use std::collections::BTreeMap;
 use leafbud_document::*;
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 
 /// Split a managed source into its frontmatter lines (fences excluded) and
 /// the exact body text following the closing fence. The MDX frontmatter

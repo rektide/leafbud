@@ -22,7 +22,8 @@ fn observed() -> crate::LeafletData {
             "permission_token_rights":[{"token":TOKEN,"entity_set":"44444444-4444-4444-8444-444444444444","read":true,"write":true,"created_at":"2026-01-01"}],
             "leaflets_in_publications":[],
             "leaflets_to_documents":[]
-        }}}).to_string(),
+        }}})
+        .to_string(),
     )
     .unwrap()
 }
@@ -31,11 +32,7 @@ fn observed() -> crate::LeafletData {
 fn void_and_post_result_contracts_are_literal_not_scrapes() {
     decode_void(VOID).unwrap();
     decode_void("0:{\"a\":null}\n").unwrap();
-    for body in [
-        "0:{\"a\":\"$@1\"}\n",
-        "0:{\"a\":\"secret token\"}\n",
-        "0:{\"a\":{\"success\":true}}\n",
-    ] {
+    for body in ["0:{\"a\":\"$@1\"}\n", "0:{\"a\":\"secret token\"}\n", "0:{\"a\":{\"success\":true}}\n"] {
         assert!(decode_void(body).is_err(), "{body}");
     }
     assert!(matches!(decode_post("0:{\"a\":{\"success\":true}}\n").unwrap(), PostOutcome::Deleted));
@@ -124,7 +121,11 @@ async fn delete_post_sends_exactly_one_document_uri() {
         ("POST", "/home") => {
             assert_eq!(r.header("next-action"), Some("700000000000000000000000000000000000000004"));
             assert_eq!(r.body_json(), json!([DOCUMENT]));
-            (200, vec![("Content-Type".into(), "text/x-component".into())], "0:{\"a\":{\"success\":true}}\n".into())
+            (
+                200,
+                vec![("Content-Type".into(), "text/x-component".into())],
+                "0:{\"a\":{\"success\":true}}\n".into(),
+            )
         }
         _ => panic!("unexpected endpoint"),
     }))
@@ -175,12 +176,24 @@ async fn missing_ambiguous_or_unauthenticated_discovery_never_dispatches() {
             "/home" => (
                 200,
                 match variant {
-                    0 => format!("<script>self.__next_f.push({})</script>", json!([1, format!("0:{}", json!({"atp_did":DID,"bsky_profiles":null,"permission_token_on_homepage":[],"contributor_leaflets":[]}))])),
+                    0 => format!(
+                        "<script>self.__next_f.push({})</script>",
+                        json!([
+                            1,
+                            format!(
+                                "0:{}",
+                                json!({"atp_did":DID,"bsky_profiles":null,"permission_token_on_homepage":[],"contributor_leaflets":[]})
+                            )
+                        ])
+                    ),
                     _ => format!("<script src=\"/_next/static/delete.js\"></script>{}", home()),
                 },
             ),
             "/_next/static/delete.js" if variant == 1 => (200, format!("{JS}\n{}", JS.replace("000003\"", "000005\""))),
-            "/_next/static/delete.js" if variant == 2 => (200, JS.replace("\"deleteLeaflet\"", "\"futureName\"").replace("\"deletePost\"", "\"futurePost\"")),
+            "/_next/static/delete.js" if variant == 2 => (
+                200,
+                JS.replace("\"deleteLeaflet\"", "\"futureName\"").replace("\"deletePost\"", "\"futurePost\""),
+            ),
             "/_next/static/delete.js" => (200, JS.into()),
             _ => (200, "<script src=\"/_next/static/delete.js\"></script>".into()),
         }))
