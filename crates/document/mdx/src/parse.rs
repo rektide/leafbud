@@ -547,6 +547,9 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     }
     ensure!(!document.title.trim().is_empty(), "empty document title");
     document.state.validate_attempt().map_err(anyhow::Error::msg)?;
+    if let Some(names) = &document.state.names {
+        names.validate().map_err(anyhow::Error::msg).context("invalid naming witness coordinate")?;
+    }
 
     // Implicit main page: top-level Key markers and ordinary blocks, in order.
     // Named Page definitions are lifted out wherever they appear; their

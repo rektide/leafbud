@@ -1,8 +1,8 @@
 //! Deliberate local normalization passes: one-time source-key assignment and
-//! Markdown body normalization, applied under the original-byte guard. By
+//! Markdown normalization and independent names, under original-byte guards. By
 //! default every applicable pass runs; selectors narrow to their union.
-//! Formatting and preparation never settle agreement: receipts are preserved
-//! byte-for-byte and never advanced here.
+//! Formatting/preparation/naming never advance editor agreement or rewrite
+//! historical attempt provenance. Only naming can settle its independent pair.
 use crate::{config, files, names};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -337,9 +337,9 @@ fn try_tidy(
         item.keys_assigned = 0;
         item.blocks_changed = 0;
         if renamed {
-            item.naming_action = "renamed-unsettled";
+            item.naming_action = "renamed-settlement-unconfirmed";
             item.error = Some(format!(
-                "renamed to {}; source/witness settlement failed: {error:#}; rerun tidy at the new path; original content retained unless externally edited",
+                "renamed to {}; source/witness settlement not confirmed: {error:#}; inspect and rerun tidy at the new path; it may contain original, completely patched or externally edited source; no rollback was attempted",
                 destination.display()
             ));
         } else {

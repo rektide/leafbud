@@ -238,6 +238,46 @@ pub struct Names {
     pub path: NamePath,
 }
 
+impl Names {
+    /// Literal, reversible logical path → workspace-relative MDX coordinate.
+    /// The leading slash is logical, never an OS absolute pathname.
+    pub fn file_for_path(path: &str) -> Result<String, &'static str> {
+        let relative = path
+            .strip_prefix('/')
+            .ok_or("logical path must begin with one slash (for example /notes/Essay)")?;
+        name_segments(relative)?;
+        Ok(format!("{relative}.mdx"))
+    }
+
+    pub fn path_for_file(file: &str) -> Result<String, &'static str> {
+        name_segments(file)?;
+        let stem = file.strip_suffix(".mdx").ok_or("naming requires the lowercase .mdx extension")?;
+        name_segments(stem)?;
+        Ok(format!("/{stem}"))
+    }
+
+    /// An accepted mismatch may contain unmappable author intent, but its
+    /// file witness must still be a supported coordinate, not a future schema.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        Self::path_for_file(&self.file).map(|_| ())
+    }
+}
+
+fn name_segments(value: &str) -> Result<(), &'static str> {
+    if value.is_empty() {
+        return Err("empty name coordinate");
+    }
+    for part in value.split('/') {
+        if part.is_empty() || part == "." || part == ".." {
+            return Err("empty/traversal name segment is unsupported");
+        }
+        if part.chars().any(|c| c.is_control() || "\\%:?#".contains(c)) {
+            return Err("encoded, control, URL or drive punctuation in name is unsupported; use literal Unicode and slash-separated segments");
+        }
+    }
+    Ok(())
+}
+
 /// Preserve actual author-field presence, including missing versus null.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "camelCase", deny_unknown_fields)]

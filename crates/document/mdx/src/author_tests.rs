@@ -38,6 +38,8 @@ fn naming_future_owned_state_refuses_instead_of_dropping_unknown_evidence() {
         "futureOwned: true",
         "names: {file: x.mdx, path: {kind: missing}, futureCoordinate: unsafe}",
         "names: {file: x.mdx, path: {kind: future, value: x}}",
+        "names: {file: /absolute.mdx, path: {kind: missing}}",
+        "names: {file: ../traversal.mdx, path: {kind: missing}}",
     ] {
         let source = input("\nBody.\n").replacen("\"@leafbud\":\n", &format!("\"@leafbud\":\n  {owned}\n"), 1);
         let pair = Names {

@@ -680,3 +680,34 @@ async fn names_readonly_status_and_list_do_not_accept_or_clear_dirty_editor() {
     let report = crate::status::inspect(&ctx, crate::status::Request::default(), None).await.unwrap();
     assert_eq!(report.items[0].local, crate::editor_state::Change::Changed);
 }
+
+#[test]
+fn names_after_move_external_source_save_wins_over_witness_patch() {
+    let root = tempfile::tempdir().unwrap();
+    let ctx = context(root.path());
+    let file = named(root.path(), "a.mdx", Some("/target"));
+    let target = root.path().join("target.mdx");
+    let before = read(&file);
+    let edited = before.replace("plain", "New author save after rename");
+    let report = run_with(
+        &ctx,
+        Request {
+            files: vec![file.clone()],
+            from: Some(names::Direction::Path),
+            ..Default::default()
+        },
+        &mut |stage, path| {
+            if stage == Stage::Renamed {
+                std::fs::write(path, &edited)?;
+            }
+            Ok(())
+        },
+    )
+    .unwrap();
+    assert_eq!(report.items[0].outcome, "partial");
+    assert_eq!(report.items[0].naming_action, "renamed-settlement-unconfirmed");
+    assert_eq!(report.items[0].destination, Some(target.clone()));
+    assert_eq!(read(&target), edited);
+    assert!(!file.exists());
+    assert!(leafbud_mdx::parse(&edited).unwrap().state.names.is_none());
+}

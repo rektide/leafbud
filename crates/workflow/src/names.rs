@@ -26,31 +26,12 @@ pub struct Evidence {
 
 const NATIVE: &str = "local intent only; native public path/identity is unchanged and custom native path mutation is not implemented";
 
-fn components(value: &str) -> Result<()> {
-    ensure!(!value.is_empty(), "empty name coordinate");
-    for part in value.split('/') {
-        ensure!(!part.is_empty() && part != "." && part != "..", "empty/traversal name segment is unsupported");
-        ensure!(
-            !part.chars().any(|c| c.is_control() || "\\%:?#".contains(c)),
-            "encoded, control, URL or drive punctuation in name is unsupported; use literal Unicode and slash-separated segments"
-        );
-    }
-    Ok(())
-}
-
 pub(crate) fn mapped_file(path: &str) -> Result<String> {
-    let relative = path
-        .strip_prefix('/')
-        .context("logical path must begin with one slash (for example /notes/Essay)")?;
-    components(relative)?;
-    Ok(format!("{relative}.mdx"))
+    Names::file_for_path(path).map_err(anyhow::Error::msg)
 }
 
 fn file_intent(file: &str) -> Result<String> {
-    components(file)?;
-    let stem = file.strip_suffix(".mdx").context("naming requires the lowercase .mdx extension")?;
-    components(stem)?;
-    Ok(format!("/{stem}"))
+    Names::path_for_file(file).map_err(anyhow::Error::msg)
 }
 
 pub(crate) fn coordinate(root: &Path, path: &Path) -> Result<String> {

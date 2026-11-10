@@ -16,9 +16,8 @@
 //!   `keys assign`), and `keys rename` is the explicit binding-preserving
 //!   rename;
 //! - `tidy FILE` runs all applicable implemented passes by default (key
-//!   preparation plus Markdown body normalization); `--keys` and
-//!   `--markdown` select passes alone; `--from`/`--accept` (naming) are
-//!   rejected until implemented;
+//!   preparation, Markdown normalization and unambiguous naming);
+//!   `--keys`, `--markdown` and `--from`/`--accept` select their union;
 //! - `list` inventories local managed files; `remote list`/`pubs list`
 //!   discover remote objects.
 //!
@@ -308,7 +307,7 @@ enum Command {
         now: bool,
     },
     /// Run all applicable implemented local tidying/normalization passes
-    /// (implemented today: Markdown body normalization; selectors narrow)
+    /// (keys, Markdown and unambiguous names; selectors narrow)
     Tidy {
         /// Managed MDX files to tidy
         #[arg(required_unless_present = "all", conflicts_with = "all")]

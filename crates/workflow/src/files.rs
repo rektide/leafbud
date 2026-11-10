@@ -56,3 +56,24 @@ pub(crate) fn write(path: &Path, expected: Option<&[u8]>, bytes: &[u8]) -> Resul
     std::fs::File::open(parent)?.sync_all()?;
     Ok(())
 }
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    #[test]
+    fn no_replace_rename_primitive_never_overwrites_even_identical_bytes_or_links() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let target = root.path().join("target");
+        std::fs::write(&source, "same bytes").unwrap();
+        std::fs::write(&target, "same bytes").unwrap();
+        let id = super::identity(&target).unwrap();
+        assert!(super::rename_noclobber(&source, &target).is_err());
+        assert_eq!(super::identity(&target).unwrap(), id);
+        assert!(source.exists());
+        std::fs::remove_file(&target).unwrap();
+        std::os::unix::fs::symlink(root.path().join("absent"), &target).unwrap();
+        assert!(super::rename_noclobber(&source, &target).is_err());
+        assert!(std::fs::symlink_metadata(&target).unwrap().is_symlink());
+        assert_eq!(std::fs::read_to_string(&source).unwrap(), "same bytes");
+    }
+}
