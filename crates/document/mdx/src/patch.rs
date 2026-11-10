@@ -1,11 +1,13 @@
-//! Source-preserving envelope and author-field patching. Two distinct
+//! Source-preserving envelope and author-field patching. Three distinct
 //! operations: [`patch_tracking`] settles only the reserved `@leafbud`
 //! envelope (identity/binding/nodes/receipts) so successful pushes never
 //! reformat the author's body; [`adopt_remote`] additionally adopts changed
-//! remote content and owned author fields for guarded refresh.
+//! remote content and owned author fields for guarded refresh;
 //! [`prepare_binding_defaults`] is separate pre-content-write preparation.
+//! [`unbind_deleted`] is the deliberate post-native-deletion conversion.
 use super::{parse, yaml};
 use anyhow::{Context, Result, bail, ensure};
+use std::collections::BTreeMap;
 use leafbud_document::*;
 use serde_json::{Value, json};
 
@@ -311,6 +313,45 @@ pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<Str
     let parsed = parse(&result).context("binding-default preparation validation")?;
     ensure!(parsed == expected, "binding-default preparation changed unrelated content/tracking");
     ensure!(split_managed(&result)?.1 == body, "binding-default preparation changed the body");
+    Ok(result)
+}
+
+/// Deliberate post-delete local conversion. The caller MUST have verified by
+/// observation that the bound native editor (and, for a published document,
+/// its public record) is actually gone; this is the unbinding half of that
+/// explicit decision, not a receipt settlement.
+///
+/// Drops exactly the native tracking envelope — binding, node associations,
+/// sync/writer receipts, pending evidence, last resolution and release
+/// evidence all reference server objects that no longer exist. Document
+/// identity, main-page identity, naming witness, authored content, source
+/// keys, comments and the exact body bytes are preserved, and the lifecycle
+/// returns to an unbound draft. No authored byte changes; the result must
+/// reparse through the production parser.
+pub fn unbind_deleted(source: &str) -> Result<String> {
+    let existing = parse(source)?;
+    ensure!(existing.state.binding.is_some(), "deliberate unbinding requires an established binding");
+    ensure!(existing.state.pending.is_none(), "unresolved native attempts must be settled before unbinding");
+    let mut next = existing.state.clone();
+    next.state = "draft".into();
+    next.binding = None;
+    next.nodes = BTreeMap::new();
+    next.sync = None;
+    next.writer = None;
+    next.pending = None;
+    next.last_resolution = None;
+    next.released = None;
+    next.validate_lifecycle().map_err(anyhow::Error::msg)?;
+    let result = replace_envelope(source, &next)?;
+    let parsed = parse(&result).context("deleted-source unbind validation")?;
+    ensure!(parsed.state == next, "deleted-source unbind diverges from the intended state");
+    ensure!(
+        parsed.authored_value() == existing.authored_value(),
+        "deleted-source unbind changed authored content"
+    );
+    let (_, existing_body) = split_managed(source)?;
+    let (_, result_body) = split_managed(&result)?;
+    ensure!(existing_body == result_body, "deleted-source unbind must not rewrite the body");
     Ok(result)
 }
 

@@ -1749,3 +1749,69 @@ fn page_links_may_reference_forward_definitions() {
     let dangling = source.replace("p-later\" />\n\n<Page name=\"p-later\"", "p-gone\" />\n\n<Page name=\"p-later\"");
     assert!(parse(&dangling).unwrap_err().to_string().contains("unresolved page link"));
 }
+
+/// The deliberate post-delete conversion preserves every authored byte and
+/// identity while dropping exactly the native tracking that references now
+/// dead server objects, for draft and published sources alike.
+#[test]
+fn unbind_deleted_preserves_authored_material_and_drops_dead_native_state() {
+    use leafbud_document::{NamePath, Names, Released, RELEASE_PROFILE, WriterState};
+    let mut draft = document();
+    draft.state.names = Some(Names { file: "drafts/essay.mdx".into(), path: NamePath::Missing });
+    draft.state.writer = Some(WriterState::fresh());
+    let mut published = draft.clone();
+    published.state.state = "published".into();
+    published.state.binding.as_mut().unwrap().uri = Some("at://did:plc:synthetic/site.standard.document/post".into());
+    published.state.released = Some(Released {
+        profile: RELEASE_PROFILE.into(),
+        input_hash: format!("sha256:{}", "a".repeat(64)),
+        cid: "bafyreigbdxbqolvid53jujuoqiqs3myrx372u7p4fccmoyf6w2nhautw7a".into(),
+        path: "/post".into(),
+        published_at: "2026-11-01T10:00:00Z".into(),
+        confirmed_at: "2026-11-01T10:00:00Z".into(),
+    });
+    for (label, document) in [("draft", draft), ("published", published)] {
+        let source = match render(&document) {
+            Ok(source) => source,
+            Err(error) => panic!("{label}: {error}"),
+        };
+        let source = source.replace("\nhello\n", "\n{/* drafting note */}\nhello\n");
+        let before = parse(&source).unwrap();
+        let result = unbind_deleted(&source).unwrap();
+        let after = parse(&result).unwrap();
+        assert_eq!(after.state.state, "draft");
+        assert!(after.state.binding.is_none() && after.state.sync.is_none() && after.state.writer.is_none());
+        assert!(after.state.nodes.is_empty() && after.state.released.is_none() && after.state.last_resolution.is_none());
+        assert_eq!(after.state.id, before.state.id);
+        assert_eq!(after.state.main_page, before.state.main_page);
+        assert_eq!(after.state.names, before.state.names);
+        assert_eq!(after.authored_value(), before.authored_value());
+        assert!(result.contains("{/* drafting note */}"), "source trivia survives");
+        assert_eq!(result.split("\n---\n").last(), source.split("\n---\n").last(), "body bytes are exact");
+        // The conversion is idempotent-refusing: a second run has no binding.
+        assert!(unbind_deleted(&result).is_err());
+    }
+    // An unbound draft and unresolved attempts are not deletable conversions.
+    assert!(unbind_deleted(&render(&unbound()).unwrap()).is_err());
+    use leafbud_document::{Attempt, Effect, Protection, PushStage};
+    let source = render(&document()).unwrap();
+    let mut state = parse(&source).unwrap().state;
+    let mut writer = leafbud_document::WriterState::fresh();
+    let range = writer.reserve(2).unwrap();
+    state.writer = Some(writer);
+    let hash = format!("sha256:{}", "a".repeat(64));
+    state.pending = Some(Attempt {
+        id: Uuid::new_v4(),
+        input_hash: hash.clone(),
+        desired_hash: hash.clone(),
+        effect: Effect::Push {
+            range,
+            stage: PushStage::Prepared,
+            protection: Protection { hash, facts: vec![], entities: vec![], metadata_fields: vec![], verification_roots: vec![] },
+            targets: Default::default(),
+            created_entities: vec![],
+        },
+    });
+    let pending = patch_tracking(&source, &state).unwrap();
+    assert!(unbind_deleted(&pending).is_err());
+}
