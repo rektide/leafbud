@@ -118,10 +118,7 @@ async fn authorized_disposable_draft_delete_smoke() -> Result<()> {
 }
 
 fn publication_receipt(root: &std::path::Path, value: serde_json::Value) -> Result<()> {
-    std::fs::write(
-        root.join("publication-draft-smoke.result.json"),
-        serde_json::to_vec_pretty(&value)?,
-    )?;
+    std::fs::write(root.join("publication-draft-smoke.result.json"), serde_json::to_vec_pretty(&value)?)?;
     Ok(())
 }
 
@@ -371,10 +368,7 @@ async fn authorized_selected_publication_draft_delete_smoke() -> Result<()> {
         !prior.iter().any(|known| known == &token.to_string()),
         "selected token is pre-existing; refusing"
     );
-    let publication_uri = candidate["publication"]
-        .as_str()
-        .context("candidate publication missing")?
-        .to_owned();
+    let publication_uri = candidate["publication"].as_str().context("candidate publication missing")?.to_owned();
     let mut context = crate::config::load(None, &Default::default(), None)?;
     ensure!(
         context.effective.publication.as_deref() == Some(publication_uri.as_str()),
@@ -389,8 +383,11 @@ async fn authorized_selected_publication_draft_delete_smoke() -> Result<()> {
         None => anyhow::bail!("no pending mint attempt; selection is not applicable"),
     };
     match &source_document.state.pending.as_ref().context("attempt")?.effect {
-        Effect::Mint { publication, stage: MintStage::Dispatched, .. }
-            if publication.publication() == Some(publication_uri.as_str()) => {}
+        Effect::Mint {
+            publication,
+            stage: MintStage::Dispatched,
+            ..
+        } if publication.publication() == Some(publication_uri.as_str()) => {}
         other => anyhow::bail!("pending attempt is not the dispatched publication mint: {other:?}"),
     }
     // One-shot selection marker; a rerun fails the Dispatched-stage check above.
@@ -486,7 +483,10 @@ async fn authorized_selected_publication_draft_delete_smoke() -> Result<()> {
         serde_json::to_string(&report).unwrap_or_default()
     );
     ensure!(
-        report.observed.as_ref().is_some_and(|observed| observed.token_gone && observed.record_gone.is_none()),
+        report
+            .observed
+            .as_ref()
+            .is_some_and(|observed| observed.token_gone && observed.record_gone.is_none()),
         "token not observed gone (or a record was unexpectedly involved)"
     );
     ensure!(
