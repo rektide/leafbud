@@ -16,7 +16,7 @@ mod defaults;
 mod descriptions;
 
 #[path = "save_tests.rs"]
-mod saves;
+pub(crate) mod saves;
 
 #[path = "delete_tests.rs"]
 mod deletes;
@@ -211,6 +211,54 @@ async fn lost_mint_response_and_token_then_failed_verification_never_remint() {
         }
         assert!(reader.stage_binding(&context, &path, Selection::default()).await.is_err());
         assert_eq!(server.request_count("/new"), 1);
+    }
+}
+
+#[tokio::test]
+async fn save_retains_undecoded_mint_in_private_bounded_receipt_without_source_or_report_payload() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("draft.mdx");
+    draft(&path, "");
+    let body = "0:{\"a\":\"$@1\"}\n1:\"01999000-0000-7aaa-8000-000000000001\"\n:unknown-private-flight-row\n";
+    let server = TestServer::spawn_headers(Arc::new(move |r| match r.path.as_str() {
+        "/home" => (200, vec![], home()),
+        "/lish/did:plc:synthetic/garden/dashboard" if r.method == "GET" => (200, vec![], "<script src=\"/_next/static/mint.js\"></script>".into()),
+        "/_next/static/mint.js" => (200, vec![], include_str!("../../../leaflet/web/tests/fixtures/mint-reference.js").into()),
+        "/lish/did:plc:synthetic/garden/dashboard" => (200, vec![("Content-Type".into(), "text/x-component".into())], body.into()),
+        _ => panic!("uncertain mint must not be read as an invented locator or retried"),
+    }))
+    .await;
+    let mut context = old::context(temp.path());
+    context.effective.publication = Some(URI.into());
+    let report = client(&server)
+        .save_native(
+            &context,
+            &path,
+            Selection::default(),
+            SaveOptions {
+                yes: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.outcome, "pending");
+    let source = std::fs::read_to_string(&path).unwrap();
+    let doc = leafbud_mdx::parse(&source).unwrap();
+    let attempt = doc.state.pending.unwrap();
+    let receipt = context
+        .global_path
+        .parent()
+        .unwrap()
+        .join("action-responses")
+        .join(format!("{}.flight", attempt.id));
+    assert_eq!(std::fs::read_to_string(&receipt).unwrap(), body);
+    assert!(!source.contains("unknown-private-flight-row") && !serde_json::to_string(&report).unwrap().contains("unknown-private-flight-row"));
+    assert!(report.message.unwrap().contains("private bounded action response retained"));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        assert_eq!(std::fs::metadata(receipt).unwrap().permissions().mode() & 0o777, 0o600);
     }
 }
 

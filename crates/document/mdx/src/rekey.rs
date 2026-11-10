@@ -13,7 +13,7 @@ pub fn rename_key(input: &str, old: &str, new: &str) -> Result<String> {
     let parsed = super::parse_with_spans(input).context("unsupported managed source; nothing was changed")?;
     let mut expected = parsed.document.clone();
     ensure!(
-        expected.state.pending.is_none(),
+        expected.state.pending.is_none() && expected.state.publication_attempt.is_none(),
         "pending native attempt; run recover before renaming source keys"
     );
     let explicit_block = expected

@@ -19,7 +19,7 @@ pub struct MetadataEdit {
 pub fn edit_metadata(input: &str, edit: &MetadataEdit) -> Result<String> {
     let existing = super::parse(input).context("unsupported managed source; nothing was changed")?;
     ensure!(
-        existing.state.pending.is_none(),
+        existing.state.pending.is_none() && existing.state.publication_attempt.is_none(),
         "pending native attempt; run recover before managed metadata edits"
     );
     let header = super::header(input)?;

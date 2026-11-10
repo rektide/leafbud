@@ -15,6 +15,7 @@ fn node(entity: &str, occurrence: Occurrence) -> Node {
 
 fn document() -> Document {
     let state = State {
+        publication_attempt: None,
         released: None,
         names: None,
         last_resolution: None,
@@ -82,6 +83,72 @@ fn document() -> Document {
         }],
         state,
     }
+}
+
+#[test]
+fn release_settlement_is_separate_loss_checked_and_normalizes_only_declared_fields() {
+    use leafbud_document::{PublicationAttempt, PublicationDate, PublicationStage, RELEASE_PROFILE, Released};
+    let fingerprint = format!("sha256:{}", "a".repeat(64));
+    let mut old = document();
+    old.extra.insert("path".into(), json!("/author/path"));
+    old.extra.insert("publishedAt".into(), json!("2026-11-01T10:00:00+01:00"));
+    old.extra.insert("custom".into(), json!({"keep":"🦋"}));
+    old.state.names = Some(leafbud_document::Names {
+        file: "kept.mdx".into(),
+        path: leafbud_document::NamePath::Value("/author/path".into()),
+    });
+    old.state.publication_attempt = Some(PublicationAttempt {
+        id: Uuid::new_v4(),
+        input_hash: fingerprint.clone(),
+        editor_hash: fingerprint.clone(),
+        stage: PublicationStage::Dispatched {
+            owner: "did:plc:abcdefghijklmnopqrstuvwx".into(),
+            arguments_hash: fingerprint.clone(),
+            core_hash: fingerprint.clone(),
+            contributor: None,
+            old_uri: None,
+            old_cid: None,
+            date: PublicationDate::Exact("2026-11-01T09:00:00Z".into()),
+        },
+    });
+    let source = render(&old).unwrap().replacen("\"title\": \"T\"", "title: 'T' # retained author trivia", 1);
+    let source = source.replace("<Key", "{/* kept comment */}\n\n<Key");
+    let old = parse(&source).unwrap();
+    let mut next = old.clone();
+    next.state.state = "published".into();
+    next.state.binding.as_mut().unwrap().uri = Some("at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post".into());
+    next.extra.insert("path".into(), json!("/post"));
+    next.state.publication_attempt = None;
+    next.state.released = Some(Released {
+        profile: RELEASE_PROFILE.into(),
+        input_hash: fingerprint,
+        cid: "bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku".into(),
+        path: "/post".into(),
+        published_at: "2026-11-01T09:00:00Z".into(),
+        confirmed_at: "2026-11-10T12:00:00Z".into(),
+    });
+    assert!(patch_tracking(&source, &next.state).is_err());
+    assert!(adopt_remote(&source, &next).is_err());
+    assert!(adopt_published(&source, &next).is_err());
+    let settled = settle_release(&source, &next).unwrap();
+    assert_eq!(parse(&settled).unwrap(), next);
+    assert_eq!(patch::split_managed(&settled).unwrap().1, patch::split_managed(&source).unwrap().1);
+    assert!(settled.contains("# retained author trivia") && settled.contains("+01:00"));
+    for case in 0..7 {
+        let mut invalid = next.clone();
+        match case {
+            0 => invalid.title = "different".into(),
+            1 => invalid.state.nodes.clear(),
+            2 => invalid.state.names = None,
+            3 => invalid.state.binding.as_mut().unwrap().token = Uuid::new_v4(),
+            4 => invalid.extra.insert("publishedAt".into(), json!("2026-11-02T09:00:00Z")).map(|_| ()).unwrap(),
+            5 => invalid.state.released.as_mut().unwrap().cid = "invalid".into(),
+            _ => invalid.state.binding.as_mut().unwrap().uri = Some("at://did:plc:intruder/site.standard.document/post".into()),
+        }
+        assert!(settle_release(&source, &invalid).is_err(), "case {case}");
+    }
+    let future = source.replace("\"coreHash\":", "\"futureCore\":");
+    assert!(settle_release(&future, &next).is_err());
 }
 
 #[test]

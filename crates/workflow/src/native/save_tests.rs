@@ -3,7 +3,7 @@ use leafbud_document::{Block, BlockKind, Inline, ListStyle, Mark, Occurrence, Pa
 #[path = "recovery_tests.rs"]
 mod recovery;
 #[path = "../../../leaflet/protocol/tests/support/store.rs"]
-mod store;
+pub(crate) mod store;
 
 struct Server {
     http: TestServer,

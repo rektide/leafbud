@@ -25,7 +25,7 @@ pub struct Witness {
 /// running them. The desired graph supplies post-save ordering/grouping; every
 /// active rich block is replaced with strictly decoded *actual* segmentation.
 /// Call only with the compile result for these exact desired/current facts.
-pub(super) fn compiled(desired: &Document, facts: &[Value], compiled: &Compiled) -> Result<Witness> {
+pub(crate) fn compiled(desired: &Document, facts: &[Value], compiled: &Compiled) -> Result<Witness> {
     let mut native = desired.clone();
     native.state.nodes = compiled.targets.clone();
     let mut segments = 0;

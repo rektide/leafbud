@@ -97,7 +97,7 @@ impl RemoteReader {
             local: Some("preserved"),
             message: None,
         };
-        if state.pending.is_some() {
+        if state.pending.is_some() || state.publication_attempt.is_some() {
             report.outcome = "pending";
             report.message = Some("unresolved native attempt retained; run recover first; deletion waits".into());
             return Ok(report);

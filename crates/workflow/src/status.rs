@@ -210,6 +210,15 @@ async fn inspect_file(
     }
     // Typed optional state: an explicit `sync: null` deserializes to the
     // same absent receipts as a missing field.
+    if let Some(attempt) = &existing.state.publication_attempt {
+        item.outcome = match attempt.stage {
+            leafbud_document::PublicationStage::EditorAchieved => "editor-achieved-release-undispatched",
+            leafbud_document::PublicationStage::Dispatched { .. } => "publication-uncertain",
+        };
+        item.detail = "publication continuation retained; recover observes/settles only, never retries";
+        item.baseline = editor_state::baseline(existing);
+        return item;
+    }
     if let Some(pending) = &existing.state.pending {
         item.outcome = match &pending.effect {
             leafbud_document::Effect::Mint {

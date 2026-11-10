@@ -36,10 +36,17 @@ pub async fn run(
         }
     }
     Ok(match report.outcome {
-        "no-attempt" | "settled-prior" | "would-settle-prior" | "accepted-remote" | "would-accept-remote" | "replanned-local" | "would-replan-local" => {
-            ExitCode::SUCCESS
-        }
-        "pending" | "partial" | "source-changed" | "blocked" => ExitCode::from(4),
+        "no-attempt"
+        | "settled-prior"
+        | "would-settle-prior"
+        | "accepted-remote"
+        | "would-accept-remote"
+        | "replanned-local"
+        | "would-replan-local"
+        | "published"
+        | "verified-published"
+        | "editor-achieved-release-undispatched" => ExitCode::SUCCESS,
+        "pending" | "partial" | "source-changed" | "blocked" | "uncertain" | "partial-unsupported" => ExitCode::from(4),
         _ => ExitCode::FAILURE,
     })
 }

@@ -6,6 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 pub use uuid::Uuid;
 mod attempt;
 pub use attempt::*;
+mod publication;
+pub use publication::*;
 
 /// Source format this model reads and writes (`leafbud-mdx/2`). Local data is
 /// rebuildable; there is no compatibility surface for the retired format 1.
@@ -232,6 +234,9 @@ pub struct State {
     /// editor saves must preserve it, including an unknown imported baseline.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub released: Option<Released>,
+    /// Independent publication continuation; never an editor request or retry journal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub publication_attempt: Option<PublicationAttempt>,
 }
 
 pub const RELEASE_PROFILE: &str = "leaflet-public/1";

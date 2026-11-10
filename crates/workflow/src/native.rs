@@ -10,11 +10,13 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 mod delete;
+mod publication;
 mod resolve;
 mod save;
 mod write;
 pub use delete::{DeleteOptions, DeleteReport, ObservedGone};
 pub use leafbud_document::ResolutionDirection;
+pub use publication::{PublishOptions, PublishReport};
 pub use resolve::{RecoverOptions, ResolveReport};
 pub use save::{SaveOptions, SaveReport};
 pub(crate) use save::{effects as preview_effects, prepared as prepared_preview};
@@ -62,6 +64,9 @@ pub(crate) struct Source<'a> {
     bytes: Vec<u8>,
     text: String,
     document: Document,
+    /// Private save→publication join. The save's final receipt checkpoint also
+    /// persists editor-achieved/release-undispatched, with no crash gap.
+    publication_join: Option<Uuid>,
 }
 
 impl<'a> Source<'a> {
@@ -90,6 +95,7 @@ impl<'a> Source<'a> {
             bytes,
             text,
             document,
+            publication_join: None,
         };
         source.check()?;
         Ok(source)
@@ -108,8 +114,22 @@ impl<'a> Source<'a> {
         Ok(())
     }
 
-    fn checkpoint(&mut self, state: State) -> Result<()> {
+    fn checkpoint(&mut self, mut state: State) -> Result<()> {
         self.check()?;
+        if let Some(id) = self.publication_join
+            && state.pending.is_none()
+            && state.sync.is_some()
+            && state.publication_attempt.is_none()
+        {
+            let mut saved = self.document.clone();
+            saved.state = state.clone();
+            state.publication_attempt = Some(leafbud_document::PublicationAttempt {
+                id,
+                input_hash: import::hash(&saved.authored_value()),
+                editor_hash: import::hash(&saved.editor_value()),
+                stage: leafbud_document::PublicationStage::EditorAchieved,
+            });
+        }
         // Check a newly introduced locator against the complete selection too;
         // indexing only the old bytes cannot catch a prospective duplicate.
         let locator = state
@@ -366,13 +386,25 @@ impl RemoteReader {
         let token = match result {
             Ok(Some(token)) => token,
             other => {
-                let (message, undecoded_mint) = match other {
+                let (mut message, undecoded_mint) = match other {
                     Err(error) => {
                         let message = format!("mint may have created a draft; no automatic retry: {error}");
                         (message, error.into_action_response())
                     }
                     _ => ("mint returned no locator; no automatic retry".into(), None),
                 };
+                if let Some(response) = &undecoded_mint {
+                    // The save facade cannot serialize an opaque body into the
+                    // source or diagnostics. Retain this already-bounded body in
+                    // a private, create-new receipt BEFORE returning uncertainty.
+                    let id = source.document.state.pending.as_ref().expect("dispatched mint").id;
+                    match retain_action_response(source.context, id, response) {
+                        Ok(path) => message.push_str(&format!("; private bounded action response retained at {}", path.display())),
+                        Err(error) => message.push_str(&format!(
+                            "; private action-response retention failed (original remains in BindingReport memory): {error:#}"
+                        )),
+                    }
+                }
                 return Ok(BindingReport {
                     outcome: BindingOutcome::MintUncertain,
                     token: None,
@@ -448,6 +480,46 @@ impl RemoteReader {
             }),
         }
     }
+}
+
+fn retain_action_response(context: &config::Context, id: Uuid, response: &leafbud_web::ActionResponse) -> Result<PathBuf> {
+    use std::io::Write as _;
+    ensure!(response.body().len() <= 1024 * 1024, "action response exceeds private receipt bound");
+    let directory = context.global_path.parent().context("config parent missing")?.join("action-responses");
+    std::fs::create_dir_all(directory.parent().expect("config parent"))?;
+    let mut builder = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt as _;
+        builder.mode(0o700);
+    }
+    match builder.create(&directory) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(error) => return Err(error.into()),
+    }
+    let metadata = std::fs::symlink_metadata(&directory)?;
+    ensure!(
+        metadata.is_dir() && !metadata.file_type().is_symlink(),
+        "private receipt directory must not be a symlink"
+    );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        ensure!(metadata.permissions().mode() & 0o077 == 0, "action-response directory is not private");
+    }
+    let path = directory.join(format!("{id}.flight"));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+        options.mode(0o600);
+    }
+    let mut file = options.open(&path)?;
+    file.write_all(response.body().as_bytes())?;
+    file.sync_all()?;
+    Ok(path)
 }
 
 fn verify_seed(base: &str, data: &LeafletData, snapshot: &PullSnapshot, publication: &MintContext) -> Result<Binding> {

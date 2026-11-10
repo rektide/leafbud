@@ -123,7 +123,10 @@ pub(crate) struct Plan {
 
 pub(crate) fn plan(root: &Path, file: &Path, source: &str, direction: Option<Direction>) -> Result<Plan> {
     let document = leafbud_mdx::parse(source)?;
-    ensure!(document.state.pending.is_none(), "pending native attempt; recover before naming");
+    ensure!(
+        document.state.pending.is_none() && document.state.publication_attempt.is_none(),
+        "pending native attempt; recover before naming"
+    );
     let current_path = NamePath::from_author(&document.extra).map_err(anyhow::Error::msg)?;
     let evidence = inspect(root, file, &document);
     let selected = match direction {

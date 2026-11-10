@@ -194,6 +194,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         extra,
         pages: content.pages,
         state: State {
+            publication_attempt: None,
             released: None,
             names: None,
             writer: None,

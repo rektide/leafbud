@@ -11,7 +11,7 @@ use std::{collections::BTreeMap, path::Path};
 pub mod size;
 
 /// A summary of actual native behavior, not an executable plan or authorization.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct Preview {
     pub standing: &'static str,
     pub mode: &'static str,
@@ -100,7 +100,7 @@ pub async fn preview(
     };
     let uri = desired.state.binding.as_ref().and_then(|binding| binding.uri.clone());
     let mut result = Preview {
-        standing: "internal-preflight-only; execution-not-wired",
+        standing: "read-only-preview; fresh-locked-execution-required",
         mode: if uri.is_some() { "update-same-URI" } else { "first-release" },
         keys_to_prepare: parsed.unkeyed().len() + usize::from(parsed.main_page_provisional()),
         native_pages_after_save: missing_pages,
@@ -126,20 +126,17 @@ pub async fn preview(
             "path revalidation",
             "publish analytics",
         ],
-        blockers: vec!["execution/recovery and verified release patch authority are not implemented".into()],
+        blockers: vec![],
     };
     if result.publication.is_some() {
         // This runs for EVERY publication, even an image-free update, and can
         // delete old files not mentioned by today's editor. No suppression flag.
         result.native_effects.extend([
-            "gated-image stale-copy cleanup",
+            "old image copies may be deleted; count unknown",
             "schedule deletion",
             "actor contributor upsert",
             "conditional first-release newsletter skipped-slot claim",
         ]);
-        result
-            .blockers
-            .push("native publication always prunes gated-image storage; no no-cleanup action flag or verified empty-history witness".into());
     }
     if result.uri.is_none() {
         result.native_effects.push("conditional first-release mention notifications");
@@ -148,7 +145,7 @@ pub async fn preview(
     let Some(binding) = &desired.state.binding else {
         result
             .blockers
-            .push("first binding/defaults/owner and actual saved native page identities require future guarded mint/save; none performed".into());
+            .push("first binding/defaults/owner and actual saved native page identities require guarded mint/save; none performed in preview".into());
         result
             .blockers
             .push("native inline size not witnessed before first binding; needs actual seed/compiled cumulative state, not semantic estimate".into());
@@ -218,6 +215,23 @@ pub async fn preview(
     let preparation = preparation?;
     result.actor = Some(preparation.actor().into());
     verify_owner(&desired, &observed.data, preparation.actor(), &mut result)?;
+    if result.publication.is_some() {
+        let mut contributors: Vec<String> = observed
+            .merged
+            .extra
+            .get("contributors")
+            .map(|v| serde_json::from_value(v.clone()))
+            .transpose()?
+            .unwrap_or_default();
+        if !contributors.iter().any(|did| did == preparation.actor()) {
+            contributors.push(preparation.actor().into());
+        }
+        if contributors.len() > 1 {
+            result
+                .blockers
+                .push("native actor upsert would produce multi-contributor ordering; complete projection unavailable".into());
+        }
+    }
     // Discovery/identity requests can race native linkage or effect preferences.
     // Keep the entire raw metadata witness, not only published editor hashes
     // (which deliberately exclude reply/schedule/current public metadata).
@@ -236,7 +250,7 @@ pub async fn preview(
     Ok(result)
 }
 
-fn normalize(document: &Document, existing: Option<&Value>, now: jiff::Timestamp, result: &mut Preview) -> Result<()> {
+pub(crate) fn normalize(document: &Document, existing: Option<&Value>, now: jiff::Timestamp, result: &mut Preview) -> Result<()> {
     let authored_path = document.extra.get("path").filter(|value| !value.is_null());
     if let Some(path) = authored_path {
         ensure!(path.is_string(), "path intent must be text or null");
@@ -270,7 +284,7 @@ fn normalize(document: &Document, existing: Option<&Value>, now: jiff::Timestamp
     Ok(())
 }
 
-fn inspect_effect_fields(data: &leafbud_web::LeafletData, result: &mut Preview) -> Result<()> {
+pub(crate) fn inspect_effect_fields(data: &leafbud_web::LeafletData, result: &mut Preview) -> Result<()> {
     // Only this token's action context is usable. Sibling-only adoption does
     // not prove the publish action's .eq(leaflet, leaflet_id) lookup will work.
     for field in ["reply_drafts", "publication_scheduled_posts"] {
@@ -310,7 +324,7 @@ fn inspect_effect_fields(data: &leafbud_web::LeafletData, result: &mut Preview) 
     Ok(())
 }
 
-fn verify_owner(document: &Document, data: &leafbud_web::LeafletData, actor: &str, result: &mut Preview) -> Result<()> {
+pub(crate) fn verify_owner(document: &Document, data: &leafbud_web::LeafletData, actor: &str, result: &mut Preview) -> Result<()> {
     let binding = document.state.binding.as_ref().context("binding")?;
     let owner = if let Some(publication) = &binding.publication {
         let links = data.raw["leaflets_in_publications"].as_array().context("direct publication linkage missing")?;
@@ -331,9 +345,6 @@ fn verify_owner(document: &Document, data: &leafbud_web::LeafletData, actor: &st
             owner == actor || contributors.iter().any(|row| row["contributor_did"] == actor && row["confirmed"] == true),
             "actor is neither native publication owner nor confirmed contributor"
         );
-        result
-            .blockers
-            .push("publication actor is upserted into byline; verify actual post-save contributor set/order before dispatch".into());
         owner.to_owned()
     } else {
         actor.to_owned()

@@ -71,15 +71,23 @@ pub(super) fn compile_reusing(
 impl RemoteReader {
     pub async fn save_native(&self, context: &config::Context, path: &Path, selection: Selection, options: SaveOptions) -> Result<SaveReport> {
         let mut source = Source::open(context, path, selection)?;
+        ensure!(
+            source.document.state.publication_attempt.is_none(),
+            "publication continuation retained; recover publication before a new editor save; no replay"
+        );
+        self.save_locked(&mut source, options).await
+    }
+
+    pub(super) async fn save_locked(&self, source: &mut Source<'_>, options: SaveOptions) -> Result<SaveReport> {
         validate_binding_intent(&source.text)?;
         let desired = prepared(&source.text)?;
         desired.state.validate_lifecycle().map_err(anyhow::Error::msg)?;
-        if desired.state.state == "draft" && resolved_context(&desired, context) == MintContext::Standalone {
+        if desired.state.state == "draft" && resolved_context(&desired, source.context) == MintContext::Standalone {
             ensure!(desired.tags.is_empty(), "standalone tags have no established native storage");
         }
         let mut summary = BTreeMap::new();
         if source.document.state.pending.is_some() {
-            let recovered = match self.recover_locked(&mut source, options.yes).await {
+            let recovered = match self.recover_locked(source, options.yes).await {
                 Ok(result) => result,
                 Err(error) => {
                     return Ok(SaveReport {
@@ -129,7 +137,7 @@ impl RemoteReader {
                     )),
                 });
             }
-            let staged = self.stage_binding_locked(&mut source).await?;
+            let staged = self.stage_binding_locked(source).await?;
             if !matches!(staged.outcome, BindingOutcome::PendingMaterialization) {
                 return Ok(SaveReport {
                     outcome: "pending",
@@ -146,6 +154,10 @@ impl RemoteReader {
         );
         let before = self.native_observation(&binding, source.document.state.writer.as_ref(), &[]).await?;
         source.check()?;
+        if source.publication_join.is_some() {
+            self.publication_guard(source, &before.data, &before.snapshot).await?;
+            source.check()?;
+        }
         let witness = import::remote_hash(&before.data, &before.snapshot);
         let mint = source.document.state.pending.as_ref().is_some_and(|a| matches!(a.effect, Effect::Mint { .. }));
         let baseline = source
@@ -174,12 +186,21 @@ impl RemoteReader {
                 message: None,
             });
         }
+        let publishing = source.publication_join.is_some();
         let result = self
             .execute_locked(
-                &mut source,
+                source,
                 (options.take_local || converged).then_some(witness.as_str()),
                 |desired, data, snapshot| {
                     let compiled = compile(desired, data, snapshot, &options.recreate)?;
+                    if publishing {
+                        leafbud_records::projection::preflight(desired)?;
+                        let witness = crate::publication::size::compiled(desired, &snapshot.facts, &compiled)?;
+                        ensure!(
+                            witness.no_offload_at_witness,
+                            "native pages JSON upper bound exceeds inline limit; no no-offload proof; publication/save refused"
+                        );
+                    }
                     summary.extend(effects(&compiled.mutations));
                     Ok(compiled)
                 },

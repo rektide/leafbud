@@ -23,6 +23,8 @@ pub struct ResolveReport {
     pub direction: Option<ResolutionDirection>,
     pub effects: BTreeMap<String, usize>,
     pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publication: Option<super::PublishReport>,
 }
 
 pub(super) struct Replan {
@@ -127,7 +129,25 @@ impl RemoteReader {
             effects: BTreeMap::new(),
             message: None,
             observation: write::report(RecoveryOutcome::Uncertain),
+            publication: None,
         };
+        if source.document.state.publication_attempt.is_some() {
+            // --take local/remote is an editor decision, never publication retry
+            // authority. All publication recovery remains observation-only.
+            let result = self.recover_publication_locked(&mut source, options.yes).await;
+            match result {
+                Ok(publication) => {
+                    report.outcome = publication.outcome;
+                    report.message = publication.message.clone();
+                    report.publication = Some(publication);
+                }
+                Err(error) => {
+                    report.outcome = if source.check().is_err() { "source-changed" } else { "uncertain" };
+                    report.message = Some(format!("publication observation incomplete; evidence retained, no retry: {error:#}"));
+                }
+            }
+            return Ok(report);
+        }
         if let Err(error) = self.resolve_locked(&mut source, original, options, &mut report).await {
             report.outcome = if source.check().is_err() {
                 "source-changed"

@@ -8,7 +8,10 @@ use serde_json::json;
 /// other author field, body byte, association or receipt changes.
 pub fn patch_names(input: &str, path: Option<&str>, names: &Names) -> Result<String> {
     let existing = super::parse(input).context("unsupported managed source; naming preserved")?;
-    ensure!(existing.state.pending.is_none(), "pending native attempt; recover before naming");
+    ensure!(
+        existing.state.pending.is_none() && existing.state.publication_attempt.is_none(),
+        "pending native attempt; recover before naming"
+    );
     let mut expected = super::header(input)?;
     let mut working = input.to_owned();
     if let Some(path) = path {

@@ -322,6 +322,7 @@ pub(crate) fn adopt(existing: &Document, fresh: &Document) -> Document {
         extra,
         pages,
         state: State {
+            publication_attempt: existing.state.publication_attempt.clone(),
             released: existing.state.released.clone(),
             names: existing.state.names.clone(),
             last_resolution: existing.state.last_resolution.clone(),

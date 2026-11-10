@@ -138,6 +138,10 @@ impl RemoteReader {
     }
 
     pub(super) async fn recover_locked(&self, source: &mut Source<'_>, settle: bool) -> Result<RecoveryReport> {
+        ensure!(
+            source.document.state.publication_attempt.is_none(),
+            "publication continuation requires publication recovery; no editor replay"
+        );
         let Some(attempt) = source.document.state.pending.clone() else {
             return Ok(report(RecoveryOutcome::NoAttempt));
         };

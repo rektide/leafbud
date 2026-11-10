@@ -182,6 +182,40 @@ impl State {
     /// Lifecycle validation shared by parser and effect entrypoints. Pending
     /// locator without a complete binding and bound-without-receipt are valid.
     pub fn validate_attempt(&self) -> Result<(), &'static str> {
+        if let Some(attempt) = &self.publication_attempt {
+            if self.binding.is_none() || self.pending.is_some() || !valid_fingerprint(&attempt.input_hash) || !valid_fingerprint(&attempt.editor_hash) {
+                return Err("incoherent publication continuation");
+            }
+            if let PublicationStage::Dispatched {
+                owner,
+                arguments_hash,
+                core_hash,
+                old_uri,
+                old_cid,
+                date,
+                ..
+            } = &attempt.stage
+            {
+                if !owner.starts_with("did:")
+                    || !valid_fingerprint(arguments_hash)
+                    || !valid_fingerprint(core_hash)
+                    || old_uri != &self.binding.as_ref().expect("above").uri
+                    || old_uri.is_some() != old_cid.is_some()
+                    || old_cid.as_ref().is_some_and(|cid| validate_record_cid(cid).is_err())
+                {
+                    return Err("invalid publication dispatch witness");
+                }
+                match date {
+                    PublicationDate::Exact(value) if value.parse::<jiff::Timestamp>().is_err() => return Err("invalid exact publication date"),
+                    PublicationDate::NativeNow { not_before, not_after }
+                        if not_before.parse::<jiff::Timestamp>().is_err() || not_after.as_ref().is_some_and(|v| v.parse::<jiff::Timestamp>().is_err()) =>
+                    {
+                        return Err("invalid native publication date interval");
+                    }
+                    _ => {}
+                }
+            }
+        }
         if let Some(resolution) = &self.last_resolution {
             let writer = self.writer.as_ref().ok_or("resolution requires retained writer")?;
             if self.binding.is_none()

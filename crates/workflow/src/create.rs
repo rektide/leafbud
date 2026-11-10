@@ -62,6 +62,7 @@ pub fn run(context: &config::Context, request: Request) -> Result<Report> {
         // receipts and no persisted main-page key: preparation assigns
         // main-page identity once, when the document first has content.
         state: State {
+            publication_attempt: None,
             released: None,
             names: None,
             last_resolution: None,

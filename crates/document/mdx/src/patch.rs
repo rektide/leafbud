@@ -331,7 +331,10 @@ pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<Str
 pub fn unbind_deleted(source: &str) -> Result<String> {
     let existing = parse(source)?;
     ensure!(existing.state.binding.is_some(), "deliberate unbinding requires an established binding");
-    ensure!(existing.state.pending.is_none(), "unresolved native attempts must be settled before unbinding");
+    ensure!(
+        existing.state.pending.is_none() && existing.state.publication_attempt.is_none(),
+        "unresolved native attempts must be settled before unbinding"
+    );
     let mut next = existing.state.clone();
     next.state = "draft".into();
     next.binding = None;
@@ -372,6 +375,10 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
     ensure!(
         existing.state.released == document.state.released,
         "editor adoption cannot advance release evidence"
+    );
+    ensure!(
+        existing.state.publication_attempt == document.state.publication_attempt,
+        "editor adoption cannot change publication progress"
     );
     ensure!(existing.format == document.format, "adoption cannot change the document format");
     ensure!(
@@ -437,7 +444,10 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
 pub fn adopt_published(source: &str, document: &Document) -> Result<String> {
     let existing = parse(source)?;
     ensure!(
-        existing.state.state == "draft" && document.state.state == "published" && existing.state.pending.is_none(),
+        existing.state.state == "draft"
+            && document.state.state == "published"
+            && existing.state.pending.is_none()
+            && existing.state.publication_attempt.is_none(),
         "published adoption requires a settled draft binding"
     );
     let before = existing.state.binding.as_ref().context("draft binding missing")?;
@@ -473,6 +483,94 @@ pub fn adopt_published(source: &str, document: &Document) -> Result<String> {
         }
     }
     adopt_remote(&result, document)
+}
+
+/// Separate publication settlement authority. The workflow MUST verify exact
+/// native association, content-addressed PDS output and complete meaning first.
+/// Only declared release normalization/byline and the release/editor receipts
+/// may change; ordinary tracking/adoption retain their narrower permissions.
+pub fn settle_release(source: &str, document: &Document) -> Result<String> {
+    let existing = parse(source)?;
+    let attempt = existing
+        .state
+        .publication_attempt
+        .as_ref()
+        .context("release settlement requires a dispatch witness")?;
+    let PublicationStage::Dispatched {
+        owner,
+        old_uri,
+        date,
+        contributor,
+        ..
+    } = &attempt.stage
+    else {
+        bail!("undispatched release cannot settle")
+    };
+    ensure!(existing.state.pending.is_none(), "editor attempt still pending");
+    let receipt = document.state.released.as_ref().context("confirmed release receipt required")?;
+    let before = existing.state.binding.as_ref().context("binding")?;
+    let after = document.state.binding.as_ref().context("binding")?;
+    let uri = after.uri.as_deref().context("verified public URI missing")?;
+    validate_document_uri(uri).map_err(anyhow::Error::msg)?;
+    let prefix = format!("at://{owner}/site.standard.document/");
+    let rkey = uri.strip_prefix(&prefix).context("release owner/collection mismatch")?;
+    ensure!(
+        old_uri == &before.uri && old_uri.as_ref().is_none_or(|old| old == uri),
+        "release cannot retarget established URI"
+    );
+    let mut expected_binding = before.clone();
+    expected_binding.uri = Some(uri.into());
+    ensure!(expected_binding == *after, "release cannot alter native binding");
+    ensure!(
+        receipt.path == format!("/{rkey}") && document.extra.get("path") == Some(&json!(receipt.path)),
+        "release path must be verified /rkey"
+    );
+    let actual: jiff::Timestamp = receipt.published_at.parse()?;
+    ensure!(
+        document
+            .extra
+            .get("publishedAt")
+            .and_then(Value::as_str)
+            .context("date missing")?
+            .parse::<jiff::Timestamp>()?
+            == actual,
+        "release receipt/date mismatch"
+    );
+    match date {
+        PublicationDate::Exact(value) => ensure!(value.parse::<jiff::Timestamp>()? == actual, "release cannot normalize exact date"),
+        PublicationDate::NativeNow { not_before, not_after } => ensure!(
+            actual >= not_before.parse()?
+                && not_after
+                    .as_ref()
+                    .is_none_or(|end| end.parse::<jiff::Timestamp>().is_ok_and(|end| actual <= end)),
+            "release date outside permitted interval"
+        ),
+    }
+    let mut expected = existing.clone();
+    expected.extra.insert("path".into(), json!(receipt.path));
+    expected.extra.insert("publishedAt".into(), document.extra["publishedAt"].clone());
+    if let Some(actor) = contributor {
+        expected.extra.insert("contributors".into(), json!([actor]));
+    }
+    expected.state.state = "published".into();
+    expected.state.binding = Some(expected_binding);
+    expected.state.publication_attempt = None;
+    expected.state.released = Some(receipt.clone());
+    expected.state.sync = document.state.sync.clone();
+    ensure!(expected == *document, "release settlement changes unrelated authored/tracking state");
+    let updates: Vec<_> = ["path", "publishedAt"]
+        .into_iter()
+        .filter(|key| existing.extra.get(*key) != expected.extra.get(*key))
+        .map(|key| (key, expected.extra[key].clone()))
+        .collect();
+    let mut result = super::author::patch_fields(source, &updates)?;
+    if expected.extra.get("contributors") != existing.extra.get("contributors") {
+        result = super::author::patch_fields(&result, &[("contributors", expected.extra["contributors"].clone())])?;
+    }
+    result = replace_envelope(&result, &expected.state)?;
+    ensure!(parse(&result)? == expected, "release settlement lost source meaning/state");
+    ensure!(split_managed(&result)?.1 == split_managed(source)?.1, "release settlement rewrote body");
+    Ok(result)
 }
 
 /// No historical body or generic diff: source-only trivia has one explicit

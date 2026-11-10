@@ -43,6 +43,7 @@ mod delete;
 mod diff;
 mod import;
 mod list;
+mod publish;
 mod pull;
 mod push;
 mod recover;
@@ -285,16 +286,14 @@ enum Command {
     /// Plan/execute editor synchronization and native release
     /// (saves as needed, then releases)
     Publish {
-        files: Vec<PathBuf>,
-        #[arg(long)]
-        all: bool,
-        #[arg(long, requires = "all")]
-        state: Option<State>,
+        file: PathBuf,
         #[arg(long)]
         yes: bool,
         /// Deliberately replace differing current remote content in the editor-save phase (local wins)
         #[arg(long, value_name = "TAKE")]
         take: Option<TakeSide>,
+        #[arg(long)]
+        json: bool,
     },
     /// Adopt a remote document into one bound MDX file
     Import {
@@ -529,6 +528,27 @@ async fn main() -> ExitCode {
     }
     if let Command::Delete { file, yes, purge, json } = &cli.command {
         return match delete::run(options, cli.root.as_deref(), &flags, file, DeleteOptions { yes: *yes, purge: *purge }, *json).await {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("leafbud: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if let Command::Publish { file, yes, take, json } = &cli.command {
+        return match publish::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            file,
+            leafbud_workflow::native::PublishOptions {
+                yes: *yes,
+                take_local: take.is_some(),
+            },
+            *json,
+        )
+        .await
+        {
             Ok(code) => code,
             Err(error) => {
                 eprintln!("leafbud: {error}");

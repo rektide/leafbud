@@ -139,7 +139,10 @@ impl RemoteReader {
         }
         // Pending belongs to future write recovery, not this follower. Inspect
         // without deserializing/dropping any unknown attempt evidence.
-        if header["@leafbud"].get("pending").is_some_and(|v| !v.is_null()) {
+        if ["pending", "publicationAttempt"]
+            .iter()
+            .any(|key| header["@leafbud"].get(*key).is_some_and(|v| !v.is_null()))
+        {
             return decision(Outcome::Pending, "unresolved pending state; preserved for explicit recovery");
         }
         let parsed = match leafbud_mdx::parse_with_spans(&source) {

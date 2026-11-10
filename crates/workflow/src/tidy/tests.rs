@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 fn document() -> Document {
     let state = State {
+        publication_attempt: None,
         released: None,
         names: None,
         last_resolution: None,

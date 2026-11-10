@@ -84,12 +84,13 @@ async fn first_and_update_preview_normalization_no_file_or_effect_changes() {
             assert!(!report.send_email && !report.bluesky_share);
             assert_eq!(report.path["kind"], if published { "fixed-by-existing-rkey" } else { "server-chosen-rkey" });
             assert_eq!(report.date["kind"], if published { "explicit" } else { "server-now-on-first-release" });
-            assert!(report.blockers.iter().any(|s| s.contains("execution/recovery")));
+            assert!(!report.blockers.iter().any(|s| s.contains("execution/recovery")));
             let size = report.inline_size.as_ref().expect("actual native facts witnessed");
             assert!(size.no_offload_at_witness);
             assert_eq!(size.scope.contains("conditional-on-save"), report.editor == "save-required");
             assert!(!report.blockers.iter().any(|s| s.contains("inline size") || s.contains("size profile")));
-            assert_eq!(report.blockers.iter().any(|s| s.contains("prunes")), publication);
+            assert!(!report.blockers.iter().any(|s| s.contains("prunes")));
+            assert_eq!(report.native_effects.contains(&"old image copies may be deleted; count unknown"), publication);
             assert_eq!(std::fs::read(&path).unwrap(), source.as_bytes());
             assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), before);
             assert!(
