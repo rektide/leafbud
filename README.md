@@ -5,9 +5,13 @@ description: "Current capabilities, commands, source contracts and verification 
 resource: /README.md
 status: active
 updated:
-  at: 2026-11-09
+  at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c420e5affeLoQfS0oTd9wu5b"
+    title: "Version-0.19 parser-selected preparation, flow-header authoring loop, anchored source comments and maintained executable fidelity coverage"
+  - resource: /design/source-fidelity0.gpt61s.md
+    title: "Source-fidelity and executable coverage implementation receipt"
   - resource: "opencode://ses_e3d511cf0ffeKLT5XsWr37v0r6"
     title: "Offline metadata editing, native-preserving key rename and local inventory; source/identity/receipt guards and loopback CLI/watch verification"
   - resource: /design/local-authoring-tools0.gpt61s.md
@@ -46,7 +50,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename` and local `list`, version 0.18.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers and block-anchored source comments, version 0.19.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -68,6 +72,12 @@ publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
 removed by design and is recoverable at revision `80436b61`; the
 [cleanup handoff](design/scaffold-reset0.glm53m.md) records exactly
 what was kept, what was reset, and where each piece re-homes.
+
+Current fidelity homes: [source ownership and comment contract](doc/mdx/README.md)
+and [executable content × operation coverage](doc/mdx/coverage.md). The matrix
+separates parser acceptance, native write preflight, CLI/HTTP/Phoenix fixtures,
+independent actual Yjs and earlier deployed evidence; unimplemented cells remain
+visible rather than being advertised as supported by a roundtrip alone.
 
 ## Layout
 
@@ -94,6 +104,7 @@ crates/
   cli/         leafbud (binary): thin Clap/rendering layer;
                      reads/import/create/check/list/edit/keys/status/diff/push/recover/pull/watch/tidy/config
 design/        architecture, accepted interface, and format designs
+doc/mdx/       maintained source ownership and executable fidelity coverage
 experiments/   protocol probes and evidence (tracked, load-bearing)
 ```
 
@@ -409,8 +420,9 @@ Only selected author entries are normalized; exact body bytes, unrelated YAML,
 unknown author values and compact state survive. Comments on rewritten entries
 are retained (inline/removed-value comments may become standalone lines).
 The helper supports block-style top-level fields, including multiline values and
-flow/block tag lists. A flow-style whole header or unusual unsupported patch shape
-fails without writes; explicitly reshape it first. The entire result reparses and
+flow/block tag lists, and whole-flow headers. Parser-paired collection extents
+preserve unrelated flow entries/comments through preparation, defaults, save and
+refresh too. Unusual unsupported patch shapes fail without writes. The entire result reparses and
 is checked against the selected changes. No generic property setter is provided.
 
 `keys rename` updates an explicit block Key, named Page or persisted `mainPage`,
@@ -681,7 +693,7 @@ history, no server CAS):
 | Missing remote, published lifecycle, unsupported content, broken bindings | explicit per-file outcome; nothing is pruned or created |
 
 `--take remote` deliberately replaces differing **editor-owned** local content
-(keeping local-only metadata fields, comments and manual key renames); it never
+(keeping local-only metadata fields, supported anchored comments and manual key renames); it never
 changes bindings or ignores unsupported content. Source identities are stable:
 imported deterministic keys are first-association choices, key renames survive
 refresh wherever the binding identifies the same remote object, and document
@@ -700,6 +712,16 @@ that the renamed binary has migrated live data.
 
 Current implementation/verification handoff:
 [`design/guarded-pull0.glm53m.md`](design/guarded-pull0.glm53m.md).
+
+Standalone `{/* drafting note */}` comments are local source trivia, attached to
+the next block in the same page (before or after its Key). They survive tidy,
+save, metadata edits and remote adoption without entering native/editor meaning.
+Same-page reorder follows the block; removal or movement to another page refuses
+adoption before writing, even with `--take remote`. Explicitly move/remove that
+comment before retrying. Inline, trailing/orphan comments and comments before a
+Page definition are unsupported. No native Leaflet discussion/comment capability
+is implied. Full [comment ownership](doc/mdx/README.md#body-comments-source-only-block-anchored)
+and [executable evidence](doc/mdx/coverage.md) explain these boundaries.
 
 ## Connected inbound watch
 
@@ -802,12 +824,13 @@ exactly or nothing is written.
 
 `tidy` normalizes **existing** files deliberately: parser-derived source
 spans only (frontmatter bytes, comments outside replaced spans, Key markers
-and Page boundaries are preserved; body MDX comments or unknown components
-make the file fail loudly rather than partially rewrite), inserted syntax
+and Page boundaries are preserved; supported standalone comments remain exact,
+while inline/orphan comments and unknown components fail loudly), inserted syntax
 keeps the file's line-ending convention, BOM/CRLF files work, witnesses and
 stale receipts are never touched (formatting never accepts local edits), a
 second tidy writes nothing, and writes are atomic under the original-byte
-guard. `--all` selects the workspace's managed files; unmanaged files are
+guard. Plans bind the original source bytes and prove unchanged comment anchors
+as well as content. `--all` selects the workspace's managed files; unmanaged files are
 ignored. `--keys` assigns missing durable source identities (see
 [authoring](#local-authoring-create-check-and-key-preparation)); `--from`
 and `--accept` (naming reconciliation) are not implemented yet and are

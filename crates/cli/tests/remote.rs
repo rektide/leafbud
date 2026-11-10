@@ -164,9 +164,11 @@ async fn anonymous_rpc_and_locator_errors_never_emit_success_json() {
 #[tokio::test]
 async fn uncommissioned_commands_remain_unimplemented_and_usage_is_two() {
     let server = fixture_server().await;
-    let output = cli(&server.base_url).args(["publish", "doc.mdx"]).output().await.unwrap();
-    assert_eq!(output.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("'publish' is not implemented"));
+    for command in ["publish", "export"] {
+        let output = cli(&server.base_url).args([command, "doc.mdx"]).output().await.unwrap();
+        assert_eq!(output.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&output.stderr).contains(&format!("'{command}' is not implemented")));
+    }
     let output = cli(&server.base_url)
         .args(["remote", "list", "--state", "in_publication"])
         .output()

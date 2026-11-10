@@ -1,0 +1,173 @@
+---
+type: CoverageAccount
+title: "Executable content and operation fidelity coverage"
+description: "Maintained current-profile matrix connecting native kinds, metadata, resources, operations and identity to real fixtures and explicit unsupported boundaries."
+resource: /doc/mdx/coverage.md
+status: active
+updated:
+  at: 2026-11-10
+  by: model:openai/gpt-6.1-sol#high
+sources:
+  - resource: "opencode://ses_e3c420e5affeLoQfS0oTd9wu5b"
+    title: "Inspected pinned native inventory and production mappings, extended negative native/resource fixtures, and linked current operation evidence without equating parser acceptance to writable coverage"
+  - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/attributes.ts
+    title: "Verified archived HEAD; actual block/page kinds, resource and attribute inventory"
+  - resource: /crates/leaflet/editor/src/lib.rs
+    title: "Strict native observation, consumed-attribute accounting and typed associations"
+  - resource: /crates/leaflet/editor/src/write.rs
+    title: "Source preflight and complete keyed native compilation"
+  - resource: /crates/workflow/src/native/save_tests.rs
+    title: "Full supported profile, structural revisions, retained IDs, actual HTTP saves and unsupported preflight"
+  - resource: /crates/leaflet/editor/tests/observation.rs
+    title: "Independent native fact expectations and complete unsupported block-kind inventory"
+  - resource: /design/keyed-save0.gpt61s.md
+    title: "Independent actual Yjs evidence and earlier deployed P1 proof, reused only for unchanged writer"
+---
+
+# Executable content and operation fidelity coverage
+
+Scope: **0.19 current draft authoring**, not all Leaflet content or every
+cross-product of kinds and operations. [Source ownership](README.md) is the
+source-shape contract; [project usage](/README.md) advertises only this bounded
+profile. Maintain this account when a capability or named fixture changes.
+There is no second capability registry or generated testing DSL.
+
+## Evidence levels
+
+| Level | What it proves / does not prove |
+| --- | --- |
+| P — pure | Parser/render/model tests and explicit expected native-fact decoding. A same-library roundtrip alone is not interoperability or a remote workflow. |
+| H — HTTP/workflow | Real client/native wire requests against the independent synthetic store or controlled responses. Expected content, order, IDs and refusals; not deployment authorization or real server equivalence. |
+| C — CLI | Executed binary, exit/report contracts and filesystem effects over HTTP fixtures. |
+| L — live transport fixture | Actual Phoenix/WebSocket protocol plus HTTP acquisition/adoption; not a deployed observed edit. |
+| Y — independent Yjs | Production Yrs writer output inspected by actual JavaScript Yjs; distinct from same-Yrs decode. |
+| D — deployed | Specifically recorded earlier authorized cases only. This source-fidelity batch made **no deployed changes** and did not touch `~/l`. |
+
+## Content × operation matrix
+
+“Shared” below means the implementation uses the same path, but no dedicated
+per-kind scenario is claimed. Recovery and export have separate scopes below;
+passing source validation is never shorthand for all columns.
+
+| Native/source family | Read/import + local parse/render | Create / change | Drop / move / reorder / identity | Refresh | Main executable evidence |
+| --- | --- | --- | --- | --- | --- |
+| `text`, paragraph, empty text | P/H, explicit runs and empty native defaults | H/C complete text/marks/break revisions | H/C insert/split/omit/reorder; retained entity/placement/text IDs; explicit recreation | H/L changed prose/marks/order; no-op body preservation | W1, W2, C1, P1, R1, L1, Y1 |
+| `heading`, levels 1–6 | P/H; level/type validated | H/C create headings; scalar/type changes share keyed compiler | H/C structural revision; no separate test for every level × move | H text/order path; per-level remote matrix not claimed | W1, W2, P1, C1 |
+| `blockquote`, quote | P/H and exact fallback | H all supported marks on quote creation; text change uses shared rich writer | Shared placement operations; no dedicated quote-only move/drop case | Shared refresh; no quote-only live test | W2, P1, Y1 |
+| Flat bullet/ordered text items | P explicit native expected runs/styles; Markdown list preparation | H both styles and empty item create; shared rich edits | Same placement identity; nested/loose/task/numbering overrides refuse | Shared reader/adoption, not a nested-list claim | O1, W2, P2 |
+| `horizontal-rule` | P/H native scalar | H create; C remote paragraph→rule change | Shared keyed placement operations | C retained entity + anchored comment after type change | W2, C4 |
+| `code` exact language/text | P explicit native expected bytes and latent-text locator | H create; text↔code transitions retain inactive text; changed code fields | H selected recreation retains placement, old entities stay | P/H body rewrite; no code-only Phoenix test | O2, W2, P1, I1 |
+| `image` URL/source/fallback/dimensions/alt | P explicit native expected fields, P MDX exact components; **read can retain non-HTTP fallback** | H HTTP(S)-URL image creation/change/optional-field absence; no upload | Shared keyed placement; selected recreation supported generally, not an image-specific deployed claim | Shared reader/adoption; not offline asset acquisition | O2, W2, P1, U1 |
+| `card` / `PageLink`, reachable linear named pages | P forward/multiple refs, interleaved definitions; native associations | H named page/link create, changed refs | H same-page/cross-page move, named-page retire and multiple references; detached facts retained | H alias reconciliation; C source spellings and repeat | W2, C2, P2, R2 |
+| Source-only standalone MDX comments | P anchored to next same-page block, not native discussion | P/C edit/tidy/save; fingerprints ignore them | P same-page reorder follows block; remote deletion/cross-page movement refuses | C/L preserve raw comments; no-op bytes/mtime; explicit `--take remote` cannot drop an anchor | P3, C4, L1 |
+
+## Metadata, resources and state
+
+| Concern | Current supported boundary | Executable evidence |
+| --- | --- | --- |
+| Title, description, ordered tags | Offline selected edit; native metadata save/readback in actual context. Exactly absent/null/empty description clears; whitespace stays meaningful. Standalone tag changes refuse where native storage is unavailable. | C3, M1, W1, W2; [description fixtures](/crates/workflow/src/native/description_tests.rs) |
+| Publication association | Tri-state local intent; verified explicit association after binding; ordinary retarget/inherit of a bound document refuses | M1, [default/retarget tests](/crates/workflow/src/native/defaults_tests.rs) |
+| Watermark theme, contributors | Only watermark theme modeled. First bind adopts omitted verified defaults, keeps explicit choices and records empty contributor arrays. Contributor changes without a supported native operation refuse before push. | C3, M1 |
+| Publication date, path/delivery, custom author values | Local-only author fields survive. Date edits validate an offset; editor hashes exclude them. Filename/path reconciliation and release effects are not implemented. | [author tests](/crates/document/mdx/src/author_tests.rs), C5, R1 |
+| Block/whole-flow headers; comments, quoted keys, BOM/CRLF/Unicode | Selected edits/preparation/defaults/tracking/adoption with full-output proof; no whole-header author normalization | C3, P2, [source/author tests](/crates/document/mdx/src/source.rs) |
+| Image resources | Native `local` payload fields refuse; read source/fallback is not an upload. Writer requires HTTP(S) source/fallback. `file:`, `data:` fallbacks and Markdown image syntax are not writable managed inputs. No download/cache/upload/export promise. | O2, U1; [source preflight](/crates/leaflet/editor/src/write.rs) |
+| UUID, current/retired node rows, manual aliases | New keys are new identity; retained native locators ignore spelling. Preparation cannot borrow confirmed/retired identities; drops detach rather than delete. | P2, C2, C5, W2, R2 |
+| Pending, writer ranges, receipt profiles, `lastResolution` | Typed current state only; pending/future owned state stays preserved; no rewind of reservations or historical hashes | Q1; [model attempt tests](/crates/document/model/src/attempt.rs); [watch refusal tests](/crates/workflow/src/watch/tests.rs) |
+
+## Explicit unsupported native inventory
+
+Inventory was read from archived Leaflet at verified HEAD
+`600c7b5f1f7b31b66fb626c293cc104312a12caf`, especially
+[attributes.ts](https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/attributes.ts).
+The following are **not** import/edit/save support merely because public record
+types or the upstream renderer know them:
+
+- `datetime`, `rsvp`, `link`, `mailbox`, `embed`, `html`, `button`, `poll`,
+  `bluesky-post`, `standard-site-post`, `standard-site-publication`, `math`,
+  `members-only-delimiter`, `posts-list`, `recommended-pubs`, `reply`, `questions`,
+  `signup`, `image-gallery`, `post-header`, `embedded-canvas`, `group`, `drawing`.
+  **O3 exercises every listed kind's explicit refusal.**
+- Canvas pages/spatial placements, publication navigation pages/multiple root
+  entries, page route/title/external URL, nested containers, task/loose lists,
+  heading lists and explicit numbering overrides. O1/O3/P2/U1 cover representative
+  diagnostics; not every canvas setting has a separate fixture.
+- Native footnotes/discussion/comment anchors; alignment/text size/locks; paywall
+  audience/tiers; gallery/drawing/cover resources; full-bleed/name/max-width image
+  fields; non-watermark theme/fonts/colors/backgrounds. Observation rejects
+  unconsumed facts rather than silently discarding them. O3 includes representative
+  ordinary-content-plus-unsupported-attribute cases; future unknown attributes
+  share that refusal, not an inferred semantic mapping.
+- Unknown Yjs marks/XML/schema/incomplete causal state. The strict
+  [text reader](/crates/leaflet/editor/src/text.rs) refuses them. Y1 does not prove
+  arbitrary ProseMirror schemas, native discussion marks or incomplete updates.
+
+`check` validates the source profile, not remote writability. Native push has its
+own complete preflight **before mint/writes**: U1 covers valid typed non-HTTP image
+resources, unreachable pages, unsupported source combinations and comments; C2
+proves a source-valid cyclic PageLink graph refuses with zero source/native effects.
+Do not downconvert unsupported content through ordinary save/pull.
+
+## Recovery, exports and proof boundaries
+
+**Recovery (Q1)** covers prepared-unsent, uncertain/lower-ack, original achieved
+settlement, acknowledged partial accept-current and replan; original provenance,
+pending associations, detached allocations, new reservation ranges, source/rights/
+duplicate/drift guards and follower resumption are tested. It is not a per-kind
+partial-failure cross-product, arbitrary damaged-graph repair, or a new mint retry.
+Comment-aware remote recovery uses the same adoption helper, but no separate
+comment-plus-terminal-partial end-to-end fixture is claimed.
+
+**Exports:** root `export` remains unimplemented (C6). Internal MDX rendering and
+`render_comparison` are covered by P1; normalized human diff views are temporary,
+loss-checked comparison inputs, **not** Markdown exports or executable documents.
+Generated public record types have their own
+[record fixture roundtrip](/crates/leaflet/records/src/record.rs); that does not
+connect current MDX to release/export. Published lifecycle, public release,
+subscriber email, Bluesky share and uploads remain outside this matrix's support.
+
+**Independent/deployed evidence:** Y1's prior seven independent Yjs groups remain
+applicable because this batch changed no native/Yrs writer. Earlier D evidence is
+recorded in the [save receipt](/design/keyed-save0.gpt61s.md),
+[recovery receipt](/design/terminal-recovery0.gpt61s.md) and
+[watch receipt](/design/connected-watch0.gpt61s.md): selected P1 bound save/readback/
+repeat; standalone explicit accept-current; passive connection/catch-up/no-op.
+They do not prove deployed first-unbound composition, observed deployed poke-to-file
+edits, all richer types, release or upload. Do not rerun opt-in effects by default.
+
+## Fixture lookup and targeted runs
+
+References below identify real test names, not generated capability declarations.
+Use `cargo nextest run -p PACKAGE -E 'test(SUBSTRING)'`; the full regular gate is
+`cargo nextest run --workspace`. Independent Yjs uses its separately documented
+Node harness, not nextest. Keep test names and these explanations aligned.
+
+| Ref | File and executable scenario |
+| --- | --- |
+| P1 | [MDX tests](/crates/document/mdx/src/tests.rs): `ordinary_marks_and_code`, `crossing_marks`, `atom_fallbacks`, `break_matrix`, `text_escaping`, `human_views_keep_exact_code_image_and_empty_block_meaning`, `human_comparison_is_readable_exact_and_free_of_bookkeeping`, `list_rendering_and_breaks`, `split_join_order_and_the_last_block` |
+| P2 | [Parser tests](/crates/document/mdx/src/parse.rs): `flat_lists_parse_one_keyed_item_per_block`, `spans_follow_document_order_not_source_traversal_order`, `provisional_keys_never_borrow_supplied_or_confirmed_identities`; [MDX tests](/crates/document/mdx/src/tests.rs): `preparation_parser_selected_link_spellings_preserve_interleaved_identity_and_trivia`, `apply_key_preparation_rejects_stale_and_invalid_input`, `flow_root_preparation_tracking_and_adoption_keep_author_bytes` |
+| P3 | [Comment tests](/crates/document/mdx/src/comment_tests.rs): `anchored_comments_prepare_tidy_rename_and_fingerprints`, `comments_follow_same_page_blocks_but_deleted_cross_page_and_orphans_refuse` |
+| O1 | [Native observation](/crates/leaflet/editor/tests/observation.rs): `flat_lists_and_typed_locators_observe`, `task_nested_and_heading_lists_are_diagnosed`, `list_numbering_override_is_diagnosed` |
+| O2 | [Native observation](/crates/leaflet/editor/tests/observation.rs): `native_scalar_and_image_meaning_is_explicit_and_local_resources_refuse` — independently specified expected bytes/fields and inactive text ID |
+| O3 | [Native observation](/crates/leaflet/editor/tests/observation.rs): `upstream_richer_kind_inventory_refuses_instead_of_truncating` |
+| I1 | [Import tests](/crates/workflow/src/import/tests.rs): `fixture_content_to_real_mdx_and_back_without_loss`, `visible_code_ignores_but_witnesses_native_inactive_richtext`, `actual_import_noop_rename_and_local_changes_preserved`; `rich_runs_empty_blocks_images_and_pages_roundtrip` is explicitly a model/render control, **not** a native image import proof |
+| W1 | [HTTP save tests](/crates/workflow/src/native/save_tests.rs): `both_first_mints_combined_revision_join_pull_and_zero_effect_repeat` |
+| W2 | [HTTP save tests](/crates/workflow/src/native/save_tests.rs): `complete_supported_profile_pages_scalar_transitions_and_selected_recreation`, `shared_occurrence_divergence_requires_recreation_and_drop_preserves_remaining_entity`, `unchanged_imported_defaults_keep_absent_facts_and_inactive_data` |
+| U1 | [HTTP save tests](/crates/workflow/src/native/save_tests.rs): `unsupported_remainder_refuses_before_mint_and_preview_never_persists_keys` |
+| M1 | [Default tests](/crates/workflow/src/native/defaults_tests.rs): `inherited_publication_and_defaults_survive_first_materialization_restart_status_pull_and_noop`, `explicit_fields_remain_authoritative_and_unsupported_contributor_changes_stop_before_push`, `explicit_nulls_are_not_omission_and_fail_before_authentication_or_mint` |
+| R1 | [Pull tests](/crates/workflow/src/pull/tests.rs): `pull_adopts_remote_text_mark_move_and_metadata_preserving_identities`, `pull_noop_is_an_exact_byte_and_mtime_noop`, `pull_witness_only_change_settles_receipts_without_content_rewrite`, `pull_conflict_needs_take_remote_which_preserves_local_metadata_and_renames` |
+| R2 | [Pull tests](/crates/workflow/src/pull/tests.rs): `swapped_author_labels_follow_native_associations_not_deterministic_key_spelling`; [state tests](/crates/workflow/src/editor_state/tests.rs): `new_native_nodes_cannot_steal_matched_author_labels_or_drop_association_rows` |
+| Q1 | [Recovery tests](/crates/workflow/src/native/recovery_tests.rs) and [CLI recovery cases](/crates/cli/tests/push.rs); [terminal recovery receipt](/design/terminal-recovery0.gpt61s.md) explains scenarios and exact limits |
+| C1 | [CLI push](/crates/cli/tests/push.rs): `complete_cli_both_contexts_preview_first_combined_revision_pull_and_unchanged_all` |
+| C2 | [CLI push](/crates/cli/tests/push.rs): `source_spellings_prepare_save_and_repeat_preserve_page_associations`, `confirmed_key_rename_preserves_receipts_and_no_effect_push_and_metadata_classification` |
+| C3 | [CLI push](/crates/cli/tests/push.rs): `whole_flow_header_edit_defaults_save_refresh_and_noop_keep_unknown_author_source` |
+| C4 | [CLI push](/crates/cli/tests/push.rs): `body_comment_workflow_preserves_trivia_and_refuses_deleted_anchor_even_take_remote` |
+| C5 | [CLI author](/crates/cli/tests/author.rs): `edit_flags_dates_tags_clear_noops_and_keys_are_offline`, `list_reads_config_root_without_locks_or_auth_and_reports_partial_failures` |
+| C6 | [CLI remote](/crates/cli/tests/remote.rs): `uncommissioned_commands_remain_unimplemented_and_usage_is_two` |
+| L1 | [Phoenix/HTTP watch](/crates/workflow/src/watch/tests.rs): `actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identity`, `source_save_during_await_is_preserved_and_cancellation_releases_writer_lock`, `refresh_preserves_raw_future_pending_and_owned_state_without_network` |
+| Y1 | [Actual Yjs harness](/crates/leaflet/editor/tests/text-interop.mjs), [production-output producer](/crates/leaflet/editor/examples/text-write.rs), [received seven-group receipt](/design/keyed-save0.gpt61s.md) |
+
+Safety is operation-wide, not repeated as a fake per-kind certification:
+[author transaction tests](/crates/workflow/src/author/tests.rs) cover OS-lock
+contention, original-byte changes, late duplicates and external/symlink operands;
+W1/W2/Q1/L1 cover source races, pending finality and native drift. No automatic
+cleanup/prune or whole-body regeneration default is implied by any passing cell.
