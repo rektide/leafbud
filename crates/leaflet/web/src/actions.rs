@@ -54,7 +54,7 @@ impl LeafletClient {
         let mut remaining = MAX_TOTAL.saturating_sub(html.len());
         let tags = Regex::new(r#"(?is)<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>"#).expect("static regex");
         let mut urls = BTreeSet::new();
-        for capture in tags.captures_iter(&html) {
+        for capture in tags.captures_iter(html) {
             let path = capture[1].replace("&amp;", "&");
             if path.len() > 2048 {
                 return Err(Error::Native("action discovery asset path limit"));

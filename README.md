@@ -203,6 +203,53 @@ repeat under the recovery API, preserving its old provenance rather than claimin
 original success. P1 was untouched by that recovery proof.
 Implementation/evidence: [complete keyed save receipt](design/keyed-save0.gpt61s.md).
 
+## Deliberate editor deletion
+
+```sh
+leafbud delete drafts/essay.mdx                     # preview exactly what dies
+leafbud delete drafts/essay.mdx --yes               # delete + convert local to unbound draft
+leafbud delete drafts/essay.mdx --yes --purge       # additionally remove the local file
+leafbud delete drafts/essay.mdx --json
+```
+
+Deletion goes through Leaflet's own `deleteLeaflet` server action — the same
+permanent destruction the native UI's "Delete Forever" performs — never a
+Leafbud-invented cleanup. Preview is mandatory first (`--yes` executes). A
+**draft** deletion destroys the native editor's complete entity set, its
+permission token (rights/linkage rows cascade) and queues native image-blob
+cleanup; nothing public is affected. A **published** deletion additionally
+removes the public PDS record first, through the native `deletePost` action
+(both `site.standard.document`/`pub.leaflet.document` collections are
+attempted server-side), plus its documents rows and publication linkage — a
+bigger, publicly visible action the preview says so plainly; appview/search
+propagation may lag the record's disappearance.
+
+Guards: pending attempts block (run `recover` first); the live editor must
+match the local binding exactly (origin, token, root, writable entity-set
+rights, lifecycle, publication association and, for published, the exact
+document URI); a published record that already vanished while the editor
+still resolves is divergence, not input. Success is verified **by
+observation** — the token must stop resolving and the record must go missing.
+Lost/ambiguous responses are `uncertain`, never retried automatically:
+reinspect and rerun deliberately. An editor already deleted out of band
+reports `remote-deleted`; `--yes` then performs only the local unbind.
+
+After a verified deletion the local file converts to an **unbound draft**:
+binding, native associations and receipts that referenced now-dead server
+objects are dropped, while authored content, source keys, names, comments and
+the local UUID are preserved and the result is reparse-proofed. `--purge`
+removes the file instead. Writes use the stable-ID lock and original-byte
+guard; no other file is touched. Exit codes: **0** preview/deleted/local
+unbind, **1** operational failure, **4** pending/blocked/uncertain (source
+preserved), **2** usage.
+
+The one-time authorized live smoke minted a fresh standalone disposable
+draft, saved it, deleted it through this path, observed the token 404 and
+confirmed the clean local unbind (private receipt under
+`.test-agent/native-delete/`). Published deletion is loopback-fixture tested
+only; test-publish authorization is deferred.
+Implementation receipt: [native delete](design/native-delete0.glm53m.md).
+
 ## Explicit save recovery
 
 ```sh
@@ -989,6 +1036,8 @@ only temporary synthetic sources/loopback servers, never the live corpus.
 - Integrated guarded live watch, locks and actual proof limits: [`design/connected-watch0.gpt61s.md`](design/connected-watch0.gpt61s.md)
 - First-binding defaults, explicit selected-locator recovery and deployed partial
   boundaries: [`design/native-default-adoption0.gpt61s.md`](design/native-default-adoption0.gpt61s.md)
+- Preview-first native editor deletion incl. the verified published-record path:
+  [`design/native-delete0.glm53m.md`](design/native-delete0.glm53m.md)
 - Experiment reading map and evidence protocol: [`experiments/README.md`](experiments/README.md)
 
 Never commit credentials or real response bodies; see

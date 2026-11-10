@@ -5,19 +5,13 @@
 use super::*;
 use crate::release::PublicReader;
 use leafbud_document::BlockKind;
-use leafbud_web::delete::PostOutcome;
 use leafbud_web::Error as WebError;
+use leafbud_web::delete::PostOutcome;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DeleteOptions {
     pub yes: bool,
     pub purge: bool,
-}
-
-impl Default for DeleteOptions {
-    fn default() -> Self {
-        Self { yes: false, purge: false }
-    }
 }
 
 /// Post-execution observation: what independent reads now report missing.
@@ -92,7 +86,13 @@ impl RemoteReader {
             token: binding.token,
             entity_set: binding.entity_set.clone(),
             record: binding.uri.clone(),
-            image_blocks: source.document.pages.iter().flat_map(|page| &page.blocks).filter(|block| matches!(block.kind, BlockKind::Image { .. })).count(),
+            image_blocks: source
+                .document
+                .pages
+                .iter()
+                .flat_map(|page| &page.blocks)
+                .filter(|block| matches!(block.kind, BlockKind::Image { .. }))
+                .count(),
             observed: None,
             local: Some("preserved"),
             message: None,
@@ -102,7 +102,10 @@ impl RemoteReader {
             report.message = Some("unresolved native attempt retained; run recover first; deletion waits".into());
             return Ok(report);
         }
-        ensure!(binding.base_url == self.client.base_url(), "binding belongs to another origin; select it with --base-url explicitly");
+        ensure!(
+            binding.base_url == self.client.base_url(),
+            "binding belongs to another origin; select it with --base-url explicitly"
+        );
         let store = lock::Store::new(source.context)?;
         let _binding_guard = store
             .binding(&binding.base_url, binding.token)?
@@ -121,18 +124,29 @@ impl RemoteReader {
             if let Some(uri) = &binding.uri {
                 let gone = matches!(public.fetch(uri).await, Err(crate::release::FetchError::Missing));
                 record_gone = Some(gone);
-                ensure!(gone, "native editor is gone but the public record still resolves; local source preserved until that divergence is understood");
+                ensure!(
+                    gone,
+                    "native editor is gone but the public record still resolves; local source preserved until that divergence is understood"
+                );
             }
             report.observed = Some(ObservedGone { token_gone: true, record_gone });
             report.outcome = if options.yes { "unbound-local" } else { "remote-deleted" };
-            report.local = Some(if options.yes { local_convert(source, &options)? } else if options.purge { "would-purge" } else { "would-unbind" });
+            report.local = Some(if options.yes {
+                local_convert(source, options)?
+            } else if options.purge {
+                "would-purge"
+            } else {
+                "would-unbind"
+            });
             report.message = Some("editor already deleted remotely; only the local unbind conversion was requested/executed; no effect dispatched".into());
             return Ok(report);
         };
         if binding.uri.is_some() {
             match public.fetch(binding.uri.as_deref().expect("published uri")).await {
                 Ok(_) => {}
-                Err(crate::release::FetchError::Missing) => anyhow::bail!("public record already missing while the editor still resolves; resolve the divergence before deleting"),
+                Err(crate::release::FetchError::Missing) => {
+                    anyhow::bail!("public record already missing while the editor still resolves; resolve the divergence before deleting")
+                }
                 Err(error) => return Err(anyhow::anyhow!("public record preflight failed: {:?}", error)),
             }
         }
@@ -144,7 +158,11 @@ impl RemoteReader {
             return Ok(report);
         }
         source.check()?;
-        let preparation = self.client.prepare_delete(binding.token).await.context("discovering native delete actions (no effect yet)")?;
+        let preparation = self
+            .client
+            .prepare_delete(binding.token)
+            .await
+            .context("discovering native delete actions (no effect yet)")?;
         source.check()?;
         // Native order for a published post: the record (and its rows/linkage)
         // die first, then the editor's entity set and permission token.
@@ -153,17 +171,25 @@ impl RemoteReader {
                 Ok(PostOutcome::Deleted) => {}
                 Ok(PostOutcome::Failed(failure)) => {
                     report.outcome = "refused";
-                    report.message = Some(format!("deletePost refused server-side ({:?}); no retry, source preserved; the record and editor were NOT deleted", failure.kind));
+                    report.message = Some(format!(
+                        "deletePost refused server-side ({:?}); no retry, source preserved; the record and editor were NOT deleted",
+                        failure.kind
+                    ));
                     return Ok(report);
                 }
                 Err(error) => {
                     // The response is lost/ambiguous, not a typed refusal.
                     // Observe the record before concluding anything.
                     let gone = matches!(public.fetch(uri).await, Err(crate::release::FetchError::Missing));
-                    report.observed = Some(ObservedGone { token_gone: false, record_gone: Some(gone) });
+                    report.observed = Some(ObservedGone {
+                        token_gone: false,
+                        record_gone: Some(gone),
+                    });
                     if !gone {
                         report.outcome = "uncertain";
-                        report.message = Some(format!("deletePost outcome uncertain ({error}); record still resolves; no retry, source preserved; reinspect and rerun deliberately"));
+                        report.message = Some(format!(
+                            "deletePost outcome uncertain ({error}); record still resolves; no retry, source preserved; reinspect and rerun deliberately"
+                        ));
                         return Ok(report);
                     }
                     // The record is gone. Continue only through a coherent
@@ -196,7 +222,7 @@ impl RemoteReader {
             return Ok(report);
         }
         report.outcome = "deleted";
-        report.local = Some(local_convert(source, &options)?);
+        report.local = Some(local_convert(source, options)?);
         report.message = Some(if binding.uri.is_some() {
             "public record and native editor verified gone by observation; local source converted; appview/search propagation may lag the record's disappearance".into()
         } else {
@@ -225,12 +251,14 @@ fn verify_deletable(binding: &Binding, data: &LeafletData) -> Result<()> {
         "observed token rights lack a writable right for the bound entity set; the native action would silently do nothing"
     );
     let association = import::association(data)?;
-    ensure!(association == binding.publication, "observed publication association differs from the local binding");
+    ensure!(
+        association == binding.publication,
+        "observed publication association differs from the local binding"
+    );
     let published = data.observed_state() == LeafletState::Published;
     ensure!(published == binding.uri.is_some(), "observed lifecycle differs from the local binding");
     if let Some(uri) = &binding.uri {
-        let observed = crate::published::association(data)?
-            .context("published editor has no document association")?;
+        let observed = crate::published::association(data)?.context("published editor has no document association")?;
         ensure!(&observed.uri == uri, "observed public record URI differs from the local binding");
     }
     Ok(())
@@ -253,9 +281,18 @@ fn verify_record_deleted(binding: &Binding, data: &LeafletData) -> Result<()> {
                 && r.write == Some(true)),
         "observed token rights lack a writable right for the bound entity set"
     );
-    ensure!(data.observed_state() == LeafletState::Draft, "record is gone but the editor still reports published linkage");
-    ensure!(crate::published::association(data)?.is_none(), "record is gone but a document association remains");
-    ensure!(import::association(data)? == binding.publication, "observed publication association differs from the local binding");
+    ensure!(
+        data.observed_state() == LeafletState::Draft,
+        "record is gone but the editor still reports published linkage"
+    );
+    ensure!(
+        crate::published::association(data)?.is_none(),
+        "record is gone but a document association remains"
+    );
+    ensure!(
+        import::association(data)? == binding.publication,
+        "observed publication association differs from the local binding"
+    );
     Ok(())
 }
 

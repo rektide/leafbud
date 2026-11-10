@@ -68,7 +68,10 @@ async fn origin(token: &str, published: bool) -> (DeleteServer, config::Context,
             ("publication_description", json!("")),
             ("publication_tags", json!([])),
         ] {
-            fixture["response"]["patch"].as_array_mut().unwrap().push(json!({"op":"put","key":key,"value":value}));
+            fixture["response"]["patch"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"op":"put","key":key,"value":value}));
         }
     }
     let fixture = Arc::new(std::sync::RwLock::new(fixture));
@@ -198,7 +201,14 @@ fn reader(server: &crate::import::tests::testserver::TestServer) -> RemoteReader
 
 async fn delete(server: &DeleteServer, context: &config::Context, path: &Path, yes: bool, purge: bool) -> DeleteReport {
     reader(&server.server)
-        .delete_editor(context, path, Selection { operands: vec![path.to_owned()] }, DeleteOptions { yes, purge })
+        .delete_editor(
+            context,
+            path,
+            Selection {
+                operands: vec![path.to_owned()],
+            },
+            DeleteOptions { yes, purge },
+        )
         .await
         .unwrap()
 }
@@ -212,7 +222,7 @@ async fn draft_preview_lists_what_dies_and_touches_nothing() {
     assert_eq!(report.lifecycle, "draft");
     assert_eq!(report.token.to_string(), TOKEN);
     assert!(report.record.is_none() && report.observed.is_none());
-    assert_eq!(report.local.as_deref(), Some("would-unbind"));
+    assert_eq!(report.local, Some("would-unbind"));
     assert!(report.message.as_deref().unwrap().contains("permanently deletes, for everyone"));
     assert!(!report.message.as_deref().unwrap().contains("PUBLISHED deletion additionally"));
     assert_eq!(server.posts(), 0, "preview dispatches nothing");
@@ -225,14 +235,14 @@ async fn draft_execution_observes_gone_then_converts_local_source() {
     let before = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
     let report = delete(&server, &context, &path, true, false).await;
     assert_eq!(report.outcome, "deleted");
-    assert_eq!(report.observed.as_ref().unwrap().token_gone, true);
-    assert_eq!(report.observed.as_ref().unwrap().record_gone, None);
+    assert!(report.observed.as_ref().unwrap().token_gone);
+    assert!(report.observed.as_ref().unwrap().record_gone.is_none());
     assert_eq!(server.posts(), 1, "exactly one deleteLeaflet dispatch");
     let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(after.state.id, before.state.id);
     assert!(after.state.binding.is_none() && after.state.nodes.is_empty() && after.state.sync.is_none());
     assert_eq!(after.authored_value(), before.authored_value());
-    assert_eq!(report.local.as_deref(), Some("unbound"));
+    assert_eq!(report.local, Some("unbound"));
 }
 
 #[tokio::test]
@@ -240,7 +250,7 @@ async fn purge_removes_the_local_file_after_verified_deletion() {
     let (server, context, _temp, path) = origin(TOKEN, false).await;
     let report = delete(&server, &context, &path, true, true).await;
     assert_eq!(report.outcome, "deleted");
-    assert_eq!(report.local.as_deref(), Some("purged"));
+    assert_eq!(report.local, Some("purged"));
     assert!(!path.exists());
 }
 
@@ -260,7 +270,13 @@ async fn pending_attempts_block_with_a_recover_hint() {
         effect: Effect::Push {
             range,
             stage: PushStage::Prepared,
-            protection: Protection { hash, facts: vec![], entities: vec![], metadata_fields: vec![], verification_roots: vec![] },
+            protection: Protection {
+                hash,
+                facts: vec![],
+                entities: vec![],
+                metadata_fields: vec![],
+                verification_roots: vec![],
+            },
             targets: Default::default(),
             created_entities: vec![],
         },
@@ -303,7 +319,10 @@ async fn server_side_drift_blocks_deletion_without_effects() {
     assert_eq!(report.outcome, "blocked");
     assert!(report.message.as_deref().unwrap().contains("silently do nothing"));
     assert_eq!(server.posts(), 0);
-    assert!(leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.binding.is_some(), "source preserved");
+    assert!(
+        leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.binding.is_some(),
+        "source preserved"
+    );
 }
 
 #[tokio::test]
@@ -315,7 +334,7 @@ async fn uncertain_editor_response_resolves_only_by_observation() {
     let report = delete(&server, &context, &path, true, false).await;
     assert_eq!(report.outcome, "uncertain");
     assert!(!report.observed.as_ref().unwrap().token_gone);
-    assert_eq!(report.local.as_deref(), Some("preserved"));
+    assert_eq!(report.local, Some("preserved"));
     assert_eq!(server.posts(), 1, "exactly one dispatch, never a retry");
     assert!(leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap().state.binding.is_some());
 
@@ -326,7 +345,7 @@ async fn uncertain_editor_response_resolves_only_by_observation() {
     let report = delete(&server, &context, &path, true, false).await;
     assert_eq!(report.outcome, "deleted");
     assert!(report.observed.as_ref().unwrap().token_gone);
-    assert_eq!(report.local.as_deref(), Some("unbound"));
+    assert_eq!(report.local, Some("unbound"));
     assert_eq!(server.posts(), 1);
 }
 
@@ -337,13 +356,13 @@ async fn already_deleted_editor_unbinds_locally_without_any_dispatch() {
     server.token_deleted.store(true, Ordering::SeqCst);
     let report = delete(&server, &context, &path, false, false).await;
     assert_eq!(report.outcome, "remote-deleted");
-    assert_eq!(report.local.as_deref(), Some("would-unbind"));
+    assert_eq!(report.local, Some("would-unbind"));
     assert_eq!(server.posts(), 0);
 
     // Executed: only the local conversion runs.
     let report = delete(&server, &context, &path, true, false).await;
     assert_eq!(report.outcome, "unbound-local");
-    assert_eq!(report.local.as_deref(), Some("unbound"));
+    assert_eq!(report.local, Some("unbound"));
     assert!(report.observed.as_ref().unwrap().token_gone);
     assert_eq!(server.posts(), 0);
     let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
