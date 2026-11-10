@@ -8,6 +8,8 @@ generated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
+    title: "Read-only deployed witness investigation corrects missing-field diagnosis: explicit null one-to-one joins match the pinned schema; guarded repair and separately authorized final proof follow"
   - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
     title: "Implemented and fixture-verified 0.25 save-first publish/recovery and separate settlement; one fresh live standalone draft saved, publication refused missing effect evidence before dispatch, draft deleted and token observed gone"
   - resource: /design/native-publication0.gpt61s.md
@@ -187,3 +189,44 @@ or further live publication attempt is commissioned here.
 structure, links/anchors and session provenance checks (67 links, 70 sources
 before this final evidence paragraph). Last reported context: **256101**;
 rotation/handoff follows this completed implementation-and-evidence boundary.
+
+## Deployed witness correction — 2026-11-10
+
+Follow-up session `ses_e3983e092ffeuzOsaIZioZQNKF` inspected only the already
+authorized P1 and standalone verification drafts: one read-only
+`get_leaflet_data` RPC and one read-only publish-page GET per target. No source,
+binding or remote object was changed. Private bounded bodies and sanitized key/
+shape summaries are retained in `.test-agent/native-publish-delta/` (0700/0600).
+The archive is still clean at `600c7b5f1f7b31b66fb626c293cc104312a12caf`.
+
+**The earlier assertion that deployed `reply_drafts` was omitted is not supported.**
+The old error said “evidence missing” for *every non-array*, including null; the
+prior smoke retained that diagnostic, not the raw metadata. Today's direct RPC
+evidence contains both `reply_drafts: null` and `publication_scheduled_posts: null`
+on both objects. The pinned `supabase/database.types.ts` marks both leaflet
+foreign keys `isOneToOne: true` (reply lines 2293–2298; schedule 2109–2114).
+PostgREST's selected empty one-to-one join is explicit null, not an empty array.
+The pinned publish page also reads `data.reply_drafts?.subject` and supplies the
+selected token; the deployed page token's reply witness is null, consistently.
+
+The complete direct RPC key inventory on both targets is:
+`blocked_by_admin`, `custom_domain_routes`, `description`, `id`,
+`leaflets_in_publications`, `leaflets_to_documents`, `permission_token_rights`,
+`publication_scheduled_posts`, `publications`, `reply_drafts`, `root_entity`,
+`title`. P1 has one direct publication draft row; standalone has neither direct
+linkage row. P1's row includes `preferences: null`, `email_only: false`, null
+`doc`/`documents`, and exact-token/publication/owner joins. The publication join
+includes `identity_did`, `uri`, `record`, `publication_contributors` (empty),
+newsletter/membership settings and membership tiers, matching the pinned selection.
+Rights contain token/entity-set/read/write plus the sibling entity-set join.
+There is no observed missing or renamed field used by publication preflight.
+
+This is compatibility evidence for the inspected contract, **not a deployed commit
+identification**. It establishes neither an older nor newer deployment and does
+not justify a re-pin. The authoritative reply/schedule witness already exists in
+the same RPC; another RPC, page scraper or fresh-mint provenance escape hatch is
+unnecessary. Repair will distinguish a present null from an absent key, refuse
+non-null relations and malformed shapes, and continue requiring complete evidence
+for both adopted/pre-existing and transaction-minted documents. The original
+smoke's refusal and cleanup remain real; its inferred deployed-delta explanation
+above is superseded by this correction.
