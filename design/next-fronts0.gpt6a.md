@@ -87,29 +87,25 @@ sources:
 
 ## Resume here after compaction
 
-**Latest accepted baseline: 0.21.0, through `5f7a666f`.** Published sources can
-adopt/refresh/watch and save their working editor, with separate read-only public
-status/diff. Parent reviewed native/public linkage, explicit lifecycle patching,
-working-metadata routing, strict projection and independent evidence; the 357-test
-gate is accepted with its bounded comparison and PDS-reported CID limits (4C).
+**Latest accepted baseline: 0.23.0, through `cf523b8b`.** Native publication has
+two accepted foundation checkpoints: the pinned action contract/preflight (0.22,
+368 tests) and the verification prerequisites (0.23, **378/378 tests**) — record
+content-CID verification and a proven native inline-size witness. Root `publish`
+remains unsupported; execution/recovery is the remaining slice (4C).
 
-**Active agent:** fresh Sol high `ses_e3bcb6540ffegZC39tN1E6wuTc`, on the first
-bounded checkpoint of **native publication** (`leafbud-release-native`): action
-contract, normalization/effect design and preflight/preview foundation. It must
-return for parent review and a fresh execution/recovery session, rather than build
-the whole feature in one context. The predecessor returned at ~422k, exceeding the
-agreed rotation limit; this is recorded as a cadence failure, not a new allowance.
-Rotate
+**No agent is currently active.** The 0.23 verification Sol returned at ~241k
+reported tokens, inside the rotation window. Before dispatching execution/recovery,
+the parent must record the operator's decision on the **publication-container
+gated-image cleanup policy** (section 4C): native publication into a publication
+always prunes that document's obsolete publish-owned gated-image copies, with no
+suppression flag. Standalone publishing does not take that path. This is a product
+decision, not a technical blocker; the earlier operator question on it was
+interrupted and remains open. Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
-Predecessor `ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets
-at about 215k context. Its [receipt](local-authoring-tools0.gpt61s.md) records APIs
-and source-shape limits. Do not duplicate the active implementation or poll its
-progress; await the harness return and review the actual result.
-
-The earlier compaction-report request is fulfilled. The latest request is to
-continue chasing the next moves using Sol high agents with the revised rotation
-window. Completed checks need not repeat merely because context was compacted.
+The user's latest request is a full status/architecture/road-ahead account; this
+document remains the maintained version of it. Completed checks need not repeat
+merely because context was compacted.
 
 ## 1. What has actually landed
 
@@ -125,6 +121,7 @@ window. Completed checks need not repeat merely because context was compacted.
 | Source fidelity and coverage | Whole-flow headers, broad preparation spellings, same-page block comments; explicit operation evidence | [Source contract](/doc/mdx/README.md), [coverage](/doc/mdx/coverage.md) |
 | Filename/path reconciliation | Independent `names`, explicit/default tidy reconciliation, read-only classification, no-clobber move with unconfirmed-settlement reporting | [Naming receipt](naming0.gpt61s.md), `workflow::names/tidy`, `mdx::patch_names` |
 | Published editor and public evidence | Verified published binding/import/refresh/save; explicit lifecycle adoption; separate public status/diff with unknown imported baselines | [Public contract](/doc/release/README.md), [receipt](published-lifecycle0.gpt61s.md) |
+| Native publication foundation | Pinned `publishToPublication` contract, read-only readiness preview, content-CID verification, proven inline-size witness; execution not wired | [Action/preflight](native-publication0.gpt61s.md), [verification](publication-verification0.gpt61s.md) |
 
 The supported native editor lifecycles are **draft and published**. Canvas,
 nested/task lists, richer interactive objects, uploads and native public-release
@@ -139,7 +136,7 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 
 ### Verification to carry forward
 
-- Latest regular gate: **357/357 workspace tests**, six opt-in deployment tests
+- Latest regular gate: **378/378 workspace tests**, six opt-in deployment tests
   skipped; formatting, strict all-target clippy and document checks passed.
 - Production Yrs → independent actual Yjs: **7/7 groups**. The terminal-recovery
   slice did not change the writer; its receipt correctly reuses that evidence.
@@ -167,6 +164,12 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
   explicit lifecycle adoption, scoped public reads/diff without native credentials,
   independent unknown/changed release evidence and published Phoenix adoption.
   No deployed published proof or new independent Yjs execution is claimed.
+- Version 0.22/0.23 add literal native publish-action transport fixtures, read-only
+  readiness guards, five independent fixed JS content-CID vectors and six fixtures
+  executing the actual pinned native serializer/offload helper (fragmented text
+  161205 bytes correctly refuses inline; ordinary two-page post 6551 bytes passes;
+  exact 102399/102400/102401 boundary verified). All loopback/synthetic; the
+  unchanged ordinary Yrs writer keeps its received seven-group evidence.
 
 Trust these reported checks. Add tests for new changes or a specific unresolved
 review question; do not rerun everything to reconstruct confidence after compaction.
@@ -336,26 +339,36 @@ PDS-reported and syntax-validated, **not rehashed**; status labels that evidence
 requires supported current meaning for equality. This is accepted for the current
 read-only contract, not sufficient by itself to claim verified future publication.
 
-**Active next checkpoint — `leafbud-release-native`:** fresh Sol
-`ses_e3bcb6540ffegZC39tN1E6wuTc` owns action discovery/arguments/responses, source-
-grounded first/update normalization and side-effect analysis, and production
-preflight/preview building blocks with literal HTTP/action fixtures. It may expose
-an honest preview command but must leave execution explicitly unavailable until
-the next session integrates it. This is an internal feature checkpoint, not full
-publish delivery or ticket closure.
+**Foundation accepted; execution next — `leafbud-release-native`:** two bounded
+checkpoints are parent-accepted. Sol `ses_e3bcb6540ffegZC39tN1E6wuTc` (0.22,
+~223k) delivered the pinned action contract, forced no-email transport, read-only
+`workflow::publication::preview` and the exact standalone default-theme correction.
+Sol `ses_e3bb92bc4ffeN77oF8X2ayoH9a` (0.23, ~241k) delivered record content-CID
+verification (`atproto::content`, `fetch_content_verified`) and the proven native
+inline-size witness through the actual pinned serializer. Root `publish`/`--yes`
+still refuses; no workflow invokes the effect adapter.
 
-The handoff must equip a fresh execution/recovery Sol with compact attempt-state
-transitions, exact output verification/receipt authority and lost-response handling.
-Inspect the real server-action boundary: internal rkey support does not establish
-public action support, future dates can normalize, and native `sendEmail` defaults
-true. Initial publication must explicitly disable delivery and avoid entity cleanup;
-other automatic native effects must be understood. Current projection limits are
-preflight boundaries before save/mint, not permission to truncate content.
+The remaining slice is one fresh Sol high: locked save-first execution, durable
+dispatch-before-effect uncertainty, fresh saved-state size witness, content-verified
+exact-URI output plus native authoritative association, complete meaning comparison
+with declared path/date normalization, a distinct loss-checked release-patch
+authority and finite recovery. Never blind-retry uncertain dispatch. The receiving
+briefs in both receipts equip it.
 
-The previous session exceeded 320k. The new checkpoint is deliberately smaller:
-measure at stage boundaries, stop adding scope near 220k, and return with a committed
-handoff before 300k to leave margin. Execution/recovery is a fresh session even if
-context remains. All verification uses fixtures/loopback; no live corpus/test-draft
+**Open product decision — gated-image cleanup:** publishing into a publication
+always runs the native document-scoped stale-copy cleanup (`gatedImages.removeStale`,
+no suppression flag; standalone publishing never constructs it). Parent's source
+review confirmed the scope. Execution dispatch needs the operator to choose:
+accept that native housekeeping as disclosed behavior, require an upstream opt-out
+before publication-container publishing (standalone can proceed meanwhile), or
+finish standalone first. This decides preview blockers, not live authorization.
+
+Other automatic native effects are enumerated and preflight-guarded: byline upsert
+on first publication, schedule deletion, newsletter skipped-slot claim on first
+newsletter-enabled publish, path revalidation/analytics and conditional version
+snapshots. Nondefault inherited preferences, reply drafts and schedules refuse.
+
+All verification uses fixtures/loopback; no live corpus/test-draft
 mutation or real publication, upload, email/share or cleanup is commissioned.
 
 Reuse existing native web actions and public record/protocol crates where their
@@ -411,7 +424,8 @@ still needs its parent-level scope review, not duplicate implementation tickets.
 
 | Session | Disposition |
 | --- | --- |
-| `ses_e3bcb6540ffegZC39tN1E6wuTc` | **Active:** native publication action/preflight checkpoint; return before execution/recovery |
+| `ses_e3bb92bc4ffeN77oF8X2ayoH9a` | Completed 0.23 content-CID/inline-size verification at ~241k; parent accepted |
+| `ses_e3bcb6540ffegZC39tN1E6wuTc` | Completed 0.22 action contract/preflight at ~223k; parent accepted |
 | `ses_e3c10b84effeXUnnnL5oZ5M7TJ` | Completed 0.21 published adoption/state; ~422k exceeded rotation limit, retired |
 | `ses_e3c29df03ffeKTX7z5IHA3nup5` | Completed naming at 214,041 reported tokens; parent accepted 0.20 |
 | `ses_e3c420e5affeLoQfS0oTd9wu5b` | Completed source fidelity/coverage at 239,394 measured tokens; parent accepted 0.19 |
@@ -420,7 +434,7 @@ still needs its parent-level scope review, not duplicate implementation tickets.
 | `ses_e3d96851dffeS2cPD2vPHjGklF` | Completed keyed save loop at ~276k; retired from major continuation |
 | `ses_e3dcb1f8effebiT0KtCRZB8dWf` | Completed defaults/description/P1 settlement at ~256k; retired |
 | `ses_e4121e55dffeF009EbMiG1Xinz` | Completed native effects and later candidate inspection at ~310k; retired |
-| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent reviewed through 0.21 and split native publication into bounded fresh-session checkpoints |
+| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent reviewed through 0.23; execution/recovery dispatch awaits the cleanup-policy decision |
 
 Historical independent waves and earlier agents are linked from the receipts.
 Their old g recommendations or polling-first descriptions are superseded by
