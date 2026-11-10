@@ -3,7 +3,7 @@ type: OperatorDecisionExplainer
 title: "May Leafbud trigger Leaflet's per-post image cleanup?"
 description: "An implementation-side, plain-language account of the publication-container cleanup choice, its actual user impact, and the work each option requires."
 resource: /design/native-cleanup-question0.gpt61s.md
-status: proposed-not-decided
+status: decided-option-a
 generated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
@@ -440,3 +440,13 @@ Three refinements matter more than the original technical shorthand:
 [ui-publish]: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/app/(app)/(identity)/%5Bleaflet_id%5D/publish/PublishPost.tsx#L303-L318
 [delimiter]: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/utils/factsToPagesRecord.ts#L758-L774
 [public-truncation]: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/membership.ts#L108-L153
+
+
+## Decision (2026-11-10)
+
+The operator chose **option A — "let Leaflet be Leaflet."** Publishing from
+Leafbud accepts Leaflet's own publish-time behavior, this cleanup included,
+exactly as the web UI's publish button does. Leafbud discloses it in the
+preview in plain words ("old image copies may be deleted; count unknown") and
+adds no deletion machinery of its own. This section records the outcome; the
+analysis above is unchanged.

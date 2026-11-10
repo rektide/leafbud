@@ -93,14 +93,23 @@ two accepted foundation checkpoints: the pinned action contract/preflight (0.22,
 content-CID verification and a proven native inline-size witness. Root `publish`
 remains unsupported; execution/recovery is the remaining slice (4C).
 
-**No agent is currently active.** The 0.23 verification Sol returned at ~241k
-reported tokens, inside the rotation window. Before dispatching execution/recovery,
-the parent must record the operator's decision on the **publication-container
-gated-image cleanup policy** (section 4C): native publication into a publication
-always prunes that document's obsolete publish-owned gated-image copies, with no
-suppression flag. Standalone publishing does not take that path. This is a product
-decision, not a technical blocker; the earlier operator question on it was
-interrupted and remains open. Rotate
+**Cleanup policy DECIDED (operator, 2026-11-10): "let Leaflet be Leaflet" — option A.**
+Publishing from Leafbud into a publication accepts Leaflet's own publish-time
+behavior, including its per-post image housekeeping, exactly as the web UI's
+publish button does. The preview must disclose it in plain words — "old image
+copies may be deleted; count unknown," never "no images, therefore nothing to
+delete." This is scoped acceptance of native behavior, not a general approval
+of Leafbud-side deletion: no Leafbud cleanup routines, storage credentials or
+retries join it. Standalone publishing never touches this path. Two independent
+explainers converged on this lean ([g](native-cleanup-question0.glm53m.md),
+[Sol](native-cleanup-question0.gpt61s.md)); the execution slice replaces the
+publication-scoped blocker with the disclosure.
+
+**Active agent:** g `ses_e39c64844ffeh98er3US2A0gQC` on `leafbud-editor-delete`
+(draft + published deliberate deletion; operator expanded scope 2026-11-10).
+The **publication execution/recovery Sol dispatches when the delete work
+returns** — same checkout, overlapping files; keep implementation agents serial.
+Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 The user's latest request is a full status/architecture/road-ahead account; this
@@ -355,13 +364,20 @@ with declared path/date normalization, a distinct loss-checked release-patch
 authority and finite recovery. Never blind-retry uncertain dispatch. The receiving
 briefs in both receipts equip it.
 
-**Open product decision — gated-image cleanup:** publishing into a publication
-always runs the native document-scoped stale-copy cleanup (`gatedImages.removeStale`,
-no suppression flag; standalone publishing never constructs it). Parent's source
-review confirmed the scope. Execution dispatch needs the operator to choose:
-accept that native housekeeping as disclosed behavior, require an upstream opt-out
-before publication-container publishing (standalone can proceed meanwhile), or
-finish standalone first. This decides preview blockers, not live authorization.
+**DECIDED — gated-image cleanup (operator 2026-11-10, "let Leaflet be Leaflet"):**
+publishing into a publication accepts the native document-scoped stale-copy
+cleanup (`gatedImages.removeStale`, no suppression flag; standalone never
+constructs it) as disclosed behavior, identical to the web UI's publish. The
+execution slice removes the publication-scoped blocker and replaces it with a
+plain disclosure: "old image copies may be deleted; count unknown." No
+Leafbud-side deletion, storage access or cleanup retry joins it. Two
+independent explainers ([g](native-cleanup-question0.glm53m.md),
+[Sol](native-cleanup-question0.gpt61s.md)) verified the bounds and converged
+on this lean: effect limited to the document's own publish-owned folder,
+fails safe on listing errors, capped at 1000 objects per sweep, unreachable
+for Leafbud-authored content, and a clean public record cannot prove the
+folder empty (D illusory). Scoped acceptance of native behavior only — this
+decides preview disclosure, not live authorization.
 
 Other automatic native effects are enumerated and preflight-guarded: byline upsert
 on first publication, schedule deletion, newsletter skipped-slot claim on first

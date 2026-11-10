@@ -3,8 +3,11 @@ type: Design
 title: "The native gated-image cleanup question, explained for decision"
 description: "Plain-language account of the one remaining policy blocker for native publication-container publishing: Leaflet's own post-publish storage cleanup, its user impact, and the operator's options."
 resource: /design/native-cleanup-question0.glm53m.md
-status: draft
+status: decided-option-a
 generated:
+  at: 2026-11-10
+  by: model:zai-coding-plan/glm-5.3#max
+updated:
   at: 2026-11-10
   by: model:zai-coding-plan/glm-5.3#max
 sources:
@@ -259,3 +262,13 @@ this one differs only in lacking a witness, and D shows the witness gap cannot
 be closed from our side. C is the reasonable fallback if the operator prefers
 to decide with usage data, at the cost of keeping publication users on the web
 UI, which performs the same cleanup anyway.
+
+
+## Decision (2026-11-10)
+
+The operator chose **option A — "let Leaflet be Leaflet."** Publishing from
+Leafbud accepts Leaflet's own publish-time behavior, this cleanup included,
+exactly as the web UI's publish button does. Leafbud discloses it in the
+preview in plain words ("old image copies may be deleted; count unknown") and
+adds no deletion machinery of its own. This section records the outcome; the
+analysis above is unchanged.

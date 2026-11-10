@@ -46,6 +46,10 @@ sources:
 - Local content currently on this computer, including `~/l`, is rebuildable.
   Formats and earlier design choices may be revised when useful; avoid building
   migration machinery solely to preserve this disposable corpus.
+- Leaflet's own publish-time behavior is **accepted as disclosed native behavior**
+  ("let Leaflet be Leaflet", operator 2026-11-10): publishing into a publication
+  includes its per-post image housekeeping, disclosed plainly in preview. Leafbud
+  never adds its own deletion/cleanup routines or retries.
 - Live Leaflet testing is permitted **in moderation when quiet and self-cleaning**:
   prefer freshly minted disposable drafts that are deleted after verification.
   Quiet publish suppresses subscriber email only, not public record visibility;
