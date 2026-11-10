@@ -31,6 +31,27 @@ impl LeafletClient {
         let response = self.http.get(page.clone()).send().await.map_err(transport)?;
         let mut remaining = MAX_TOTAL;
         let html = bounded_text(response, "GET publication dashboard", MAX_PAGE, &mut remaining).await?;
+        self.discover_action_in(&html, name).await
+    }
+
+    /// Scan one already-fetched page's same-origin static chunks for a
+    /// required single action reference. Zero, ambiguous, changed or
+    /// redirected discovery refuses.
+    pub(crate) async fn discover_action_in(&self, html: &str, name: &str) -> Result<String, Error> {
+        self.references_in(html, name)
+            .await?
+            .ok_or(Error::Native("current native action reference unavailable; no fallback"))
+    }
+
+    /// Same bounded scan for an optional action: absent (zero references) is
+    /// `None`; two or more references are still an ambiguous refusal.
+    pub(crate) async fn discover_optional_action_in(&self, html: &str, name: &str) -> Result<Option<String>, Error> {
+        self.references_in(html, name).await
+    }
+
+    async fn references_in(&self, html: &str, name: &str) -> Result<Option<String>, Error> {
+        // The page fetch already consumed its bytes from this shared budget.
+        let mut remaining = MAX_TOTAL.saturating_sub(html.len());
         let tags = Regex::new(r#"(?is)<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>"#).expect("static regex");
         let mut urls = BTreeSet::new();
         for capture in tags.captures_iter(&html) {
@@ -62,10 +83,7 @@ impl LeafletClient {
                 return Err(Error::Native("ambiguous native action reference"));
             }
         }
-        if references.len() != 1 {
-            return Err(Error::Native("current native action reference unavailable; no fallback"));
-        }
-        Ok(references.into_iter().next().expect("one reference"))
+        Ok((references.len() == 1).then(|| references.into_iter().next().expect("one reference")))
     }
 }
 

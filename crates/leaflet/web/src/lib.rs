@@ -13,6 +13,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 mod actions;
+pub mod delete;
 mod home;
 pub mod live;
 mod mint;
