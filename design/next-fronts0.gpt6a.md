@@ -105,18 +105,25 @@ explainers converged on this lean ([g](native-cleanup-question0.glm53m.md),
 [Sol](native-cleanup-question0.gpt61s.md)); the execution slice replaces the
 publication-scoped blocker with the disclosure.
 
-**Active agent:** fresh Sol high on the `leafbud-release-native` **deployed-evidence
-follow-up**: reconcile the deployed server's actual metadata fields with the
-pinned reference, repair the effect-field witness without weakening absence
-guards, and — if the evidence fix holds — run one final quiet disposable live
-publish proof. Publish execution itself is parent-accepted (0.25.0, 406/406,
-`498dc2df`): save-first transaction, dispatch-before-effect uncertainty,
-content-verified settlement via `settle_release`, finite recovery. The first
-live smoke was **correctly refused before dispatch** (deployed server omitted
-`reply_drafts`; missing evidence is not an empty array) and cleaned up its
-disposable draft completely. Undecoded mint responses now survive to private
-0600 receipts instead of vanishing. Keep implementation agents serial in this
-checkout. Rotate
+**Latest accepted baseline: 0.25.0, through `462e6bfb`.** Native publishing is
+**live-proven end-to-end**: one disposable standalone draft was quietly
+published, updated at the same URI, each verified through association +
+content-CID + meaning with settled `released` receipts, then fully deleted with
+both record and editor observed gone. The deployed-server mystery resolved
+soundly — its RPC answers reply/schedule evidence with explicit null (one-to-one
+joins), which our reader had conflated with absence; the guard now requires the
+explicit null for every draft, no exemptions. The Flight decoder gained its
+fixes from a retained 100,686-byte response with literal regressions.
+`leafbud-release-native` is closed with the qualification that
+publication-container live proof was not exercised (fixtures + option-A
+disclosure only) and the original P1 mint attribution remains unproven.
+
+**Active agent:** fresh Sol high on **`leafbud-release-preferences`** — exposing
+the four publication visibility preferences through tri-state frontmatter and
+`edit --preference` flags per the researched design
+([publish options](publish-options0.glm53m.md)). Fixture/loopback only; no live
+effects commissioned. `leafbud-release-delivery` remains uncommissioned. Keep
+implementation agents serial in this checkout. Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 The user's latest request is a full status/architecture/road-ahead account; this
@@ -139,7 +146,7 @@ merely because context was compacted.
 | Published editor and public evidence | Verified published binding/import/refresh/save; explicit lifecycle adoption; separate public status/diff with unknown imported baselines | [Public contract](/doc/release/README.md), [receipt](published-lifecycle0.gpt61s.md) |
 | Native publication foundation | Pinned `publishToPublication` contract, read-only readiness preview, content-CID verification, proven inline-size witness; execution not wired | [Action/preflight](native-publication0.gpt61s.md), [verification](publication-verification0.gpt61s.md) |
 | Deliberate native deletion | Preview-first `delete` for draft and published; record-first native order; observation-verified; clean local unbinding | [Delete receipt](native-delete0.glm53m.md), `web::delete`, `native::delete` |
-| Publish execution and recovery | Save-first `publish` with dispatch uncertainty, content-verified settlement, finite recovery; live proof pending deployed evidence fix | [Publish receipt](native-publish0.gpt61s.md), `native::publish`, `mdx::settle_release` |
+| Publish execution and recovery | Live-proven quiet first publish + same-URI update with content-verified settlement; finite recovery; explicit-null evidence guards | [Publish receipt](native-publish0.gpt61s.md), `native::publish`, `mdx::settle_release` |
 
 The supported native editor lifecycles are **draft and published**. Canvas,
 nested/task lists, richer interactive objects, uploads and native public-release
