@@ -64,6 +64,168 @@ async fn server(publication: bool) -> (testserver::TestServer, Arc<Mutex<store::
     (http, state)
 }
 
+fn published_payload(text: &str) -> String {
+    use base64::Engine;
+    use yrs::{Doc, Transact, XmlFragment as _};
+    let doc = Doc::new();
+    let fragment = doc.get_or_insert_xml_fragment("prosemirror");
+    let mut txn = doc.transact_mut();
+    let paragraph = fragment.insert(&mut txn, 0, yrs::XmlElementPrelim::empty("paragraph"));
+    paragraph.insert(&mut txn, 0, yrs::XmlTextPrelim::new(text));
+    base64::engine::general_purpose::STANDARD.encode(txn.encode_update_v1())
+}
+
+#[tokio::test]
+async fn published_cli_import_edit_save_refresh_public_only_status_and_fetched_release_diff() {
+    let uri = "at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post";
+    let record = json!({"$type":"site.standard.document","site":"https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx","title":"Public title","path":"/post","publishedAt":"2026-10-01T10:00:00.000Z","content":{"$type":"pub.leaflet.content","pages":[{"$type":"pub.leaflet.pages.linearDocument","id":store::PAGE,"blocks":[{"$type":"pub.leaflet.pages.linearDocument#block","block":{"$type":"pub.leaflet.blocks.text","plaintext":"Already released prose"}}]}]}});
+    let mut native = store::Store::new(true);
+    native.data["leaflets_in_publications"] = json!([]);
+    native.data["leaflets_to_documents"] =
+        json!([{"leaflet":store::TOKEN,"document":uri,"title":"Working title","description":"","tags":[],"documents":{"uri":uri,"data":record}}]);
+    for (key, value) in [
+        ("publication_title", json!("Working title")),
+        ("publication_description", json!("")),
+        ("publication_tags", json!([])),
+        ("draft_contributors", json!([])),
+    ] {
+        native.extras.insert(key.into(), value);
+    }
+    native.assert(json!({"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","entity":store::SEED,"attribute":"block/text","data":{"type":"text","value":published_payload("Current unreleased native prose")}}));
+    let native = Arc::new(Mutex::new(native));
+    let handle = native.clone();
+    let public = record.clone();
+    let server=testserver::TestServer::spawn(Arc::new(move|request|{
+        if request.path=="/xrpc/com.atproto.repo.getRecord" {
+            assert!(request.header("cookie").is_none() && request.header("authorization").is_none());
+            return (200,json!({"uri":uri,"cid":"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku","value":public}).to_string());
+        }
+        let mut native=handle.lock().unwrap();
+        if request.path=="/home" {
+            let identity=json!({"atp_did":"did:plc:abcdefghijklmnopqrstuvwx","permission_token_on_homepage":[{"permission_tokens":native.data}],"contributor_leaflets":[]});
+            return (200,format!("<script>self.__next_f.push({})</script>",json!([1,format!("0:{identity}")])));
+        }
+        (200,native.rpc(&request.path,&request.body_json()).expect("only native editor RPCs permitted").to_string())
+    })).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("published.mdx");
+    let report = invoke(&server.base_url, root.path(), &["import", uri, "--to", "published.mdx", "--json"], 0).await;
+    assert_eq!(report["imported"], 1);
+    assert_eq!(report["version"], 2);
+    let source = std::fs::read_to_string(&path).unwrap();
+    assert!(source.contains("Current unreleased native prose") && !source.contains("Already released prose"));
+    let before = leafbud_mdx::parse(&source).unwrap();
+    assert_eq!(before.state.state, "published");
+    assert!(before.state.released.is_none());
+    let source = format!(
+        "\u{feff}{}",
+        source
+            .replacen("\n\"@leafbud\":", "\n# unknown author bytes\ncustom: {keep: [1, 2]}\n\"@leafbud\":", 1)
+            .replacen("<Key", "{/* local note */}\n\n<Key", 1)
+            .replace('\n', "\r\n")
+    );
+    std::fs::write(&path, &source).unwrap();
+    let edited = cli(&server.base_url, root.path(), &["edit", "published.mdx", "--title", "Next working title"])
+        .output()
+        .await
+        .unwrap();
+    assert!(edited.status.success());
+    let source = format!("{}\r\nNew local paragraph.\r\n", std::fs::read_to_string(&path).unwrap());
+    std::fs::write(&path, &source).unwrap();
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "published.mdx", "--json"], 0).await["items"][0]["outcome"],
+        "would-save"
+    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "published.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "saved"
+    );
+    let after_source = std::fs::read_to_string(&path).unwrap();
+    let after = leafbud_mdx::parse(&after_source).unwrap();
+    assert!(after_source.starts_with('\u{feff}') && after_source.contains("custom: {keep: [1, 2]}\r\n") && after_source.contains("{/* local note */}"));
+    assert_eq!(after.state.id, before.state.id);
+    assert_eq!(after.state.binding, before.state.binding);
+    assert_eq!(after.state.released, None);
+    assert_eq!(
+        after.state.nodes[&before.pages[0].blocks[0].key],
+        before.state.nodes[&before.pages[0].blocks[0].key]
+    );
+    assert_eq!(after.extra["publishedAt"], "2026-10-01T10:00:00.000Z");
+    assert_eq!(native.lock().unwrap().data["leaflets_to_documents"][0]["documents"]["data"], record);
+    let bytes = std::fs::read(&path).unwrap();
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let pushes = native.lock().unwrap().pushes;
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "published.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "unchanged"
+    );
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["pull", "published.mdx", "--json"], 0).await["unchanged"],
+        1
+    );
+    assert_eq!(native.lock().unwrap().pushes, pushes);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+    // A broken native credential store/origin cannot block public-only reads.
+    std::fs::create_dir_all(root.path().join(".config/leafbud/auth-token")).unwrap();
+    let public_cli = |args: &[&str]| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_leafbud"));
+        command
+            .env("XDG_CONFIG_HOME", root.path().join(".config"))
+            .env("LEAFLET_BASE_URL", "invalid native origin")
+            .env_remove("LEAFLET_AUTH_TOKEN")
+            .args(["--root", root.path().to_str().unwrap(), "--pds", &server.base_url])
+            .args(args);
+        command
+    };
+    let requests = server.request_count("/api/rpc/get_leaflet_data");
+    let status = public_cli(&["status", "published.mdx", "--public-only", "--json"]).output().await.unwrap();
+    assert!(status.status.success(), "{}", String::from_utf8_lossy(&status.stderr));
+    let status: Value = serde_json::from_slice(&status.stdout).unwrap();
+    assert_eq!(status["items"][0]["release"]["state"], "different-untracked");
+    assert_eq!(status["items"][0]["release"]["baseline"], "unknown-imported");
+    assert_eq!(status["items"][0]["remote"]["freshness"], "not-requested");
+    let diff = public_cli(&[
+        "diff",
+        "published.mdx",
+        "--edge",
+        "release",
+        "--tool",
+        "diff",
+        "--tool-arg=-U1000",
+        "--tool-exit",
+        "diff",
+    ])
+    .output()
+    .await
+    .unwrap();
+    assert!(diff.status.success(), "{}", String::from_utf8_lossy(&diff.stderr));
+    let view = String::from_utf8(diff.stdout).unwrap();
+    assert!(view.contains("Already released prose") && view.contains("Current unreleased native prose") && view.contains("publishedAt"));
+    assert_eq!(server.request_count("/api/rpc/get_leaflet_data"), requests);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    // Simulate a later durable web editor edit (not a new public release).
+    native.lock().unwrap().facts.get_mut("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa").unwrap()["data"]["value"] =
+        json!(published_payload("Fresh native working text"));
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["pull", "published.mdx", "--json"], 0).await["updated"],
+        1
+    );
+    let final_source = std::fs::read_to_string(&path).unwrap();
+    let final_doc = leafbud_mdx::parse(&final_source).unwrap();
+    assert!(final_source.contains("Fresh native working text") && final_source.contains("local note"));
+    assert_eq!(final_doc.state.binding, before.state.binding);
+    assert!(final_doc.state.released.is_none());
+    assert_eq!(server.request_count("/new"), 0);
+    assert!(
+        server
+            .requests()
+            .iter()
+            .all(|request| request.path.starts_with("/api/rpc/") || request.path == "/home" || request.path == "/xrpc/com.atproto.repo.getRecord")
+    );
+}
+
 #[tokio::test]
 async fn complete_cli_both_contexts_preview_first_combined_revision_pull_and_unchanged_all() {
     for publication in [false, true] {

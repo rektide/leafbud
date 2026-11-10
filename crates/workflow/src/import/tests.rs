@@ -257,7 +257,7 @@ async fn actual_import_noop_rename_and_local_changes_preserved() {
     assert_eq!(report.items[0].outcome, "kept-local-changes");
     assert_eq!(report.items[0].path.as_ref(), Some(&renamed));
     assert_eq!(std::fs::read_to_string(&renamed).unwrap(), edited);
-    assert_eq!(server.request_count("/api/rpc/pull"), 3);
+    assert_eq!(server.request_count("/api/rpc/pull"), 5, "reimports use the fresh guarded refresh transaction");
 }
 
 #[tokio::test]
@@ -291,7 +291,7 @@ async fn single_destination_collision_and_unsafe_paths_are_refused() {
 }
 
 #[tokio::test]
-async fn remote_drift_does_not_replace_existing_local_source() {
+async fn repeat_import_uses_guarded_pull_and_preserves_local_changes() {
     use std::sync::atomic::{AtomicBool, Ordering};
     let changed = Arc::new(AtomicBool::new(false));
     let flag = changed.clone();
@@ -329,7 +329,10 @@ async fn remote_drift_does_not_replace_existing_local_source() {
     let bytes = std::fs::read(path).unwrap();
     changed.store(true, Ordering::Relaxed);
     let second = reader.import(&context, request()).await.unwrap();
-    assert_eq!((second.failed, second.imported), (1, 0));
-    assert!(second.items[0].error.as_ref().unwrap().contains("remote changed"));
-    assert_eq!(std::fs::read(path).unwrap(), bytes);
+    assert_eq!((second.failed, second.imported, second.refreshed), (0, 0, 1));
+    assert_eq!(
+        leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap().title,
+        "Changed remote title"
+    );
+    assert_ne!(std::fs::read(path).unwrap(), bytes);
 }

@@ -27,6 +27,13 @@ impl Store {
         self.acquire(&format!("binding-{:x}", Sha256::digest(format!("{base}/{token}"))))
     }
 
+    /// One public identity can have several native capability aliases/origins.
+    /// Coordinate new local adoption through the same OS-lock mechanism.
+    pub fn public(&self, uri: &str) -> Result<Option<Guard>> {
+        use sha2::{Digest, Sha256};
+        self.acquire(&format!("public-{:x}", Sha256::digest(uri)))
+    }
+
     fn acquire(&self, name: &str) -> Result<Option<Guard>> {
         std::fs::create_dir_all(&self.0).context("creating cooperative lock directory")?;
         let file = OpenOptions::new()

@@ -277,58 +277,81 @@ pub(crate) async fn outcome(events: &mut mpsc::UnboundedReceiver<Event>, wanted:
 
 #[tokio::test]
 async fn actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identity() {
-    let http = Http::new().await;
-    let socket = Socket::new().await;
-    let temp = tempfile::tempdir().unwrap();
-    let path = http.seed(temp.path(), TOKEN, "doc.mdx");
-    let source = std::fs::read_to_string(&path).unwrap();
-    let mut doc = leafbud_mdx::parse(&source).unwrap();
-    doc.state.id = Uuid::new_v4();
-    let old = doc.pages[0].blocks[0].key.clone();
-    let mut source = leafbud_mdx::render(&doc)
-        .unwrap()
-        .replacen("\n\"@leafbud\":", "\ncustom: {keep: [1, 2]}\n\"@leafbud\":", 1);
-    let at = leafbud_mdx::parse_with_spans(&source).unwrap().spans[0].start;
-    source.insert_str(at, "{/* local note 😀 */}\n\n");
-    std::fs::write(&path, &source).unwrap();
-    let reader = http.reader();
-    let context = fixtures::context(temp.path());
-    crate::author::rename(&context, &path, &old, "manual-key").unwrap();
-    let (cancel, _) = watch::channel(false);
-    let (tx, mut events) = mpsc::unbounded_channel();
-    let run = reader.watch(
-        &context,
-        Request {
-            all: true,
-            ..Default::default()
-        },
-        socket.options(),
-        cancel.subscribe(),
-        |e| {
-            tx.send(copy_event(e)).unwrap();
-            Ok(())
-        },
-    );
-    let actions = async {
-        outcome(&mut events, refresh::Outcome::Unchanged).await;
-        http.change(TOKEN, "Durable remote edit");
-        socket.poke();
-        outcome(&mut events, refresh::Outcome::Updated).await;
-        let bytes = std::fs::read(&path).unwrap();
-        let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
-        let source = String::from_utf8(bytes.clone()).unwrap();
-        assert!(source.contains("Durable remote edit") && source.contains("manual-key") && source.contains("custom: {keep: [1, 2]}"));
-        assert!(source.contains("{/* local note 😀 */}"));
-        assert_eq!(leafbud_mdx::parse_with_spans(&source).unwrap().comments[0].block, "manual-key");
-        assert_eq!(leafbud_mdx::parse(&source).unwrap().state.id, doc.state.id);
-        socket.poke();
-        outcome(&mut events, refresh::Outcome::Unchanged).await;
-        assert_eq!(std::fs::read(&path).unwrap(), bytes);
-        assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
-        cancel.send_replace(true);
-    };
-    let (report, _) = tokio::join!(run, actions);
-    assert_eq!(report.unwrap().writes, 1);
+    for published in [false, true] {
+        let http = Http::new().await;
+        if published {
+            http.fixtures.write().unwrap().insert(TOKEN.into(), crate::published::tests::fixture(true));
+        }
+        let socket = Socket::new().await;
+        let temp = tempfile::tempdir().unwrap();
+        let path = http.seed(temp.path(), TOKEN, "doc.mdx");
+        let source = std::fs::read_to_string(&path).unwrap();
+        let mut doc = leafbud_mdx::parse(&source).unwrap();
+        doc.state.id = Uuid::new_v4();
+        if published {
+            doc.state.released = Some(leafbud_document::Released {
+                profile: leafbud_document::RELEASE_PROFILE.into(),
+                input_hash: format!("sha256:{}", "a".repeat(64)),
+                cid: "bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku".into(),
+                path: "/post".into(),
+                published_at: "2026-10-01T10:00:00Z".into(),
+                confirmed_at: "2026-10-01T10:00:01Z".into(),
+            });
+            doc.state.names = Some(leafbud_document::Names {
+                file: "doc.mdx".into(),
+                path: leafbud_document::NamePath::Value("/post".into()),
+            });
+        }
+        let old = doc.pages[0].blocks[0].key.clone();
+        let mut source = leafbud_mdx::render(&doc)
+            .unwrap()
+            .replacen("\n\"@leafbud\":", "\ncustom: {keep: [1, 2]}\n\"@leafbud\":", 1);
+        let at = leafbud_mdx::parse_with_spans(&source).unwrap().spans[0].start;
+        source.insert_str(at, "{/* local note 😀 */}\n\n");
+        std::fs::write(&path, &source).unwrap();
+        let reader = http.reader();
+        let context = fixtures::context(temp.path());
+        crate::author::rename(&context, &path, &old, "manual-key").unwrap();
+        let (cancel, _) = watch::channel(false);
+        let (tx, mut events) = mpsc::unbounded_channel();
+        let run = reader.watch(
+            &context,
+            Request {
+                all: true,
+                ..Default::default()
+            },
+            socket.options(),
+            cancel.subscribe(),
+            |e| {
+                tx.send(copy_event(e)).unwrap();
+                Ok(())
+            },
+        );
+        let actions = async {
+            outcome(&mut events, refresh::Outcome::Unchanged).await;
+            http.change(TOKEN, "Durable remote edit");
+            socket.poke();
+            outcome(&mut events, refresh::Outcome::Updated).await;
+            let bytes = std::fs::read(&path).unwrap();
+            let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+            let source = String::from_utf8(bytes.clone()).unwrap();
+            assert!(source.contains("Durable remote edit") && source.contains("manual-key") && source.contains("custom: {keep: [1, 2]}"));
+            assert!(source.contains("{/* local note 😀 */}"));
+            assert_eq!(leafbud_mdx::parse_with_spans(&source).unwrap().comments[0].block, "manual-key");
+            assert_eq!(leafbud_mdx::parse(&source).unwrap().state.id, doc.state.id);
+            let after = leafbud_mdx::parse(&source).unwrap();
+            assert_eq!(after.state.binding, doc.state.binding);
+            assert_eq!(after.state.released, doc.state.released);
+            assert_eq!(after.state.names, doc.state.names);
+            socket.poke();
+            outcome(&mut events, refresh::Outcome::Unchanged).await;
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+            assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+            cancel.send_replace(true);
+        };
+        let (report, _) = tokio::join!(run, actions);
+        assert_eq!(report.unwrap().writes, 1);
+    }
 }
 
 #[tokio::test]

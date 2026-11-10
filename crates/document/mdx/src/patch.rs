@@ -209,6 +209,7 @@ pub(crate) fn replace_envelope(source: &str, state: &State) -> Result<String> {
 pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     let existing = parse(source)?;
     ensure!(existing.state.names == next.names, "tracking settlement cannot accept naming changes");
+    ensure!(existing.state.released == next.released, "editor tracking cannot advance release evidence");
     ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
     ensure!(next.state == existing.state.state, "tracking settlement cannot change lifecycle");
     next.validate_lifecycle().map_err(anyhow::Error::msg)?;
@@ -327,6 +328,10 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
         existing.state.names == document.state.names,
         "remote adoption cannot accept local naming changes"
     );
+    ensure!(
+        existing.state.released == document.state.released,
+        "editor adoption cannot advance release evidence"
+    );
     ensure!(existing.format == document.format, "adoption cannot change the document format");
     ensure!(
         existing.state.id == document.state.id
@@ -383,6 +388,50 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
         "source-preserving adoption would lose content/associations"
     );
     Ok(result)
+}
+
+/// Explicit observation-based lifecycle adoption only. This grants neither
+/// retargeting nor release-receipt authority. Ordinary tracking/refresh cannot
+/// perform this transition. Workflow must verify the native/public association.
+pub fn adopt_published(source: &str, document: &Document) -> Result<String> {
+    let existing = parse(source)?;
+    ensure!(
+        existing.state.state == "draft" && document.state.state == "published" && existing.state.pending.is_none(),
+        "published adoption requires a settled draft binding"
+    );
+    let before = existing.state.binding.as_ref().context("draft binding missing")?;
+    let after = document.state.binding.as_ref().context("published binding missing")?;
+    let mut expected = before.clone();
+    expected.uri = after.uri.clone();
+    ensure!(
+        before.uri.is_none() && after.uri.is_some() && expected == *after,
+        "published adoption cannot retarget any native identity"
+    );
+    ensure!(
+        existing.state.id == document.state.id
+            && existing.state.writer == document.state.writer
+            && existing.state.names == document.state.names
+            && existing.state.last_resolution == document.state.last_resolution
+            && existing.state.released == document.state.released,
+        "published adoption cannot change independent identity/evidence"
+    );
+    let mut state = existing.state.clone();
+    state.state = "published".into();
+    state.binding = Some(after.clone());
+    let mut result = replace_envelope(source, &state)?;
+    for field in ["path", "publishedAt"] {
+        if existing.extra.get(field).is_none_or(Value::is_null) {
+            if let Some(value) = document.extra.get(field) {
+                result = super::author::patch_fields(&result, &[(field, value.clone())])?;
+            }
+        } else {
+            ensure!(
+                existing.extra.get(field) == document.extra.get(field),
+                "lifecycle adoption must preserve explicit author {field}"
+            );
+        }
+    }
+    adopt_remote(&result, document)
 }
 
 /// No historical body or generic diff: source-only trivia has one explicit

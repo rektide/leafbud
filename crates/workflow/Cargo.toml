@@ -15,6 +15,7 @@ leafbud-document.workspace = true
 leafbud-mdx.workspace = true
 leafbud-editor.workspace = true
 leafbud-atproto.workspace = true
+leafbud-records.workspace = true
 jiff.workspace = true
 uuid.workspace = true
 serde.workspace = true

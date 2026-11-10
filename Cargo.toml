@@ -46,6 +46,7 @@ leafbud-document = { version = "=0.21.0", path = "crates/document/model" }
 leafbud-mdx = { version = "=0.21.0", path = "crates/document/mdx" }
 leafbud-editor = { version = "=0.21.0", path = "crates/leaflet/editor" }
 leafbud-protocol = { version = "=0.21.0", path = "crates/leaflet/protocol" }
+leafbud-records = { version = "=0.21.0", path = "crates/leaflet/records" }
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"

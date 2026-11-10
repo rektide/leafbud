@@ -75,6 +75,7 @@ pub struct Report {
 
 #[derive(Default)]
 pub struct Policy {
+    pub adopt_published: bool,
     pub take_remote: bool,
     pub dry_run: bool,
     pub follow: bool,
@@ -177,7 +178,8 @@ impl RemoteReader {
                 "new or retired authored objects remain local; watch never prepares keys or pushes",
             );
         }
-        let observed = match self.observe_editor(existing).await {
+        ensure!(!policy.adopt_published || !policy.follow, "watch cannot adopt a lifecycle transition");
+        let observed = match self.observe_editor_with_adoption(existing, policy.adopt_published).await {
             Ok(observed) => observed,
             Err(error) => {
                 return decision(
@@ -192,6 +194,27 @@ impl RemoteReader {
                 );
             }
         };
+        let transitioning = existing.state.state != observed.merged.state.state;
+        let _public_guard = if transitioning {
+            Some(
+                store
+                    .public(
+                        observed
+                            .merged
+                            .state
+                            .binding
+                            .as_ref()
+                            .and_then(|binding| binding.uri.as_deref())
+                            .context("verified public URI missing")?,
+                    )?
+                    .context("public identity busy in another Leafbud adoption; retry later")?,
+            )
+        } else {
+            None
+        };
+        if let Err(error) = validate_public_selection(context, path, &observed.merged, policy) {
+            return decision(Outcome::Ambiguous, &format!("{error:#}"));
+        }
         let agreement = observed.agreement;
         let outcome = if agreement.state == "clean" {
             Outcome::Unchanged
@@ -232,9 +255,10 @@ impl RemoteReader {
         let verified = self.client.get(binding.token).await.context("re-verifying remote identity")?;
         ensure!(
             verified.metadata.root_entity == observed.data.metadata.root_entity
-                && verified.observed_state().as_str() == existing.state.state
+                && verified.observed_state().as_str() == observed.merged.state.state
                 && crate::import::association(&verified)? == binding.publication
-                && crate::published::association(&verified)?.as_ref().map(|association| &association.uri) == binding.uri.as_ref(),
+                && crate::published::association(&verified)?.as_ref().map(|association| &association.uri)
+                    == observed.merged.state.binding.as_ref().and_then(|binding| binding.uri.as_ref()),
             "remote identity/lifecycle/association changed during refresh; preserved"
         );
         // Rescan after all network awaits. A rename, duplicate or changed
@@ -242,12 +266,30 @@ impl RemoteReader {
         if let Err(error) = validate_selection(context, path, &expected, policy) {
             return decision(Outcome::Ambiguous, &format!("{error:#}"));
         }
-        let next = leafbud_mdx::adopt_remote(&source, &observed.merged).context("composing guarded refresh")?;
+        validate_public_selection(context, path, &observed.merged, policy)?;
+        let next = if existing.state.state != observed.merged.state.state {
+            leafbud_mdx::adopt_published(&source, &observed.merged)
+        } else {
+            leafbud_mdx::adopt_remote(&source, &observed.merged)
+        }
+        .context("composing guarded refresh")?;
         if next.as_bytes() != original.as_slice() {
             crate::files::write(path, Some(&original), next.as_bytes()).context("local file changed during pull; not overwritten")?;
         }
         Ok((outcome, None))
     }
+}
+
+fn validate_public_selection(context: &config::Context, path: &Path, document: &leafbud_document::Document, policy: &Policy) -> Result<()> {
+    if let Some(uri) = document.state.binding.as_ref().and_then(|binding| binding.uri.as_ref()) {
+        let mut inventory = inventory::scan(&context.workspace_root, None)?;
+        inventory.include_operands(&policy.operands);
+        ensure!(
+            inventory.public.get(uri).is_none_or(|paths| paths.iter().all(|candidate| candidate == path)),
+            "public identity already belongs to another local source; adoption refused"
+        );
+    }
+    Ok(())
 }
 
 fn validate_selection(context: &config::Context, path: &Path, expected: &Identity, policy: &Policy) -> Result<()> {

@@ -98,15 +98,24 @@ impl std::fmt::Debug for XrpcClient {
 impl XrpcClient {
     pub fn new(pds_base_url: &str) -> Result<Self, Error> {
         let base = pds_base_url.trim().trim_end_matches('/');
-        let parsed = reqwest::Url::parse(base).map_err(|_| Error::BadInput(format!("invalid PDS url {base:?}")))?;
-        if parsed.scheme() != "https"
-            && parsed.host_str() != Some("localhost")
-            && !base.starts_with("http://127.0.0.1")
-            && !base.starts_with("http://localhost")
+        let parsed = reqwest::Url::parse(base).map_err(|_| Error::BadInput("invalid PDS origin".into()))?;
+        if !(parsed.scheme() == "https" || parsed.scheme() == "http" && matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")))
+            || parsed.host_str().is_none()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.path() != "/"
+            || parsed.query().is_some()
+            || parsed.fragment().is_some()
         {
-            return Err(Error::BadInput(format!("PDS url must be https (got {base:?})")));
+            return Err(Error::BadInput(
+                "PDS must be an HTTPS origin (HTTP loopback allowed), without credentials, path, query or fragment".into(),
+            ));
         }
-        let http = reqwest::Client::builder().user_agent(concat!("leafbud/", env!("CARGO_PKG_VERSION"))).build()?;
+        let http = reqwest::Client::builder()
+            .user_agent(concat!("leafbud/", env!("CARGO_PKG_VERSION")))
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(std::time::Duration::from_secs(30))
+            .build()?;
         Ok(Self {
             http,
             base_url: base.to_string(),
@@ -356,6 +365,17 @@ mod tests {
         // http is only tolerated for loopback testing.
         assert!(XrpcClient::new("http://example.com").is_err());
         assert!(XrpcClient::new("http://127.0.0.1:2583").is_ok());
+        for bad in [
+            "http://127.0.0.1.evil.example",
+            "http://localhost.evil.example",
+            "https://user:secret@pds.example",
+            "https://pds.example/path",
+            "https://pds.example/?token=secret",
+            "https://pds.example/#fragment",
+        ] {
+            let error = XrpcClient::new(bad).err().unwrap().to_string();
+            assert!(!error.contains("secret"));
+        }
         assert!(XrpcClient::new("https://pds.example/").unwrap().url_for("x") == *"https://pds.example/xrpc/x");
     }
 

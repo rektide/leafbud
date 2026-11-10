@@ -228,6 +228,23 @@ pub struct State {
     /// Accepted local file/path pair, independent of native/editor evidence.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub names: Option<Names>,
+    /// Last confirmed publication-input/output correspondence. Public reads and
+    /// editor saves must preserve it, including an unknown imported baseline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub released: Option<Released>,
+}
+
+pub const RELEASE_PROFILE: &str = "leaflet-public/1";
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Released {
+    pub profile: String,
+    pub input_hash: String,
+    pub cid: String,
+    pub path: String,
+    pub published_at: String,
+    pub confirmed_at: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -324,6 +341,21 @@ pub fn validate_document_uri(value: &str) -> Result<(), &'static str> {
         Some("site.standard.document" | "pub.leaflet.document") => Ok(()),
         _ => Err("unsupported public document collection"),
     }
+}
+
+/// Record CID syntax/profile only; this does not rehash a fetched record.
+pub fn validate_record_cid(value: &str) -> Result<(), &'static str> {
+    let cid: jacquard_common::types::cid::IpldCid = value.parse().map_err(|_| "invalid record CID")?;
+    if !value.starts_with('b')
+        || cid.to_string() != value
+        || cid.codec() != 0x71
+        || cid.hash().code() != 0x12
+        || cid.hash().size() != 32
+        || cid.to_bytes().len() != 36
+    {
+        return Err("record CID must be CIDv1 dag-cbor SHA-256 in canonical base32lower");
+    }
+    Ok(())
 }
 
 impl State {

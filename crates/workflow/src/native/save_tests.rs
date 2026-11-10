@@ -100,7 +100,16 @@ async fn published_editor_save_updates_working_linkage_only_in_both_contexts() {
         }
         let temp = tempfile::tempdir().unwrap();
         let path = old::seed(&server.http, temp.path(), store::TOKEN, "published.mdx").await;
-        let before = read(&path);
+        let mut before = read(&path);
+        before.state.released = Some(leafbud_document::Released {
+            profile: leafbud_document::RELEASE_PROFILE.into(),
+            input_hash: format!("sha256:{}", "a".repeat(64)),
+            cid: "bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku".into(),
+            path: "/post".into(),
+            published_at: "2026-10-01T10:00:00Z".into(),
+            confirmed_at: "2026-10-01T10:00:01Z".into(),
+        });
+        write(&path, &before);
         let source = std::fs::read_to_string(&path).unwrap();
         let source = leafbud_mdx::edit_metadata(
             &source,
@@ -121,16 +130,21 @@ async fn published_editor_save_updates_working_linkage_only_in_both_contexts() {
         assert_eq!(after.state.binding, before.state.binding);
         assert_eq!(after.state.id, before.state.id);
         assert_eq!(after.state.state, "published");
-        assert_eq!(after.extra["publishedAt"], before.extra["publishedAt"]);
-        let store = server.store.lock().unwrap();
         assert_eq!(
-            store.data[if publication { "leaflets_in_publications" } else { "leaflets_to_documents" }][0]["documents"]["data"],
-            public,
-            "editor save must never mutate public record"
+            after.state.released, before.state.released,
+            "editor save must preserve older release evidence exactly"
         );
-        assert_eq!(store.extras["publication_title"], "New working title");
-        assert!(store.pushes > 0);
-        drop(store);
+        assert_eq!(after.extra["publishedAt"], before.extra["publishedAt"]);
+        {
+            let store = server.store.lock().unwrap();
+            assert_eq!(
+                store.data[if publication { "leaflets_in_publications" } else { "leaflets_to_documents" }][0]["documents"]["data"],
+                public,
+                "editor save must never mutate public record"
+            );
+            assert_eq!(store.extras["publication_title"], "New working title");
+            assert!(store.pushes > 0);
+        }
         let source = std::fs::read(&path).unwrap();
         let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
         assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "unchanged");

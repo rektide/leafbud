@@ -57,6 +57,7 @@ pub mod builder_types;
 
 // ── Hand-written layer ─────────────────────────────────────────────────────
 
+pub mod projection;
 pub mod record;
 
 /// The generated types' default string backing, re-exported so callers

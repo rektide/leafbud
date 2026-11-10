@@ -42,7 +42,7 @@ pub use author::{MetadataEdit, edit_metadata};
 pub use keys::{KeyPreparation, KeySource, TidyEdit, apply_key_preparation, prepare_keys};
 pub use names::patch_names;
 pub use parse::{BlockComment, BlockSpan, PROVISIONAL_MAIN_PAGE, Parsed, header, parse, parse_with_spans};
-pub use patch::{adopt_remote, patch_tracking, prepare_binding_defaults};
+pub use patch::{adopt_published, adopt_remote, patch_tracking, prepare_binding_defaults};
 pub use rekey::rename_key;
 pub use render::{apply_markdown_tidy, plan_markdown_tidy, render};
 pub use view::render_comparison;

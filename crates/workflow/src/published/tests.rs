@@ -178,15 +178,35 @@ async fn published_import_refresh_retains_uuid_keys_names_comments_and_local_dat
             .await
             .unwrap();
         assert_eq!(status.items[0].outcome, "clean");
+        let settled = std::fs::read(&path).unwrap();
+        {
+            let mut fixtures = current.write().unwrap();
+            let link = link(fixtures.get_mut(TOKEN).unwrap(), publication);
+            link["documents"]["data"]["title"] = json!("Changed released title only");
+            link["documents"]["data"]["publishedAt"] = json!("2026-10-02T10:00:00Z");
+        }
+        let status = crate::status::inspect(&context, crate::status::Request { files: vec![path.clone()] }, Some(&reader))
+            .await
+            .unwrap();
+        assert_eq!(
+            status.items[0].outcome, "clean",
+            "public-only appview changes do not contaminate the editor witness"
+        );
+        assert_eq!(
+            reader.refresh_document(&context, &path, Default::default()).await.outcome,
+            crate::refresh::Outcome::Unchanged
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), settled);
         // A public-URI retarget is never silently adopted, even under take-remote.
         let saved = std::fs::read(&path).unwrap();
-        let mut fixtures = current.write().unwrap();
-        let fixture = fixtures.get_mut(TOKEN).unwrap();
-        let link = link(fixture, publication);
-        let changed = "at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/changed";
-        link[if publication { "doc" } else { "document" }] = json!(changed);
-        link["documents"]["uri"] = json!(changed);
-        drop(fixtures);
+        {
+            let mut fixtures = current.write().unwrap();
+            let fixture = fixtures.get_mut(TOKEN).unwrap();
+            let link = link(fixture, publication);
+            let changed = "at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/changed";
+            link[if publication { "doc" } else { "document" }] = json!(changed);
+            link["documents"]["uri"] = json!(changed);
+        }
         let result = reader
             .refresh_document(
                 &context,
@@ -281,4 +301,84 @@ async fn exact_uri_discovery_import_all_and_duplicate_public_binding_are_guarded
         .unwrap();
     assert_eq!(report.failed, 1);
     assert_eq!(std::fs::read(path).unwrap(), original);
+}
+
+#[tokio::test]
+async fn observed_native_publication_transition_requires_explicit_guarded_adoption() {
+    let (server, current) = support::serving(BTreeMap::from([(TOKEN.into(), support::fixture())])).await;
+    let temp = tempfile::tempdir().unwrap();
+    let context = support::context(temp.path());
+    let path = support::seed(&server, temp.path(), TOKEN, "draft.mdx").await;
+    let original = std::fs::read_to_string(&path).unwrap();
+    let old = leafbud_mdx::parse(&original).unwrap();
+    current.write().unwrap().insert(TOKEN.into(), fixture(false));
+    let reader = support::reader(&server);
+    let result = reader.refresh_document(&context, &path, Default::default()).await;
+    assert_eq!(result.outcome, crate::refresh::Outcome::NeedsDecision);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
+    let preview = reader
+        .refresh_document(
+            &context,
+            &path,
+            crate::refresh::Policy {
+                adopt_published: true,
+                dry_run: true,
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(preview.outcome, crate::refresh::Outcome::Updated, "{:?}", preview.message);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
+    let result = reader
+        .refresh_document(
+            &context,
+            &path,
+            crate::refresh::Policy {
+                adopt_published: true,
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(result.outcome, crate::refresh::Outcome::Updated, "{:?}", result.message);
+    let after = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(after.state.state, "published");
+    assert_eq!(after.state.id, old.state.id);
+    assert_eq!(after.state.nodes, old.state.nodes);
+    assert_eq!(after.state.binding.as_ref().unwrap().uri.as_deref(), Some(URI));
+    let mut expected = old.state.binding.clone().unwrap();
+    expected.uri = Some(URI.into());
+    assert_eq!(after.state.binding, Some(expected));
+    assert!(
+        after.state.released.is_none(),
+        "explicit lifecycle adoption must not invent release-input correspondence"
+    );
+    assert_eq!(after.extra["publishedAt"], "2026-10-01T10:00:00.000Z");
+    assert!(
+        leafbud_mdx::adopt_remote(&original, &after).is_err(),
+        "ordinary adoption has no lifecycle authority"
+    );
+    assert!(
+        leafbud_mdx::patch_tracking(&original, &after.state).is_err(),
+        "tracking has no lifecycle authority"
+    );
+    // The old draft has no URI to index yet; a different alias already owning
+    // the prospective public identity must block even a dry-run adoption.
+    let mut alias = after.clone();
+    alias.state.id = uuid::Uuid::new_v4();
+    alias.state.binding.as_mut().unwrap().token = uuid::Uuid::new_v4();
+    std::fs::write(temp.path().join("alias.mdx"), leafbud_mdx::render(&alias).unwrap()).unwrap();
+    std::fs::write(&path, &original).unwrap();
+    let result = reader
+        .refresh_document(
+            &context,
+            &path,
+            crate::refresh::Policy {
+                adopt_published: true,
+                dry_run: true,
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(result.outcome, crate::refresh::Outcome::Ambiguous);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
 }

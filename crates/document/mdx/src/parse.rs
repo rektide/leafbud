@@ -533,6 +533,23 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     }
     ensure!(document.format == FORMAT, "unsupported managed format");
     document.state.validate_lifecycle().map_err(anyhow::Error::msg)?;
+    if let Some(released) = &document.state.released {
+        ensure!(
+            document.state.state == "published" && released.profile == RELEASE_PROFILE,
+            "unsupported release evidence/lifecycle"
+        );
+        ensure!(
+            released
+                .input_hash
+                .strip_prefix("sha256:")
+                .is_some_and(|hex| hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))),
+            "invalid released input fingerprint"
+        );
+        validate_record_cid(&released.cid).map_err(anyhow::Error::msg)?;
+        let _: jiff::Timestamp = released.published_at.parse().context("invalid released publication date")?;
+        let _: jiff::Timestamp = released.confirmed_at.parse().context("invalid release confirmation date")?;
+        ensure!(released.path.starts_with('/'), "released path must be absolute logical path");
+    }
     if let Some(sync) = &document.state.sync {
         ensure!(sync.profile == EDITOR_PROFILE, "unsupported receipt profile");
         ensure!(document.state.binding.is_some(), "receipts without a binding are incoherent");
@@ -835,6 +852,7 @@ mod tests {
 
     fn bound_state() -> State {
         State {
+            released: None,
             names: None,
             last_resolution: None,
             writer: None,

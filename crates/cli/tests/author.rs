@@ -102,7 +102,7 @@ async fn offline_naming_directions_preview_selectors_status_and_noop() {
     std::fs::create_dir(root.path().join("notes")).unwrap();
     let parsed = leafbud_mdx::parse(&source).unwrap();
     let r: Value = serde_json::from_str(&run(root.path(), &["status", "draft.mdx", "--offline", "--json"], 0).await).unwrap();
-    assert_eq!(r["version"], 2);
+    assert_eq!(r["version"], 3);
     assert_eq!(r["items"][0]["names"]["disposition"], "untracked");
     run(root.path(), &["tidy", "draft.mdx", "--json"], 3).await;
     assert_eq!(std::fs::read_to_string(&file).unwrap(), source);

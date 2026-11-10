@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 #[derive(Default)]
 pub struct Request {
+    pub adopt_published: bool,
     pub all: bool,
     pub files: Vec<PathBuf>,
     pub state: Option<LeafletState>,
@@ -111,6 +112,7 @@ impl RemoteReader {
                     context,
                     path,
                     crate::refresh::Policy {
+                        adopt_published: request.adopt_published,
                         take_remote: request.take_remote,
                         dry_run: request.dry_run,
                         state: request.state,

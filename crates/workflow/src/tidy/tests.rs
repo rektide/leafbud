@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 fn document() -> Document {
     let state = State {
+        released: None,
         names: None,
         last_resolution: None,
         writer: None,
@@ -711,7 +712,7 @@ async fn names_readonly_status_and_list_do_not_accept_or_clear_dirty_editor() {
     let report = crate::status::inspect(&ctx, crate::status::Request { files: vec![file.clone()] }, None)
         .await
         .unwrap();
-    assert_eq!(report.version, 2);
+    assert_eq!(report.version, 3);
     assert_eq!(report.items[0].names.as_ref().unwrap().disposition, "untracked");
     assert_eq!(report.items[0].local, crate::editor_state::Change::Changed);
     assert_eq!(read(&file), source);

@@ -31,6 +31,7 @@ pub struct Report {
     pub selected: usize,
     pub imported: usize,
     pub unchanged: usize,
+    pub refreshed: usize,
     pub failed: usize,
     pub skipped: usize,
     pub items: Vec<Item>,
@@ -74,6 +75,20 @@ pub(crate) fn association(data: &LeafletData) -> Result<Option<String>> {
 }
 
 pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot) -> String {
+    if data.observed_state() == LeafletState::Published {
+        // Joined documents.data is released output, NOT working metadata.
+        // The full current facts/extras retain conservative editor coverage;
+        // only native/public identity belongs to the association witness here.
+        let associations:Vec<_>=data.association_rows().iter().map(|row|json!({
+            "publication":row["leaflets_in_publications"].as_array().into_iter().flatten().map(|link|json!({"publication":link["publication"],"doc":link["doc"]})).collect::<Vec<_>>(),
+            "standalone":row["leaflets_to_documents"].as_array().into_iter().flatten().map(|link|json!({"document":link["document"]})).collect::<Vec<_>>()
+        })).collect();
+        return hash(&leafbud_editor::witness(
+            &pull.facts,
+            &pull.extras,
+            json!({"root":data.metadata.root_entity,"associations":associations}),
+        ));
+    }
     hash(&leafbud_editor::witness(
         &pull.facts,
         &pull.extras,
@@ -179,6 +194,7 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
         extra,
         pages: content.pages,
         state: State {
+            released: None,
             names: None,
             writer: None,
             pending: None,
@@ -350,7 +366,7 @@ impl RemoteReader {
             }]
         };
         let mut report = Report {
-            version: 1,
+            version: 2,
             workspace: root.clone(),
             coverage: if request.all {
                 "Observed /home+contributor inventory; source query has no explicit pagination/limit; backend/account-wide completeness unverified."
@@ -361,6 +377,7 @@ impl RemoteReader {
             selected: 0,
             imported: 0,
             unchanged: 0,
+            refreshed: 0,
             failed: 0,
             skipped: 0,
             items: vec![],
@@ -413,26 +430,26 @@ impl RemoteReader {
                             "binding already exists at another local path"
                         );
                     }
-                    let (_guard, _, source) = crate::lock::read(path, &store)?;
-                    let existing = leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
-                    crate::editor_state::same_identity(existing.state.binding.as_ref().context("existing binding missing")?, &document)?;
-                    ensure!(
-                        existing.state.state == document.state.state,
-                        "observed lifecycle transition requires explicit adoption; existing source preserved"
-                    );
-                    ensure!(
-                        existing.state.sync.as_ref().is_some_and(|sync| sync.remote_hash == remote_hash(&data, &pull)),
-                        "remote changed since import; explicit pull/refresh support required (existing file preserved)"
-                    );
-                    let value = existing.editor_value();
-                    let outcome = if hash(&value) == existing.state.sync.as_ref().expect("checked above").local_hash {
-                        "unchanged"
-                    } else {
-                        "kept-local-changes"
+                    // Reuse guarded pull, never a second adoption policy or a
+                    // fresh filename inferred from a changed remote title.
+                    let refreshed = self.refresh_document(context, path, Default::default()).await;
+                    use crate::refresh::Outcome;
+                    let outcome = match refreshed.outcome {
+                        Outcome::Unchanged => "unchanged",
+                        Outcome::LocalDirty => "kept-local-changes",
+                        Outcome::Updated | Outcome::ReceiptsOnly | Outcome::Converged => "updated-existing",
+                        _ => bail!(
+                            "existing source preserved: {}",
+                            refreshed.message.unwrap_or_else(|| refreshed.outcome.as_str().into())
+                        ),
                     };
                     return Ok(Some((path.clone(), outcome)));
                 }
                 let path = destination(&root, &display_title(&document), id, request.to.as_deref())?;
+                let _public_guard = match public_uri {
+                    Some(uri) => Some(store.public(uri)?.context("public identity busy in another Leafbud adoption; retry later")?),
+                    None => None,
+                };
                 let _document_guard = store
                     .document(document.state.id)?
                     .context("document busy in another Leafbud operation; retry later")?;
@@ -474,6 +491,8 @@ impl RemoteReader {
                 Ok(Some((path, outcome))) => {
                     if outcome == "imported" {
                         report.imported += 1;
+                    } else if outcome == "updated-existing" {
+                        report.refreshed += 1;
                     } else {
                         report.unchanged += 1;
                     }

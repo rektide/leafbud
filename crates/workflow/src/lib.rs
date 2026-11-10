@@ -18,6 +18,7 @@ mod published;
 pub mod pull;
 pub mod push;
 pub mod refresh;
+pub mod release;
 pub mod status;
 pub mod tidy;
 pub mod watch;

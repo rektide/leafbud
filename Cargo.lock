@@ -2009,13 +2009,17 @@ dependencies = [
 name = "leafbud-records"
 version = "0.21.0"
 dependencies = [
+ "anyhow",
  "jacquard-common",
  "jacquard-derive",
  "jacquard-lexicon",
+ "jiff",
  "leafbud-atproto",
+ "leafbud-document",
  "serde",
  "serde_json",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]
@@ -2055,6 +2059,7 @@ dependencies = [
  "leafbud-editor",
  "leafbud-mdx",
  "leafbud-protocol",
+ "leafbud-records",
  "leafbud-web",
  "rustix",
  "serde",

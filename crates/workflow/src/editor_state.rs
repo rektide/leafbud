@@ -121,6 +121,10 @@ pub struct ObservationError {
 
 impl RemoteReader {
     pub async fn observe_editor(&self, existing: &Document) -> Result<Observed, ObservationError> {
+        self.observe_editor_with_adoption(existing, false).await
+    }
+
+    pub(crate) async fn observe_editor_with_adoption(&self, existing: &Document, adopt_published: bool) -> Result<Observed, ObservationError> {
         let error = |kind, message: String| ObservationError {
             kind,
             message,
@@ -139,7 +143,8 @@ impl RemoteReader {
                 },
             )
         })?;
-        if data.observed_state().as_str() != existing.state.state {
+        let transition = existing.state.state == "draft" && data.observed_state() == leafbud_web::LeafletState::Published && adopt_published;
+        if data.observed_state().as_str() != existing.state.state && !transition {
             return Err(error(
                 "unsupported",
                 "remote lifecycle changed; explicit lifecycle adoption required, current source/receipts preserved".into(),
@@ -158,8 +163,23 @@ impl RemoteReader {
             message: format!("remote content is unsupported for the refresh profile; local file preserved: {e:#}"),
             remote_hash: Some(hash.clone()),
         })?;
-        same_identity(&binding, &fresh).map_err(|e| error("identity-changed", format!("{e:#}")))?;
+        let mut compared = binding.clone();
+        if transition {
+            compared.uri = fresh.state.binding.as_ref().and_then(|binding| binding.uri.clone());
+        }
+        same_identity(&compared, &fresh).map_err(|e| error("identity-changed", format!("{e:#}")))?;
         let mut merged = adopt(existing, &fresh);
+        if transition {
+            merged.state.state = "published".into();
+            merged.state.binding = Some(compared);
+            for field in ["path", "publishedAt"] {
+                if existing.extra.get(field).is_none_or(serde_json::Value::is_null)
+                    && let Some(value) = fresh.extra.get(field)
+                {
+                    merged.extra.insert(field.into(), value.clone());
+                }
+            }
+        }
         let agreement = classify(existing, &merged, &hash);
         if agreement.endpoints_equal {
             // Non-entry page definition ordering is source layout, not editor
@@ -302,6 +322,7 @@ pub(crate) fn adopt(existing: &Document, fresh: &Document) -> Document {
         extra,
         pages,
         state: State {
+            released: existing.state.released.clone(),
             names: existing.state.names.clone(),
             last_resolution: existing.state.last_resolution.clone(),
             writer: existing.state.writer.clone(),

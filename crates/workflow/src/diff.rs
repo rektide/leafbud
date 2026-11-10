@@ -120,6 +120,30 @@ impl RemoteReader {
     }
 }
 
+impl crate::release::PublicReader {
+    /// Public reads need no native authentication, capability lookup or write
+    /// authority. Both views describe actually acquired current endpoints.
+    pub async fn diff_release(&self, context: &config::Context, file: &Path, tool: &Tool) -> Result<Report> {
+        let root = std::fs::canonicalize(&context.workspace_root)?;
+        let path = std::fs::canonicalize(if file.is_absolute() { file.to_path_buf() } else { root.join(file) })?;
+        let original = std::fs::read(&path)?;
+        let source = std::str::from_utf8(&original)?;
+        let document = leafbud_mdx::parse(source).context("invalid or unsupported current source; no partial public comparison")?;
+        let mut inventory = inventory::scan(&root, None)?;
+        inventory.include_operands(std::slice::from_ref(&path));
+        ensure!(
+            !inventory.duplicates.contains(&path),
+            "duplicate local/native/public identity; comparison refused"
+        );
+        let (local, public) = self.comparison(&document).await?;
+        ensure!(
+            std::fs::read(&path).ok().as_deref() == Some(original.as_slice()),
+            "local source changed during public read; rerun diff"
+        );
+        run_tool(&root, tool, &crate::release::view(&local)?, &crate::release::view(&public)?).await
+    }
+}
+
 async fn run_tool(root: &Path, tool: &Tool, local: &str, editor: &str) -> Result<Report> {
     let dir = tempfile::Builder::new()
         .prefix("leafbud-diff-")

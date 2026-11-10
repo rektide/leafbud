@@ -20,14 +20,14 @@ pub async fn run(options: RemoteOptions, root: Option<&Path>, flags: &Config, re
             }
         }
         println!(
-            "{} discovered; {} selected; {} imported; {} existing preserved; {} filtered; {} failed",
-            report.discovered, report.selected, report.imported, report.unchanged, report.skipped, report.failed
+            "{} discovered; {} selected; {} imported; {} refreshed; {} existing preserved; {} filtered; {} failed",
+            report.discovered, report.selected, report.imported, report.refreshed, report.unchanged, report.skipped, report.failed
         );
         println!("Coverage: {}", report.coverage);
     }
     Ok(if report.failed == 0 {
         ExitCode::SUCCESS
-    } else if report.imported + report.unchanged > 0 {
+    } else if report.imported + report.unchanged + report.refreshed > 0 {
         ExitCode::from(4)
     } else {
         ExitCode::FAILURE

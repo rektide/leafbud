@@ -32,6 +32,7 @@ pub struct Report {
 pub struct Item {
     pub path: PathBuf,
     pub names: Option<crate::names::Evidence>,
+    pub release: crate::release::Evidence,
     pub outcome: &'static str,
     pub detail: &'static str,
     pub local: Change,
@@ -58,6 +59,16 @@ pub struct RemoteEvidence {
 
 /// No RemoteReader/credentials are needed for offline status.
 pub async fn inspect(context: &config::Context, request: Request, remote: Option<&RemoteReader>) -> Result<Report> {
+    inspect_with_public(context, request, remote, None, remote.is_none()).await
+}
+
+pub async fn inspect_with_public(
+    context: &config::Context,
+    request: Request,
+    remote: Option<&RemoteReader>,
+    public: Option<&crate::release::PublicReader>,
+    offline: bool,
+) -> Result<Report> {
     let root = std::fs::canonicalize(&context.workspace_root).context("resolving document workspace")?;
     let mut inventory = inventory::scan(&root, None)?;
     let mut paths = Vec::new();
@@ -75,17 +86,17 @@ pub async fn inspect(context: &config::Context, request: Request, remote: Option
     }
     inventory.include_operands(&paths);
     let mut report = Report {
-        version: 2,
+        version: 3,
         workspace: root,
-        offline: remote.is_none(),
+        offline,
         selected: paths.len(),
         failed: 0,
         ignored_unmanaged: inventory.unmanaged,
-        release: "unknown-not-implemented",
+        release: "independent-per-item",
         items: vec![],
     };
     for path in paths {
-        let item = inspect_file(&report.workspace, &path, &inventory, remote).await;
+        let item = inspect_file(&report.workspace, &path, &inventory, remote, public, offline).await;
         if matches!(item.outcome, "invalid" | "ambiguous" | "failed" | "local-missing" | "raced") {
             report.failed += 1;
         }
@@ -94,16 +105,24 @@ pub async fn inspect(context: &config::Context, request: Request, remote: Option
     Ok(report)
 }
 
-async fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory, remote: Option<&RemoteReader>) -> Item {
+async fn inspect_file(
+    root: &Path,
+    path: &Path,
+    inventory: &inventory::Inventory,
+    remote: Option<&RemoteReader>,
+    public: Option<&crate::release::PublicReader>,
+    offline: bool,
+) -> Item {
     let mut item = Item {
         path: path.to_owned(),
         names: None,
+        release: Default::default(),
         outcome: "unknown",
         detail: "remote state is unknown; offline status never implies clean agreement",
         local: Change::Unknown,
         remote: RemoteEvidence {
             observed_profile: None,
-            freshness: if remote.is_none() { "offline" } else { "not-requested" },
+            freshness: if offline { "offline" } else { "not-requested" },
             change: Change::Unknown,
             observed_hash: None,
         },
@@ -180,6 +199,15 @@ async fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory
         item.detail = "duplicate local document ID or native binding; resolve the copies before managed operations";
         return item;
     }
+    item.release = crate::release::observe(existing, public, offline).await;
+    if std::fs::read(path).ok().as_deref() != Some(original.as_slice()) {
+        item.outcome = "raced";
+        item.detail = "local file changed during public observation; rerun status; no files were written";
+        item.local = Change::Unknown;
+        item.release.freshness = "stale-local-source";
+        item.names = None;
+        return item;
+    }
     // Typed optional state: an explicit `sync: null` deserializes to the
     // same absent receipts as a missing field.
     if let Some(pending) = &existing.state.pending {
@@ -250,6 +278,9 @@ async fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory
         return item;
     }
     let Some(remote) = remote else {
+        if !offline {
+            item.detail = "native editor observation not requested; public release evidence is independent";
+        }
         if item.local == Change::Changed {
             item.outcome = "local-changed";
         }
@@ -312,6 +343,7 @@ async fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory
         item.local = Change::Unknown;
         item.endpoints_equal = None;
         item.names = None;
+        item.release.freshness = "stale-local-source";
     }
     item
 }

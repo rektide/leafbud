@@ -12,7 +12,8 @@ pub(super) fn prepare(builder: &mut Builder<'_>, current: &Document, persisted_t
     let title = (Some(desired.title.as_str()) != persisted_title).then(|| desired.title.clone());
     let description = canonical_description(desired.description.as_deref());
     let description_changed = description != canonical_description(current.description.as_deref());
-    if desired.state.binding.as_ref().expect("bound").publication.is_some() {
+    let binding = desired.state.binding.as_ref().expect("bound");
+    if binding.publication.is_some() || binding.uri.is_some() {
         let tags = (desired.tags != current.tags).then(|| desired.tags.clone());
         if title.is_some() || description_changed || tags.is_some() {
             builder.result.mutations.push(NativeMutation::UpdatePublicationDraft(PublicationMetadata {

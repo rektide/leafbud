@@ -169,12 +169,15 @@ enum Command {
         /// Report remote state as unknown; local changes relative to stored receipts only
         #[arg(long)]
         offline: bool,
+        /// Observe public release only; do not load native editor credentials
+        #[arg(long)]
+        public_only: bool,
         #[arg(long)]
         json: bool,
     },
     /// Compare readable current local/editor Markdown through a foreground tool
     #[command(
-        after_help = "Example: leafbud diff essay.mdx --tool diff --tool-arg=-u --tool-exit diff\nOr configure: leafbud config set diff-program diff\n              leafbud config set diff-args '[\"-u\"]'\n              leafbud config set diff-exit diff\nTool receives ARG... LOCAL.md EDITOR.md; no shell. GUI tools must wait until closed.\nStdio/TTY is inherited; --json is intentionally unsupported. names/release are not implemented."
+        after_help = "Example: leafbud diff essay.mdx --tool diff --tool-arg=-u --tool-exit diff\nOr configure: leafbud config set diff-program diff\n              leafbud config set diff-args '[\"-u\"]'\n              leafbud config set diff-exit diff\nTool receives ARG... LOCAL.md EDITOR.md; no shell. GUI tools must wait until closed.\n--edge release reads the actual public record without editor credentials. Stdio/TTY is inherited; --json and names diff are unsupported."
     )]
     Diff {
         file: PathBuf,
@@ -216,6 +219,9 @@ enum Command {
     },
     /// Guarded refresh of bound files from their current editors (local write)
     Pull {
+        /// Adopt a verified draft-to-published transition on this same binding
+        #[arg(long)]
+        adopt_published: bool,
         /// Existing bound local MDX files (never remote discovery; use import)
         #[arg(required_unless_present = "all", conflicts_with = "all")]
         files: Vec<PathBuf>,
@@ -613,14 +619,14 @@ async fn main() -> ExitCode {
         tool_exit,
     } = &cli.command
     {
-        if *edge != Edge::Editor {
-            eprintln!("leafbud: diff --edge names/release is not implemented; only current local/editor content is compared");
+        if *edge == Edge::Names {
+            eprintln!("leafbud: diff --edge names is not implemented");
             return ExitCode::FAILURE;
         }
         flags.diff_program = tool.clone();
         flags.diff_args = (!tool_arg.is_empty()).then(|| tool_arg.clone());
         flags.diff_exit = *tool_exit;
-        return match diff::run(options, cli.root.as_deref(), &flags, file).await {
+        return match diff::run(options, cli.root.as_deref(), &flags, file, *edge == Edge::Release).await {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
                 eprintln!("leafbud: {error}");
@@ -628,13 +634,20 @@ async fn main() -> ExitCode {
             }
         };
     }
-    if let Command::Status { files, offline, json } = &cli.command {
+    if let Command::Status {
+        files,
+        offline,
+        public_only,
+        json,
+    } = &cli.command
+    {
         return match status::run(
             options,
             cli.root.as_deref(),
             &flags,
             leafbud_workflow::status::Request { files: files.clone() },
             *offline,
+            *public_only,
             *json,
         )
         .await
@@ -672,6 +685,7 @@ async fn main() -> ExitCode {
         };
     }
     if let Command::Pull {
+        adopt_published,
         files,
         all,
         state,
@@ -685,6 +699,7 @@ async fn main() -> ExitCode {
             cli.root.as_deref(),
             &flags,
             leafbud_workflow::pull::Request {
+                adopt_published: *adopt_published,
                 all: *all,
                 files: files.clone(),
                 state: state.map(|s| match s {

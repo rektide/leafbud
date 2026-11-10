@@ -11,11 +11,17 @@ pub async fn run(
     flags: &Config,
     request: Request,
     offline: bool,
+    public_only: bool,
     json: bool,
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let context = config::load(root, flags, None)?;
-    let remote = if offline { None } else { Some(options.connect().await?) };
-    let report = status::inspect(&context, request, remote.as_ref()).await?;
+    let remote = if offline || public_only { None } else { Some(options.connect().await?) };
+    let public = if offline {
+        None
+    } else {
+        Some(leafbud_workflow::release::PublicReader::new(context.effective.pds.as_deref())?)
+    };
+    let report = status::inspect_with_public(&context, request, remote.as_ref(), public.as_ref(), offline).await?;
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
@@ -48,12 +54,20 @@ pub async fn run(
                 }
                 println!("    {}", names.native);
             }
+            println!(
+                "  release: {} (input: {}; output: {}; {}; baseline: {})",
+                item.release.state,
+                item.release.input.as_str(),
+                item.release.output.as_str(),
+                item.release.freshness,
+                item.release.baseline
+            );
         }
         println!(
             "{} selected; {} failed; read-only (no files, receipts or remotes written)",
             report.selected, report.failed
         );
-        println!("Release: unknown (not implemented); local-only metadata: not compared to editor");
+        println!("Editor, names and release evidence are independent; read-only observations never accept changes");
     }
     Ok(if report.failed == 0 {
         ExitCode::SUCCESS

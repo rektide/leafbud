@@ -15,6 +15,7 @@ fn node(entity: &str, occurrence: Occurrence) -> Node {
 
 fn document() -> Document {
     let state = State {
+        released: None,
         names: None,
         last_resolution: None,
         writer: None,
