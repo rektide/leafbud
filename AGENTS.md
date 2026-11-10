@@ -82,6 +82,10 @@ sources:
   token usage, when available.
 - Continue a session when retained context is valuable within that rollover
   budget. Prefer a fresh session when starting the next major task.
+  Split large features into committed design/preflight and execution/recovery
+  checkpoints when needed. Measure context at those checkpoints and reserve
+  handoff room before the upper bound; do not extend a session to finish a whole
+  feature after the rotation limit.
   Before rotating, commit owned work and leave a concise handoff with code/design
   pointers, verification, unresolved decisions and the next useful slice.
 

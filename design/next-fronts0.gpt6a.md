@@ -1,7 +1,7 @@
 ---
 type: Report
 title: "Leafbud: current ground, next fronts and compaction handoff"
-description: "Continuation account of accepted 0.20 naming and completed local authoring, active published adoption/release evidence, remaining fronts and verification boundaries."
+description: "Continuation account of accepted 0.21 published adoption/release evidence, active native-publication preflight checkpoint, remaining fronts and verification boundaries."
 resource: /design/next-fronts0.gpt6a.md
 status: current-handoff
 generated:
@@ -12,7 +12,19 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Parent architecture and compaction report, integration acceptance through 0.20, continuing Sol commissions and 220–320k rotation policy"
+    title: "Parent architecture and compaction report, acceptance through 0.21, native-publication checkpoint commission and correction after agent context overshoot"
+  - resource: /design/published-lifecycle0.gpt61s.md
+    title: "0.21 published adoption/editor save and independent release evidence, with 357-test gate"
+  - resource: /doc/release/README.md
+    title: "Maintained public meaning, lifecycle and evidence limits"
+  - resource: /crates/workflow/src/published.rs
+    title: "Reviewed authoritative native/public linkage and exact URI discovery"
+  - resource: /crates/workflow/src/release.rs
+    title: "Reviewed public acquisition, scoped current/unknown evidence and no receipt settlement"
+  - resource: /crates/leaflet/records/src/projection.rs
+    title: "Reviewed bounded working/public mapping and strict unsupported fields"
+  - resource: /crates/leaflet/editor/src/write/metadata.rs
+    title: "Reviewed published working-metadata routing independent of public actions"
   - resource: /design/naming0.gpt61s.md
     title: "0.20 literal path mapping, no-clobber move/witness ordering and 342-test gate"
   - resource: /crates/workflow/src/names.rs
@@ -75,16 +87,19 @@ sources:
 
 ## Resume here after compaction
 
-**Latest accepted baseline: 0.20.0, through `875c01b6`.** Local authoring now
-includes independent filename/path witnesses, deliberate tidy reconciliation,
-read-only naming status/list and recoverable no-clobber file moves. Parent
-reviewed mapping/classification, source patch authority, full-selection late
-checks and move/witness failure ordering; the 342-test gate is accepted (4B).
+**Latest accepted baseline: 0.21.0, through `5f7a666f`.** Published sources can
+adopt/refresh/watch and save their working editor, with separate read-only public
+status/diff. Parent reviewed native/public linkage, explicit lifecycle patching,
+working-metadata routing, strict projection and independent evidence; the 357-test
+gate is accepted with its bounded comparison and PDS-reported CID limits (4C).
 
-**Active agent:** fresh Sol high `ses_e3c10b84effeXUnnnL5oZ5M7TJ`, implementing
-**published adoption and independent release evidence** (`leafbud-release-adopt`
-then `leafbud-release-state`, section 4C). Naming returned at 214,041 reported
-tokens, a coherent major-task boundary. Rotate
+**Active agent:** fresh Sol high `ses_e3bcb6540ffegZC39tN1E6wuTc`, on the first
+bounded checkpoint of **native publication** (`leafbud-release-native`): action
+contract, normalization/effect design and preflight/preview foundation. It must
+return for parent review and a fresh execution/recovery session, rather than build
+the whole feature in one context. The predecessor returned at ~422k, exceeding the
+agreed rotation limit; this is recorded as a cadence failure, not a new allowance.
+Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 Predecessor `ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets
@@ -109,10 +124,12 @@ window. Completed checks need not repeat merely because context was compacted.
 | Offline authoring tools | Selected metadata edits, identity-preserving key rename, truthful local inventory | `mdx::author/rekey`, `workflow::author/list`; [local tools](local-authoring-tools0.gpt61s.md) |
 | Source fidelity and coverage | Whole-flow headers, broad preparation spellings, same-page block comments; explicit operation evidence | [Source contract](/doc/mdx/README.md), [coverage](/doc/mdx/coverage.md) |
 | Filename/path reconciliation | Independent `names`, explicit/default tidy reconciliation, read-only classification, no-clobber move with unconfirmed-settlement reporting | [Naming receipt](naming0.gpt61s.md), `workflow::names/tidy`, `mdx::patch_names` |
+| Published editor and public evidence | Verified published binding/import/refresh/save; explicit lifecycle adoption; separate public status/diff with unknown imported baselines | [Public contract](/doc/release/README.md), [receipt](published-lifecycle0.gpt61s.md) |
 
-The supported native lifecycle is **draft**. Canvas, nested/task lists, richer
-interactive objects, uploads, published-editor adoption and public release are
-still separate work. There is no whole-body regeneration default, automatic
+The supported native editor lifecycles are **draft and published**. Canvas,
+nested/task lists, richer interactive objects, uploads and native public-release
+execution remain separate work. Public comparison is a narrower explicit profile
+than editor support. There is no whole-body regeneration default, automatic
 cleanup, saved historical body or executable request journal.
 
 The domain grouping is now nine crates: document **model/MDX**, Leaflet
@@ -122,7 +139,7 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 
 ### Verification to carry forward
 
-- Latest regular gate: **342/342 workspace tests**, six opt-in deployment tests
+- Latest regular gate: **357/357 workspace tests**, six opt-in deployment tests
   skipped; formatting, strict all-target clippy and document checks passed.
 - Production Yrs → independent actual Yjs: **7/7 groups**. The terminal-recovery
   slice did not change the writer; its receipt correctly reuses that evidence.
@@ -146,6 +163,10 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 - Version 0.20 tests add actual NOREPLACE collisions, post-rename interruption/
   external saves, independent dirty-editor naming acceptance, content-no-op CLI/
   HTTP push/pull and Phoenix rescan at the new filename with comments intact.
+- Version 0.21 verifies both published editor contexts against HTTP fixtures,
+  explicit lifecycle adoption, scoped public reads/diff without native credentials,
+  independent unknown/changed release evidence and published Phoenix adoption.
+  No deployed published proof or new independent Yjs execution is claimed.
 
 Trust these reported checks. Add tests for new changes or a specific unresolved
 review question; do not rerun everything to reconstruct confidence after compaction.
@@ -205,10 +226,11 @@ and full reparse equality proves their scope. The new equal-state return in
 `patch_tracking` runs after existing identity/writer/binding/pending guards, so a
 renamed node-map's textual order no longer causes an empty push to rewrite bytes.
 
-## 4. Current and next fronts after 0.20
+## 4. Current and next fronts after 0.21
 
-Fronts A and B are accepted; front C's adoption/state pair is active after review.
-Native publication effects and later fronts remain separate. Use **fresh
+Fronts A/B and front C's adoption/state pair are accepted. Native publication is
+now a staged implementation commission; live effects remain separately authorized.
+Use **fresh
 Sol high**, selecting coherent batches of 1–4 tickets.
 
 ### A. Source fidelity and executable coverage — accepted
@@ -278,12 +300,11 @@ first public key/path. Do not invent custom-rkey behavior by sending ignored fie
 
 ### C. Published lifecycle and release — larger next product loop
 
-**Active tickets:** `leafbud-release-adopt` → `leafbud-release-state`, fresh Sol
-`ses_e3c10b84effeXUnnnL5oZ5M7TJ`. Under continuing implementation authority, it
-will record code-grounded linkage/projection design first, then implement the
-coherent adoption/read/refresh and release observation/status/diff slice. A material
-architecture fork returns for parent assessment. `leafbud-release-native` follows
-only as a separately scoped effect feature.
+**Accepted tickets:** `leafbud-release-adopt` and `leafbud-release-state`, through
+`5f7a666f`, Sol `ses_e3c10b84effeXUnnnL5oZ5M7TJ`. Both are closed. Parent accepts
+verified linkage, current-editor adoption, explicit `pull --adopt-published`,
+editor-only saves and independent read-only release status/diff. Imported public
+baselines stay unknown; no operation here creates a confirmed release receipt.
 `leafbud-release-delivery` remains explicit newsletter/share behavior.
 
 **Payoff:** continue editing the same native document after publication and
@@ -298,7 +319,7 @@ record drift without accepting them. Preview publishing should explain native
 path/date and delivery choices. A lost release result needs observation-based
 recovery, not a blind publish retry.
 
-The current batch must keep current native working content distinct from fetched
+The delivered batch keeps current native working content distinct from fetched
 public output. A URI/CID alone does not prove what editor input was released;
 unknown imported release baselines remain unknown. Import with no legitimate
 editor linkage reports editing-unavailable, never guesses or mints a replacement.
@@ -306,11 +327,36 @@ Current-endpoint release diff reuses the existing human Markdown/external-tool
 contract where conversion is faithful. Ordinary editor agreement cannot silently
 advance release receipts; naming/comment/source protections remain intact.
 
-Published editor-only saves may be enabled only where verified native operations
-keep public output unchanged. Published metadata storage must be inspected rather
-than assumed identical to draft rows; coupled release effects require an explicit
-capability boundary. Fixtures/loopback are the entire verification scope of this
-batch. No live corpus or test-draft mutation, publish/email/share/upload or cleanup.
+Published editor-only saves use working linkage-table metadata, including standalone
+published documents. Parent checked upstream `updatePublicationDraft`: it updates
+those working rows without calling public release. Release projection refuses
+unresolved images/resources, contributor ordering, ambiguous page graphs, legacy
+comparison and richer output fields rather than hiding them. CID observations are
+PDS-reported and syntax-validated, **not rehashed**; status labels that evidence and
+requires supported current meaning for equality. This is accepted for the current
+read-only contract, not sufficient by itself to claim verified future publication.
+
+**Active next checkpoint — `leafbud-release-native`:** fresh Sol
+`ses_e3bcb6540ffegZC39tN1E6wuTc` owns action discovery/arguments/responses, source-
+grounded first/update normalization and side-effect analysis, and production
+preflight/preview building blocks with literal HTTP/action fixtures. It may expose
+an honest preview command but must leave execution explicitly unavailable until
+the next session integrates it. This is an internal feature checkpoint, not full
+publish delivery or ticket closure.
+
+The handoff must equip a fresh execution/recovery Sol with compact attempt-state
+transitions, exact output verification/receipt authority and lost-response handling.
+Inspect the real server-action boundary: internal rkey support does not establish
+public action support, future dates can normalize, and native `sendEmail` defaults
+true. Initial publication must explicitly disable delivery and avoid entity cleanup;
+other automatic native effects must be understood. Current projection limits are
+preflight boundaries before save/mint, not permission to truncate content.
+
+The previous session exceeded 320k. The new checkpoint is deliberately smaller:
+measure at stage boundaries, stop adding scope near 220k, and return with a committed
+handoff before 300k to leave margin. Execution/recovery is a fresh session even if
+context remains. All verification uses fixtures/loopback; no live corpus/test-draft
+mutation or real publication, upload, email/share or cleanup is commissioned.
 
 Reuse existing native web actions and public record/protocol crates where their
 actual behavior fits; inspect current upstream capabilities before choosing the
@@ -365,7 +411,8 @@ still needs its parent-level scope review, not duplicate implementation tickets.
 
 | Session | Disposition |
 | --- | --- |
-| `ses_e3c10b84effeXUnnnL5oZ5M7TJ` | **Active:** published adoption → release evidence; 220–320k rotation window |
+| `ses_e3bcb6540ffegZC39tN1E6wuTc` | **Active:** native publication action/preflight checkpoint; return before execution/recovery |
+| `ses_e3c10b84effeXUnnnL5oZ5M7TJ` | Completed 0.21 published adoption/state; ~422k exceeded rotation limit, retired |
 | `ses_e3c29df03ffeKTX7z5IHA3nup5` | Completed naming at 214,041 reported tokens; parent accepted 0.20 |
 | `ses_e3c420e5affeLoQfS0oTd9wu5b` | Completed source fidelity/coverage at 239,394 measured tokens; parent accepted 0.19 |
 | `ses_e3d511cf0ffeKLT5XsWr37v0r6` | Completed local metadata/rekey/list at ~215k; parent accepted 0.18 |
@@ -373,7 +420,7 @@ still needs its parent-level scope review, not duplicate implementation tickets.
 | `ses_e3d96851dffeS2cPD2vPHjGklF` | Completed keyed save loop at ~276k; retired from major continuation |
 | `ses_e3dcb1f8effebiT0KtCRZB8dWf` | Completed defaults/description/P1 settlement at ~256k; retired |
 | `ses_e4121e55dffeF009EbMiG1Xinz` | Completed native effects and later candidate inspection at ~310k; retired |
-| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent reviewed through 0.20 and commissioned the published adoption/state pair |
+| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent reviewed through 0.21 and split native publication into bounded fresh-session checkpoints |
 
 Historical independent waves and earlier agents are linked from the receipts.
 Their old g recommendations or polling-first descriptions are superseded by
@@ -405,9 +452,9 @@ was published or emailed, and no unrelated document or asset was cleaned up.
 1. Read this report, [AGENTS](/AGENTS.md), and the completed
    [local-tool receipt](local-authoring-tools0.gpt61s.md). No need to reload every
    historical design or rerun completed checks.
-2. Await the active published-adoption/state Sol return; do not duplicate or poll.
-   Review authoritative identity linkage, working/public separation and receipt scope.
-3. Parent integration review through 0.20 is complete. Trust reported tests; add
+2. Await the active native-publication preflight Sol return; do not duplicate or poll.
+   Review action/effect contract and recovery design before fresh execution dispatch.
+3. Parent integration review through 0.21 is complete. Trust reported tests; add
    targeted regressions only for new changes or actual unresolved concerns.
 4. Preserve predecessor commits before corrections. Use explicit owned jj paths;
    never `jj edit`, squash or push. Shared `.beads/issues.jsonl` changes may include
