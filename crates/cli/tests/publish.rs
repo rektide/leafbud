@@ -87,7 +87,7 @@ async fn preview_first_execute_update_noop_and_uncertain_recovery_cli_both_conte
                     state.data[table][0][if publication{"doc"}else{"document"}]=json!(URI);
                     state.data[table][0]["documents"]=json!({"uri":URI,"data":record});
                     for key in ["title","description","tags"] {state.extras.insert(format!("publication_{key}"),args[key].clone());}
-                    return (200,vec![("Content-Type".into(),"text/x-component".into())],format!("0:{{\"a\":\"$@1\"}}\n1:{}\n",json!({"success":true,"uri":URI,"rkey":"post","record":record,"firstPublish":first,"blocks":blocks.len()})));
+                    return (200,vec![("Content-Type".into(),"text/x-component".into())],format!("12:X\n0:{{\"a\":\"$@1\"}}\n1:{}\n12:C\n",json!({"success":true,"uri":URI,"rkey":"post","record":record,"firstPublish":first,"blocks":blocks.len(),"reply":"$undefined"})));
                 }
                 p if p.starts_with("/xrpc/com.atproto.repo.getRecord")=>{
                     let record=&state.data[if publication{"leaflets_in_publications"}else{"leaflets_to_documents"}][0]["documents"]["data"];

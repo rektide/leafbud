@@ -58,6 +58,26 @@ fn literal_success_update_and_failure_contracts_not_release_receipts() {
     }
 }
 
+#[test]
+fn observed_deployed_empty_iterable_and_undefined_reply_decode_without_record_coercion() {
+    // Reduced, anonymized literal fixture. X/C framing and optional reply's
+    // "$undefined" spelling came from the retained deployed update, not guesses.
+    let fixture = include_str!("../../tests/fixtures/publish-empty-iterable.flight");
+    let Outcome::Published(published) = decode(fixture).unwrap() else {
+        panic!("success")
+    };
+    assert!(!published.first_publish && published.reply.is_none());
+    assert_eq!(published.blocks, 1);
+    assert_eq!(published.record["title"], "Updated disposable fixture");
+    let body = fixture.replace("Updated disposable fixture", "$undefined");
+    let Outcome::Published(published) = decode(&body).unwrap() else {
+        panic!("success")
+    };
+    assert_eq!(published.record["title"], "$undefined", "do not coerce authored values");
+    assert!(decode(&fixture.replace("\"reply\":\"$undefined\"", "\"reply\":\"$@12\"")).is_err());
+    assert!(decode(&fixture.replace("\"reply\":\"$undefined\"", "\"reply\":{}")).is_err());
+}
+
 #[tokio::test]
 async fn actual_next_request_forces_no_email_and_never_sends_key_path_or_deletion() {
     let server = TestServer::spawn_headers(Arc::new(|r| {

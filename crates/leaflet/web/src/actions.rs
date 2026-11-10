@@ -138,7 +138,11 @@ pub(crate) fn action_result(body: &str) -> Result<Value, Error> {
     }
     let mut root = None;
     let mut rows = std::collections::BTreeMap::new();
-    for line in body.lines().take(4097) {
+    let mut empty_iterables = std::collections::BTreeMap::new();
+    for (index, line) in body.lines().take(4097).enumerate() {
+        if index >= 4096 {
+            return Err(Error::Native("action row count limit"));
+        }
         let Some((id, value)) = line.split_once(':') else {
             return Err(Error::Native("invalid action row"));
         };
@@ -152,15 +156,31 @@ pub(crate) fn action_result(body: &str) -> Result<Value, Error> {
             }
             continue;
         }
-        if id.is_empty() || !id.bytes().all(|b| b.is_ascii_hexdigit()) || rows.insert(id, value).is_some() {
+        if id.is_empty() || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
             return Err(Error::Native("invalid/duplicate action row ID"));
         }
-        if rows.len() > 4096 {
-            return Err(Error::Native("action row count limit"));
+        // Observed in the retained 2026-11-10 publication response: an unrelated
+        // empty async iterable emits `12:X` then `12:C`. React Flight uses X for
+        // an async iterable and C for its close. This is NOT two model rows.
+        // Admit only that complete empty pair, never values, arbitrary duplicate
+        // models, a stream as root/action result, or a general streaming runtime.
+        if value == "X" && id != "0" && !rows.contains_key(id) && !empty_iterables.contains_key(id) {
+            empty_iterables.insert(id, false);
+            continue;
+        }
+        if value == "C" && empty_iterables.get(id) == Some(&false) {
+            empty_iterables.insert(id, true);
+            continue;
+        }
+        if matches!(value, "X" | "C") || empty_iterables.contains_key(id) || rows.insert(id, value).is_some() {
+            return Err(Error::Native("invalid/duplicate action row ID"));
         }
         if id == "0" {
             root = Some(value);
         }
+    }
+    if empty_iterables.values().any(|closed| !closed) {
+        return Err(Error::Native("incomplete action response async iterable"));
     }
     let value: Value =
         serde_json::from_str(root.ok_or(Error::Native("action return root missing"))?).map_err(|_| Error::Native("invalid action return root"))?;

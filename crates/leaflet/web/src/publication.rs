@@ -181,6 +181,13 @@ pub fn decode(body: &str) -> Result<Outcome, Error> {
         .ok_or(Error::Native("publication result missing success"))?;
     match success {
         Value::Bool(true) => {
+            // The actual native result includes `reply: undefined` when no
+            // reply was submitted. Flight serializes that optional field as
+            // "$undefined". Normalize ONLY this known optional result slot;
+            // authored record strings and unknown fields remain untouched.
+            if value.get("reply").is_some_and(|reply| reply == "$undefined") {
+                value.as_object_mut().expect("success object").remove("reply");
+            }
             let result: Published = serde_json::from_value(value).map_err(|_| Error::Native("unsupported publication success shape"))?;
             if result.rkey.is_empty() || result.uri.is_empty() || !result.record.is_object() {
                 return Err(Error::Native("incomplete publication success"));

@@ -166,12 +166,12 @@ impl Server {
                     if mode == 1 {
                         return (503, vec![], "lost after effect".into());
                     }
-                    let result = json!({"success":true,"uri":URI,"rkey":"post","record":record,"firstPublish":first,"blocks":1});
+                    let result = json!({"success":true,"uri":URI,"rkey":"post","record":record,"firstPublish":first,"blocks":1,"reply":"$undefined"});
                     return (
                         200,
                         vec![("Content-Type".into(), "text/x-component".into())],
                         format!(
-                            "0:{{\"a\":\"$@1\"}}\n1:{result}\n{}",
+                            "12:X\n0:{{\"a\":\"$@1\"}}\n1:{result}\n12:C\n{}",
                             if mode == 13 { "unknown-row:opaque-private-evidence\n" } else { "" }
                         ),
                     );
@@ -223,6 +223,31 @@ fn draft(path: &Path, publication: bool) {
 }
 fn read(path: &Path) -> Document {
     leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[test]
+#[ignore = "offline only: requires the private retained final-probe response and source snapshots; never invokes live effects"]
+fn retained_deployed_update_response_decodes_and_matches_settled_receipt_offline() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.test-agent/native-publish-final");
+    let body = std::fs::read_to_string(root.join("update-response.private.flight")).expect("private retained response required");
+    let document = leafbud_mdx::parse(&std::fs::read_to_string(root.join("published-update.source.private.mdx")).unwrap()).unwrap();
+    let Outcome::Published(action) = leafbud_web::publication::decode(&body).expect("retained real response must decode") else {
+        panic!("success")
+    };
+    let binding = document.state.binding.as_ref().unwrap();
+    assert_eq!(binding.uri.as_deref(), Some(action.uri.as_str()));
+    assert_eq!(AtUri::parse(&action.uri).unwrap().rkey, action.rkey);
+    assert!(!action.first_publish && action.reply.is_none());
+    let expected = projection::working(&document).unwrap().value;
+    assert_eq!(projection::from_record(&action.record, &document).unwrap().value, expected);
+    let released = document.state.released.as_ref().expect("actual settled receipt required");
+    assert_eq!(released.input_hash, import::hash(&expected));
+    leafbud_atproto::content::verify_record_content(&action.record, &released.cid).expect("decoded inline record must match actually verified PDS CID");
+    let after = read(&root.join("workspace/disposable.mdx"));
+    assert!(
+        after.state.binding.is_none() && after.state.released.is_none(),
+        "proof object must already be deleted/unbound"
+    );
 }
 
 #[tokio::test]

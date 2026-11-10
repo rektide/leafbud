@@ -1,0 +1,5 @@
+:HL["/_next/static/publish.css","style"]
+12:X
+0:{"a":"$@1","f":["unrelated render payload"],"i":false,"q":""}
+1:{"success":true,"rkey":"post","uri":"at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post","record":{"$type":"site.standard.document","title":"Updated disposable fixture","site":"https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx","path":"/post","publishedAt":"2026-11-10T00:00:00.000Z","description":"","tags":[],"theme":{"$type":"pub.leaflet.publication#theme","showPageBackground":true},"content":{"$type":"pub.leaflet.content","pages":[{"$type":"pub.leaflet.pages.linearDocument","id":"native-page","blocks":[{"$type":"pub.leaflet.pages.linearDocument#block","block":{"$type":"pub.leaflet.blocks.text","plaintext":"Updated disposable paragraph."}}]}]}},"firstPublish":false,"blocks":1,"reply":"$undefined"}
+12:C

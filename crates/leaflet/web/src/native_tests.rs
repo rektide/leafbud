@@ -35,6 +35,32 @@ fn bounded_action_reference_and_return_slot_not_a_uuid_scrape() {
     }
 }
 
+#[test]
+fn observed_empty_iterable_pair_is_not_a_duplicate_model_or_action_result() {
+    // Reduced literal framing from the retained deployed publication response;
+    // the mint action value here is synthetic, NOT a new live mint claim.
+    let fixture = include_str!("../tests/fixtures/mint-empty-iterable.flight");
+    assert_eq!(actions::mint_result(fixture).unwrap(), Some(TOKEN.parse().unwrap()));
+    for bad in [
+        fixture.replace("12:C\n", ""),
+        fixture.replace("12:X\n", ""),
+        fixture.replace("12:X", "12:x"),
+        fixture.replace("12:C", "12:Cnull"),
+        fixture.replace("12:C", "12:[]\n12:C"),
+        fixture.replace("12:C", "12:X\n12:C"),
+        fixture.replace("12:C", "12:C\n12:C"),
+        fixture.replace("$@1", "$@12"),
+        fixture.replace("12:X", "0:X").replace("12:C", "0:C"),
+        format!("12:null\n{fixture}"),
+        format!("{fixture}12:null\n"),
+        format!("{fixture}1:null\n"),
+    ] {
+        assert!(actions::mint_result(&bad).is_err(), "malformed/selected stream must refuse");
+    }
+    let too_many = format!("{}0:{{\"a\":null}}\n", ":HL[]\n".repeat(4096));
+    assert!(actions::mint_result(&too_many).is_err());
+}
+
 #[tokio::test]
 async fn publication_uses_current_dashboard_action_and_literal_args_only() {
     let server = TestServer::spawn_headers(Arc::new(|request| {
