@@ -145,7 +145,7 @@ impl LeafletClient {
     }
 }
 
-async fn read_action_response(mut response: reqwest::Response, operation: &'static str) -> Result<String, Error> {
+async fn read_action_response(response: reqwest::Response, operation: &'static str) -> Result<String, Error> {
     if response.headers().contains_key("x-action-redirect") || response.headers().get("x-nextjs-action-not-found").is_some_and(|v| v == "1") {
         return Err(Error::Native("delete action redirected/not found; outcome uncertain"));
     }
