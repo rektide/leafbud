@@ -18,6 +18,9 @@ mod descriptions;
 #[path = "save_tests.rs"]
 mod saves;
 
+#[path = "delete_tests.rs"]
+mod deletes;
+
 const TOKEN: &str = "01999000-0000-7aaa-8000-000000000001";
 const ROOT: &str = "11111111-1111-4111-8111-111111111111";
 const PAGE: &str = "22222222-2222-4222-8222-222222222222";

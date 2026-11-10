@@ -9,9 +9,11 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+mod delete;
 mod resolve;
 mod save;
 mod write;
+pub use delete::{DeleteOptions, DeleteReport, ObservedGone};
 pub use leafbud_document::ResolutionDirection;
 pub use resolve::{RecoverOptions, ResolveReport};
 pub use save::{SaveOptions, SaveReport};

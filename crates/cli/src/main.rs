@@ -9,6 +9,8 @@
 //!   `push`, `pull`, `publish`, `import`, `edit`, `tidy`, `export`;
 //! - **push saves the editor; publish releases; pull reads the working
 //!   editor** — same meanings for draft and published files;
+//! - `delete FILE` destroys a bound native editor deliberately (preview by
+//!   default; a published deletion removes the public record first);
 //! - `create FILE --title` writes one unbound local draft (offline, stable
 //!   random document UUID, no clobbering) with tri-state publication intent;
 //! - missing source keys are assigned on executed `push`/`publish`;
@@ -32,11 +34,15 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use leafbud_workflow::{LeafletState, RemoteOptions};
+use leafbud_workflow::{
+    LeafletState, RemoteOptions,
+    native::DeleteOptions,
+};
 
 mod author;
 mod config;
 mod create;
+mod delete;
 mod diff;
 mod import;
 mod list;
@@ -129,6 +135,21 @@ enum RecoverTake {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Delete a bound native editor deliberately (preview by default)
+    #[command(
+        after_help = "Draft: destroys the native editor (entity set, permission token, image-blob cleanup) and converts the local file to an unbound draft. Published: ALSO deletes the public PDS record first — a bigger, publicly visible action. Verified by observation; uncertain outcomes are never retried automatically."
+    )]
+    Delete {
+        file: PathBuf,
+        /// Execute the displayed plan (preview by default)
+        #[arg(long)]
+        yes: bool,
+        /// Additionally remove the local file after verified deletion
+        #[arg(long)]
+        purge: bool,
+        #[arg(long)]
+        json: bool,
+    },
     /// Inspect/settle a prior save; explicitly accept remote or replan local only after terminal acknowledgment
     Recover {
         file: PathBuf,
@@ -509,6 +530,24 @@ async fn main() -> ExitCode {
             }
         };
     }
+    if let Command::Delete { file, yes, purge, json } = &cli.command {
+        return match delete::run(
+            options,
+            cli.root.as_deref(),
+            &flags,
+            file,
+            DeleteOptions { yes: *yes, purge: *purge },
+            *json,
+        )
+        .await
+        {
+            Ok(code) => code,
+            Err(error) => {
+                eprintln!("leafbud: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Command::Recover { file, yes, take, json } = &cli.command {
         return match recover::run(
             options,
@@ -864,6 +903,7 @@ fn not_implemented(command: &Command) -> ExitCode {
 /// Render the full dotted command path for diagnostics.
 fn command_name(command: &Command) -> String {
     match command {
+        Command::Delete { .. } => "delete".into(),
         Command::Recover { .. } => "recover".into(),
         Command::Create { .. } => "create".into(),
         Command::Check { .. } => "check".into(),
