@@ -599,6 +599,15 @@ pub fn header(source: &str) -> Result<Value> {
 /// Actual JSX identity/reference attributes, selected through the production
 /// arena/decoded property meaning, not text searches over prose or code.
 pub(crate) fn rename_attributes(source: &str, old: &str, new: &str) -> Result<Vec<super::TidyEdit>> {
+    replace_attributes(source, old, new, true)
+}
+
+/// Preparation owns references only, never explicit Key/Page identities.
+pub(crate) fn retarget_page_links(source: &str, old: &str, new: &str) -> Result<Vec<super::TidyEdit>> {
+    replace_attributes(source, old, new, false)
+}
+
+fn replace_attributes(source: &str, old: &str, new: &str, identities: bool) -> Result<Vec<super::TidyEdit>> {
     let (arena, errors) = satteri_pulldown_cmark::parse(source, satteri_pulldown_cmark::MDX_OPTIONS);
     ensure!(errors.is_empty(), "invalid MDX syntax");
     let reader = Reader {
@@ -609,11 +618,11 @@ pub(crate) fn rename_attributes(source: &str, old: &str, new: &str) -> Result<Ve
         keyed: vec![],
         auto: 0,
     };
-    fn visit(reader: &Reader, id: u32, source: &str, bom: usize, old: &str, new: &str, edits: &mut Vec<super::TidyEdit>) -> Result<()> {
+    fn visit(reader: &Reader, id: u32, source: &str, bom: usize, old: &str, new: &str, identities: bool, edits: &mut Vec<super::TidyEdit>) -> Result<()> {
         if reader.kind(id) == MdastNodeType::MdxJsxFlowElement {
             let prop = match reader.name(id) {
-                "Key" => Some("id"),
-                "Page" => Some("name"),
+                "Key" if identities => Some("id"),
+                "Page" if identities => Some("name"),
                 "PageLink" => Some("page"),
                 _ => None,
             };
@@ -630,12 +639,21 @@ pub(crate) fn rename_attributes(source: &str, old: &str, new: &str) -> Result<Ve
             }
         }
         for &child in reader.arena.get_children(id) {
-            visit(reader, child, source, bom, old, new, edits)?;
+            visit(reader, child, source, bom, old, new, identities, edits)?;
         }
         Ok(())
     }
     let mut edits = vec![];
-    visit(&reader, 0, source, usize::from(source.starts_with('\u{feff}')) * 3, old, new, &mut edits)?;
+    visit(
+        &reader,
+        0,
+        source,
+        usize::from(source.starts_with('\u{feff}')) * 3,
+        old,
+        new,
+        identities,
+        &mut edits,
+    )?;
     Ok(edits)
 }
 

@@ -4,7 +4,7 @@
 //! only [`apply_key_preparation`] produces bytes, and it proves the result
 //! through the production parser before returning it.
 use super::{json, parse, parse_with_spans, patch};
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Context, Result, ensure};
 use leafbud_document::*;
 
 /// One nonoverlapping byte replacement in the original source (shared with
@@ -138,31 +138,7 @@ pub fn prepare_keys(source: &str, keys: KeySource<'_>) -> Result<KeyPreparation>
         });
     }
     if let (Some(provisional), Some(main)) = (&provisional_main, &main_page) {
-        let mut index = 0;
-        for page in &parsed.document.pages {
-            for block in &page.blocks {
-                if matches!(&block.kind, BlockKind::PageLink { page: target } if target == provisional) {
-                    let span = &parsed.spans[index];
-                    let block_source = &source[span.start..span.end];
-                    let forms = [
-                        format!("page={{{}}}", json(provisional)),
-                        format!("page=\"{provisional}\""),
-                        format!("page='{provisional}'"),
-                    ];
-                    let found = forms.iter().find(|form| block_source.contains(form.as_str()));
-                    let Some(form) = found else {
-                        bail!("page link addressing the provisional main page has an unsupported attribute spelling");
-                    };
-                    let at = span.start + block_source.find(form.as_str()).expect("checked");
-                    edits.push(TidyEdit {
-                        start: at,
-                        end: at + form.len(),
-                        text: form.replace(provisional.as_str(), main),
-                    });
-                }
-                index += 1;
-            }
-        }
+        edits.extend(super::parse::retarget_page_links(source, provisional, main)?);
     }
     edits.sort_by_key(|edit| edit.start);
     ensure!(

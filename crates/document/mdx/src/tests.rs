@@ -1293,7 +1293,7 @@ fn preparation_retargets_links_to_the_provisional_main_page() {
     let state = "\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}";
     let literal = format!("---\nformat: leafbud-mdx/2\ntitle: T\n{state}\n---\n\nprose mentioning p-auto spelling\n\n<PageLink page=\"p-auto\" />\n");
     let expression = literal.replace("page=\"p-auto\"", "page={\"p-auto\"}");
-    for (source, expect_link) in [(literal, "<PageLink page=\"p-1\" />"), (expression, "<PageLink page={\"p-1\"} />")] {
+    for (source, expect_link) in [(literal, "<PageLink page=\"p-1\" />"), (expression, "<PageLink page=\"p-1\" />")] {
         let (mut block, mut page) = (counter("b"), counter("p"));
         let plan = prepare_keys(
             &source,
@@ -1313,6 +1313,45 @@ fn preparation_retargets_links_to_the_provisional_main_page() {
             parsed.document.editor_value()["main"]["blocks"][1]["content"]["page"],
             json!({"kind": "new", "key": "p-1"})
         );
+    }
+}
+
+#[test]
+fn preparation_parser_selected_link_spellings_preserve_interleaved_identity_and_trivia() {
+    for property in ["page = 'p-auto'", "page = { \"p-au\\u0074o\" }", "page =\n  \"p-auto\""] {
+        let source = format!("\u{feff}---\nformat: leafbud-mdx/2\ntitle: Héllo\n\"@leafbud\": {{\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\"}}\n---\n\n<PageLink {property} />\n\n<Page name='details' kind='linear'>\n\n<PageLink {property} />\n\n</Page>\n\n`<PageLink page=\"p-auto\" />` stays literal\n").replace('\n', "\r\n");
+        assert!(parse(&source).is_ok(), "valid authored spelling");
+        let (mut block, mut page) = (counter("b"), counter("p"));
+        let plan = prepare_keys(
+            &source,
+            KeySource {
+                block: &mut block,
+                page: &mut page,
+            },
+        )
+        .unwrap();
+        let prepared = apply_key_preparation(&source, &plan).unwrap();
+        let doc = parse(&prepared).unwrap();
+        assert_eq!(doc.pages[0].key, "p-1");
+        assert_eq!(doc.pages[0].blocks[0].key, "b-1");
+        assert_eq!(doc.pages[0].blocks[1].key, "b-2");
+        assert_eq!(doc.pages[1].blocks[0].key, "b-3");
+        for page in &doc.pages {
+            assert_eq!(page.blocks[0].kind, BlockKind::PageLink { page: "p-1".into() });
+        }
+        assert!(prepared.contains("`<PageLink page=\"p-auto\" />` stays literal"));
+        assert!(prepared.starts_with("\u{feff}---\r\n"));
+        assert!(!prepared.replace("\r\n", "").contains('\n'));
+        let repeat = prepare_keys(
+            &prepared,
+            KeySource {
+                block: &mut block,
+                page: &mut page,
+            },
+        )
+        .unwrap();
+        assert!(repeat.is_noop());
+        assert_eq!(apply_key_preparation(&prepared, &repeat).unwrap(), prepared);
     }
 }
 

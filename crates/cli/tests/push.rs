@@ -137,6 +137,67 @@ async fn complete_cli_both_contexts_preview_first_combined_revision_pull_and_unc
 }
 
 #[tokio::test]
+async fn source_spellings_prepare_save_and_repeat_preserve_page_associations() {
+    let (server, store) = server(false).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("doc.mdx");
+    assert!(
+        cli(&server.base_url, root.path(), &["create", "doc.mdx", "--title", "Héllo", "--standalone"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    let source = format!(
+        "{}\n<PageLink page = {{ \"detail\\u0073\" }} />\n\n<Page name='details' kind='linear'>\n\n<PageLink page = {{ \"p-au\\u0074o\" }} />\n\n</Page>\n\nAfter the page.\n",
+        std::fs::read_to_string(&path).unwrap()
+    );
+    std::fs::write(&path, &source).unwrap();
+    let refused = invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 1).await;
+    assert!(refused["items"][0]["message"].as_str().unwrap().contains("cyclic page"));
+    assert!(server.requests().is_empty());
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    // Cycles are source-valid but outside the native writer's current profile.
+    // An acyclic source carries these same property spellings through save.
+    let source = source.replace("<PageLink page = { \"p-au\\u0074o\" } />", "Inside the page.");
+    std::fs::write(&path, &source).unwrap();
+    let preview = invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--json"], 0).await;
+    assert_eq!(preview["items"][0]["outcome"], "would-bind-and-save");
+    assert!(server.requests().is_empty());
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "saved"
+    );
+    let bytes = std::fs::read_to_string(&path).unwrap();
+    let doc = leafbud_mdx::parse(&bytes).unwrap();
+    assert_eq!(doc.pages.len(), 2);
+    assert_eq!(doc.pages[0].blocks.len(), 2);
+    assert_eq!(doc.pages[0].blocks[0].kind, leafbud_document::BlockKind::PageLink { page: "details".into() });
+    assert_eq!(
+        doc.pages[1].blocks[0].kind,
+        leafbud_document::BlockKind::Paragraph {
+            content: vec![leafbud_document::Inline::Run {
+                text: "Inside the page.".into(),
+                marks: vec![]
+            }]
+        }
+    );
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let pushes = store.lock().unwrap().pushes;
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "unchanged"
+    );
+    assert_eq!(invoke(&server.base_url, root.path(), &["pull", "doc.mdx", "--json"], 0).await["unchanged"], 1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), bytes);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+    assert_eq!(leafbud_mdx::parse(&bytes).unwrap().state.nodes, doc.state.nodes);
+}
+
+#[tokio::test]
 async fn confirmed_key_rename_preserves_receipts_and_no_effect_push_and_metadata_classification() {
     let (server, store) = server(false).await;
     let root = tempfile::tempdir().unwrap();
