@@ -8,13 +8,13 @@ generated:
   at: 2026-11-08
   by: model:openai/gpt-6-astra#high
 updated:
-  at: 2026-11-09
+  at: 2026-11-10
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e46711846ffeWAA4snDkH28tpL"
     title: "Operator set session cadence and complexity budget, then rejected generated-body default in favor of complete drafting on the keyed native-object foundation"
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Operator commissions rebuildable keyed authoring, live watch and native-default adoption; sets 240–350k rollover and fresh Sol high sessions for continuing major features"
+    title: "Operator commissions continuing keyed/local authoring work with fresh Sol high agents; latest rotation policy is major task boundaries or 220–320k reported context"
 ---
 
 # Leafbud work-session cadence
@@ -64,6 +64,9 @@ sources:
   over the earlier g default, beginning with the complete keyed text/structure
   save loop. Routine bounded work may still use g where appropriate; follow
   explicit selections and inherited fallback rules.
+- The operator explicitly renewed continuing implementation on 2026-11-10:
+  pursue the next-move work through source fidelity/executable coverage and local
+  filename/path reconciliation, with parent integration review between batches.
 - Plan coherent batches of **1–4 upcoming tickets**. A preview is a recommendation;
   keep commissioned implementation distinct from work merely queued for discussion.
 - Parent review owns architecture, evidence and integration; implementation agents
@@ -71,14 +74,14 @@ sources:
 
 ## Session size and rotation
 
-- For future working-agent sessions, **roll over at a coherent checkpoint between
-  240–350k reported context tokens**. Prepare the handoff as the session approaches
-  that window and complete rollover by 350k; nominal model capacity is not the
-  operating budget. Smaller completed slices may end normally—never manufacture
+- For working-agent sessions, **rotate at major task boundaries or at a coherent
+  checkpoint between 220–320k reported context tokens**. Prepare the handoff as
+  the session approaches that window and complete rollover by 320k; nominal model
+  capacity is not the operating budget. Smaller completed slices may end normally—never manufacture
   work to reach the lower bound. Use reported context, not cumulative lifetime
   token usage, when available.
 - Continue a session when retained context is valuable within that rollover
-  budget. Rotate earlier when scope or a natural completion warrants it.
+  budget. Prefer a fresh session when starting the next major task.
   Before rotating, commit owned work and leave a concise handoff with code/design
   pointers, verification, unresolved decisions and the next useful slice.
 

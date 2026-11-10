@@ -12,7 +12,7 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Parent architecture and compaction report, then 0.18 source/identity integration review and refreshed next-front design"
+    title: "Parent architecture and compaction report, 0.18 integration acceptance, then renewed continuing-work commission and 220–320k rotation policy"
   - resource: /design/local-authoring-tools0.gpt61s.md
     title: "Completed 0.18 metadata/rekey/list, 317-test gate and actual CLI/HTTP/Phoenix evidence"
   - resource: /crates/document/mdx/src/author.rs
@@ -62,15 +62,21 @@ parser-selected JSX edits, exact reparse proofs, unchanged tracking settlement,
 shared locked writes and read-only inventory. No blocking integration issue was
 found; the reported 317-test gate is accepted.
 
-**No agent is currently active.** Sol session
-`ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets at about
-215k context. Its [receipt](local-authoring-tools0.gpt61s.md) records APIs and
-source-shape limits. The next proposed two-ticket batch is **source fidelity +
-executable coverage**, designed in section 4A below; it has not been dispatched.
+**Active agent:** fresh Sol high `ses_e3c420e5affeLoQfS0oTd9wu5b`, implementing
+**source fidelity + executable coverage** (`leafbud-mdx-source` and
+`leafbud-mdx-coverage`), designed in section 4A below. The operator explicitly
+renewed continuing implementation on 2026-11-10; after parent review, a fresh Sol
+high should take filename/path reconciliation (`leafbud-author-names`). Rotate at
+major task boundaries or **220–320k reported context**, superseding 240–350k.
 
-User's latest request: write the current report and next-front design in Markdown
-so this parent session can compact. No completed implementation/test/deployed
-probe needs repeating merely because context was compacted.
+Predecessor `ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets
+at about 215k context. Its [receipt](local-authoring-tools0.gpt61s.md) records APIs
+and source-shape limits. Do not duplicate the active implementation or poll its
+progress; await the harness return and review the actual result.
+
+The earlier compaction-report request is fulfilled. The latest request is to
+continue chasing the next moves using Sol high agents with the revised rotation
+window. Completed checks need not repeat merely because context was compacted.
 
 ## 1. What has actually landed
 
@@ -121,8 +127,9 @@ review question; do not rerun everything to reconstruct confidence after compact
 ## 2. Decisions that must survive
 
 - **Fresh Sol high for major features.** Continue through coherent batches and
-  parent reviews. Rollover at a coherent checkpoint **between 240–350k reported
-  context**, completing it by 350k. Smaller finished slices can end earlier.
+  parent reviews. Rotate at major task boundaries or a coherent checkpoint
+  **between 220–320k reported context**, completing rollover by 320k. Smaller
+  finished slices can end earlier.
 - **Low volume, bounded complexity.** Simple keyed create/update/place/detach;
   compatible text splice/marks with loaded-paragraph-interior fallback; changed
   page end-normalization. No general structural optimizer.
@@ -174,12 +181,18 @@ renamed node-map's textual order no longer causes an empty push to rewrite bytes
 
 ## 4. Next fronts after 0.18
 
-These are recommendations/options, not claims of commissioned implementation.
-Use **fresh Sol high**, selecting coherent batches of 1–4 tickets.
+Front A is now commissioned and active; front B is the next commissioned
+continuation after integration review. Later fronts remain options. Use **fresh
+Sol high**, selecting coherent batches of 1–4 tickets.
 
 ### A. Source fidelity and executable coverage — recommended next foundation
 
 **Tickets:** `leafbud-mdx-source` + `leafbud-mdx-coverage`.
+
+**Commissioned:** fresh Sol `ses_e3c420e5affeLoQfS0oTd9wu5b`; owns production
+code/tests, README, maintained source/coverage documentation and its own receipt.
+Parent owns this report and AGENTS. Complete a useful bounded source/coverage
+batch, then return for review before the separate naming task.
 
 **Payoff:** fewer ordinary authoring spellings cause refusal, and future changes
 have a visible operation/content coverage contract. Version 0.18 already handles
@@ -302,6 +315,7 @@ children reviewed, not duplicate implementation tickets.
 
 | Session | Disposition |
 | --- | --- |
+| `ses_e3c420e5affeLoQfS0oTd9wu5b` | **Active:** source fidelity + executable coverage; new 220–320k rotation window |
 | `ses_e3d511cf0ffeKLT5XsWr37v0r6` | Completed local metadata/rekey/list at ~215k; parent accepted 0.18 |
 | `ses_e3d6d728effe6RFnyZcrUtifT9` | Completed terminal recovery/no-op correction at ~263k; rotate rather than continue major work |
 | `ses_e3d96851dffeS2cPD2vPHjGklF` | Completed keyed save loop at ~276k; retired from major continuation |
@@ -339,8 +353,8 @@ was published or emailed, and no unrelated document or asset was cleaned up.
 1. Read this report, [AGENTS](/AGENTS.md), and the completed
    [local-tool receipt](local-authoring-tools0.gpt61s.md). No need to reload every
    historical design or rerun completed checks.
-2. No implementation agent is active. The next recommended batch is section 4A;
-   refresh ticket state before a fresh Sol high dispatch.
+2. Await the active source/coverage Sol return; do not duplicate its work or poll.
+   Review its evidence, then dispatch a fresh Sol high for naming reconciliation.
 3. Parent integration review of 0.18 is complete. Trust reported tests; add
    targeted regressions only for new changes or actual unresolved concerns.
 4. Preserve predecessor commits before corrections. Use explicit owned jj paths;
