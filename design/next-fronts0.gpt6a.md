@@ -1,7 +1,7 @@
 ---
 type: Report
 title: "Leafbud: current ground, next fronts and compaction handoff"
-description: "Continuation account of accepted 0.19 source fidelity/coverage, active filename/path reconciliation, remaining fronts and exact verification boundaries."
+description: "Continuation account of accepted 0.20 naming and completed local authoring, active published adoption/release evidence, remaining fronts and verification boundaries."
 resource: /design/next-fronts0.gpt6a.md
 status: current-handoff
 generated:
@@ -12,7 +12,17 @@ updated:
   by: model:openai/gpt-6-astra#high
 sources:
   - resource: "opencode://ses_e4217c526ffeXeHByo5ZswnB3F"
-    title: "Parent architecture and compaction report, 0.18/0.19 integration acceptance, continuing Sol commissions and 220–320k rotation policy"
+    title: "Parent architecture and compaction report, integration acceptance through 0.20, continuing Sol commissions and 220–320k rotation policy"
+  - resource: /design/naming0.gpt61s.md
+    title: "0.20 literal path mapping, no-clobber move/witness ordering and 342-test gate"
+  - resource: /crates/workflow/src/names.rs
+    title: "Reviewed independent naming classification, explicit directions and destination validation"
+  - resource: /crates/workflow/src/tidy.rs
+    title: "Reviewed full-selection late guards, dry-run batch reservations and recoverable move/settlement ordering"
+  - resource: /crates/workflow/src/files.rs
+    title: "Reviewed actual Linux NOREPLACE primitive and guarded source replacement"
+  - resource: /crates/document/mdx/src/names.rs
+    title: "Reviewed separate naming patch authority and full source/state proof"
   - resource: /design/source-fidelity0.gpt61s.md
     title: "0.19 source/comment/flow delivery and 328-test gate"
   - resource: /doc/mdx/README.md
@@ -65,15 +75,16 @@ sources:
 
 ## Resume here after compaction
 
-**Latest accepted baseline: 0.19.0, through `aa13bed1`.** The draft workflow now
-includes whole-flow author headers, parser-selected preparation spellings and
-source-only block-anchored comments. Parent reviewed flow collection pairing,
-comment selection/attachment/adoption, source-bound tidy and maintained coverage;
-the bounded contract and reported 328-test gate are accepted (section 4A).
+**Latest accepted baseline: 0.20.0, through `875c01b6`.** Local authoring now
+includes independent filename/path witnesses, deliberate tidy reconciliation,
+read-only naming status/list and recoverable no-clobber file moves. Parent
+reviewed mapping/classification, source patch authority, full-selection late
+checks and move/witness failure ordering; the 342-test gate is accepted (4B).
 
-**Active agent:** fresh Sol high `ses_e3c29df03ffeKTX7z5IHA3nup5`, implementing
-**filename/path reconciliation** (`leafbud-author-names`, section 4B). The source/
-coverage predecessor returned at 239,394 measured tokens; it is finished. Rotate
+**Active agent:** fresh Sol high `ses_e3c10b84effeXUnnnL5oZ5M7TJ`, implementing
+**published adoption and independent release evidence** (`leafbud-release-adopt`
+then `leafbud-release-state`, section 4C). Naming returned at 214,041 reported
+tokens, a coherent major-task boundary. Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 Predecessor `ses_e3d511cf0ffeKLT5XsWr37v0r6` completed all three local-tool tickets
@@ -97,6 +108,7 @@ window. Completed checks need not repeat merely because context was compacted.
 | Deliberate terminal recovery | Original-success settlement separately from explicit accept-current/replan; bounded `lastResolution`; no uncertain replay/remint | `native::resolve`; [terminal recovery](terminal-recovery0.gpt61s.md) |
 | Offline authoring tools | Selected metadata edits, identity-preserving key rename, truthful local inventory | `mdx::author/rekey`, `workflow::author/list`; [local tools](local-authoring-tools0.gpt61s.md) |
 | Source fidelity and coverage | Whole-flow headers, broad preparation spellings, same-page block comments; explicit operation evidence | [Source contract](/doc/mdx/README.md), [coverage](/doc/mdx/coverage.md) |
+| Filename/path reconciliation | Independent `names`, explicit/default tidy reconciliation, read-only classification, no-clobber move with unconfirmed-settlement reporting | [Naming receipt](naming0.gpt61s.md), `workflow::names/tidy`, `mdx::patch_names` |
 
 The supported native lifecycle is **draft**. Canvas, nested/task lists, richer
 interactive objects, uploads, published-editor adoption and public release are
@@ -110,7 +122,7 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 
 ### Verification to carry forward
 
-- Latest regular gate: **328/328 workspace tests**, six opt-in deployment tests
+- Latest regular gate: **342/342 workspace tests**, six opt-in deployment tests
   skipped; formatting, strict all-target clippy and document checks passed.
 - Production Yrs → independent actual Yjs: **7/7 groups**. The terminal-recovery
   slice did not change the writer; its receipt correctly reuses that evidence.
@@ -131,6 +143,9 @@ HTTP or workflow. Local file effects and orchestration stay in workflow.
 - Version 0.19 CLI/HTTP and Phoenix fixtures cover whole-flow edit/default/save/
   refresh, comment preservation and refusal when a remote comment anchor disappears.
   Native/Yrs writer unchanged; prior seven-group Yjs evidence remains applicable.
+- Version 0.20 tests add actual NOREPLACE collisions, post-rename interruption/
+  external saves, independent dirty-editor naming acceptance, content-no-op CLI/
+  HTTP push/pull and Phoenix rescan at the new filename with comments intact.
 
 Trust these reported checks. Add tests for new changes or a specific unresolved
 review question; do not rerun everything to reconstruct confidence after compaction.
@@ -190,10 +205,10 @@ and full reparse equality proves their scope. The new equal-state return in
 `patch_tracking` runs after existing identity/writer/binding/pending guards, so a
 renamed node-map's textual order no longer causes an empty push to rewrite bytes.
 
-## 4. Current and next fronts after 0.19
+## 4. Current and next fronts after 0.20
 
-Front A is accepted; front B is commissioned and active after integration review.
-Later fronts remain options. Use **fresh
+Fronts A and B are accepted; front C's adoption/state pair is active after review.
+Native publication effects and later fronts remain separate. Use **fresh
 Sol high**, selecting coherent batches of 1–4 tickets.
 
 ### A. Source fidelity and executable coverage — accepted
@@ -223,16 +238,16 @@ native kind/resource expectations supplement the existing complete-save tests;
 the matrix names shared versus dedicated cases and prior deployed/Yjs boundaries.
 Parent trusts the reported checks and found no blocking architectural issue.
 
-### B. Naming and path intent — small independent authoring completion
+### B. Naming and path intent — accepted local authoring completion
 
 **Ticket:** `leafbud-author-names`.
 
-**Active:** fresh Sol `ses_e3c29df03ffeKTX7z5IHA3nup5`, under the operator's
-continuing-work instruction. Owns implementation, tests, maintained usage/coverage
-and its own receipt; parent owns this report and integration review.
+**Delivered and accepted:** fresh Sol `ses_e3c29df03ffeKTX7z5IHA3nup5`, through
+`875c01b6`; [receipt](naming0.gpt61s.md). Parent accepts ticket closure and the
+local authoring epic: create, keys, metadata, rekey and naming children are complete.
 
 **Payoff:** reconcile intentional filename/path choices without confusing them
-with native identity. This is the remaining open child of the author epic.
+with native identity. This completes the remaining child of the author epic.
 
 **Bounded design:** implement deliberate `tidy --from filename|path` and `--accept`
 using independent naming witnesses. Normal push never renames files. A pathname
@@ -240,18 +255,22 @@ change keeps local UUID and native binding; collision and conflicting direction
 require an explicit choice. Local path intent does not reserve or change a native
 public route. Preserve the established global/workspace selection conventions.
 
-The implementation must define filename/logical-path mapping and workspace versus
-external coordinates explicitly, use independent compact `names` witnesses, and
-expose read-only naming classification in status. Selectors compose as a union;
-dry-run has no source/rename/witness effects. Pending attempts block managed naming.
+Accepted mapping: logical `/notes/Éssay` ↔ workspace `notes/Éssay.mdx`, literal
+case/Unicode, exactly one suffix, existing real directories only. No decoding,
+slugification or traversal. External operands retain key/Markdown passes but do
+not settle workspace names. An explicit accepted mismatch need not enact its path.
 
-Consequential review: no-clobber move plus witness/source update needs an honest
-failure ordering, not a claim of multi-file atomicity. Carry all explicit external
-operands through late duplicate checks; current tidy's single-operand early check
-must be strengthened for the new move path. Preserve native IDs, editor receipts,
-historical resolution, body comments and unrelated author bytes. A name settlement
-cannot conceal editor drift. The agent should checkpoint a material coordinate or
-transaction-policy fork before building a general mechanism.
+`State.names` is an independent pair with missing/null/value path presence, no
+timestamp/history. Status/list share tidy's classification. Source patching keeps
+editor receipts, native IDs, writer, historical resolution and body/comment bytes.
+
+Parent accepts the failure ordering: actual Linux NOREPLACE rename first, guarded
+source/witness replacement second. A second-phase error reports destination and
+**unconfirmed** settlement, whose bytes may be original, patched or externally
+edited. No rollback overwrites/deletes the good current file. Full-selection late
+duplicate checks, source inode/bytes, operand routes and destination checks guard
+cooperative writes; no filesystem CAS is claimed. Preview reserves colliding batch
+destinations in memory; execution relies on the real no-replace primitive.
 
 This can follow the new field/key patch helpers. Keep it separate from remote
 slug support: current source evidence says ordinary native publication chooses its
@@ -259,8 +278,12 @@ first public key/path. Do not invent custom-rkey behavior by sending ignored fie
 
 ### C. Published lifecycle and release — larger next product loop
 
-**Tickets:** start design with `leafbud-release-state` +
-`leafbud-release-adopt`; then join `leafbud-release-native`.
+**Active tickets:** `leafbud-release-adopt` → `leafbud-release-state`, fresh Sol
+`ses_e3c10b84effeXUnnnL5oZ5M7TJ`. Under continuing implementation authority, it
+will record code-grounded linkage/projection design first, then implement the
+coherent adoption/read/refresh and release observation/status/diff slice. A material
+architecture fork returns for parent assessment. `leafbud-release-native` follows
+only as a separately scoped effect feature.
 `leafbud-release-delivery` remains explicit newsletter/share behavior.
 
 **Payoff:** continue editing the same native document after publication and
@@ -274,6 +297,20 @@ release. Read-only status should show unreleased changes and out-of-band public
 record drift without accepting them. Preview publishing should explain native
 path/date and delivery choices. A lost release result needs observation-based
 recovery, not a blind publish retry.
+
+The current batch must keep current native working content distinct from fetched
+public output. A URI/CID alone does not prove what editor input was released;
+unknown imported release baselines remain unknown. Import with no legitimate
+editor linkage reports editing-unavailable, never guesses or mints a replacement.
+Current-endpoint release diff reuses the existing human Markdown/external-tool
+contract where conversion is faithful. Ordinary editor agreement cannot silently
+advance release receipts; naming/comment/source protections remain intact.
+
+Published editor-only saves may be enabled only where verified native operations
+keep public output unchanged. Published metadata storage must be inspected rather
+than assumed identical to draft rows; coupled release effects require an explicit
+capability boundary. Fixtures/loopback are the entire verification scope of this
+batch. No live corpus or test-draft mutation, publish/email/share/upload or cleanup.
 
 Reuse existing native web actions and public record/protocol crates where their
 actual behavior fits; inspect current upstream capabilities before choosing the
@@ -323,19 +360,20 @@ At this update, metadata, rekey and local list are **closed**. The text/structur
 binding, recovery, conflicts, follow and earlier authoring-foundation children
 are closed. The `leafbud-editor` parent epic remains open for its final scope/
 administrative review; do not infer published lifecycle completion from the
-draft acceptance. Author/inspect parent epics likewise need their remaining
-children reviewed, not duplicate implementation tickets.
+draft acceptance. The author epic is complete with naming acceptance. Inspect
+still needs its parent-level scope review, not duplicate implementation tickets.
 
 | Session | Disposition |
 | --- | --- |
-| `ses_e3c29df03ffeKTX7z5IHA3nup5` | **Active:** filename/path reconciliation; 220–320k rotation window |
+| `ses_e3c10b84effeXUnnnL5oZ5M7TJ` | **Active:** published adoption → release evidence; 220–320k rotation window |
+| `ses_e3c29df03ffeKTX7z5IHA3nup5` | Completed naming at 214,041 reported tokens; parent accepted 0.20 |
 | `ses_e3c420e5affeLoQfS0oTd9wu5b` | Completed source fidelity/coverage at 239,394 measured tokens; parent accepted 0.19 |
 | `ses_e3d511cf0ffeKLT5XsWr37v0r6` | Completed local metadata/rekey/list at ~215k; parent accepted 0.18 |
 | `ses_e3d6d728effe6RFnyZcrUtifT9` | Completed terminal recovery/no-op correction at ~263k; rotate rather than continue major work |
 | `ses_e3d96851dffeS2cPD2vPHjGklF` | Completed keyed save loop at ~276k; retired from major continuation |
 | `ses_e3dcb1f8effebiT0KtCRZB8dWf` | Completed defaults/description/P1 settlement at ~256k; retired |
 | `ses_e4121e55dffeF009EbMiG1Xinz` | Completed native effects and later candidate inspection at ~310k; retired |
-| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent resumed after compaction, reviewed 0.18 and refreshed this handoff |
+| `ses_e4217c526ffeXeHByo5ZswnB3F` | Parent reviewed through 0.20 and commissioned the published adoption/state pair |
 
 Historical independent waves and earlier agents are linked from the receipts.
 Their old g recommendations or polling-first descriptions are superseded by
@@ -367,9 +405,9 @@ was published or emailed, and no unrelated document or asset was cleaned up.
 1. Read this report, [AGENTS](/AGENTS.md), and the completed
    [local-tool receipt](local-authoring-tools0.gpt61s.md). No need to reload every
    historical design or rerun completed checks.
-2. Await the active naming Sol return; do not duplicate its work or poll.
-   Review coordinate mapping, move/witness failure ordering and independent status.
-3. Parent integration review through 0.19 is complete. Trust reported tests; add
+2. Await the active published-adoption/state Sol return; do not duplicate or poll.
+   Review authoritative identity linkage, working/public separation and receipt scope.
+3. Parent integration review through 0.20 is complete. Trust reported tests; add
    targeted regressions only for new changes or actual unresolved concerns.
 4. Preserve predecessor commits before corrections. Use explicit owned jj paths;
    never `jj edit`, squash or push. Shared `.beads/issues.jsonl` changes may include
