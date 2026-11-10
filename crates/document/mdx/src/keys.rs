@@ -3,7 +3,7 @@
 //! persist main-page identity in the reserved envelope. Plans are inert;
 //! only [`apply_key_preparation`] produces bytes, and it proves the result
 //! through the production parser before returning it.
-use super::{json, parse, parse_with_spans, patch};
+use super::{json, parse_with_spans, patch};
 use anyhow::{Context, Result, ensure};
 use leafbud_document::*;
 
@@ -204,11 +204,15 @@ pub fn apply_key_preparation(source: &str, preparation: &KeyPreparation) -> Resu
     if let Some(main_page) = &preparation.main_page {
         result = patch::insert_state_line(&result, &format!("\"mainPage\": {}", json(main_page)))?;
     }
-    let parsed = parse(&result).context("prepared source must parse")?;
+    let parsed = parse_with_spans(&result).context("prepared source must parse")?;
     ensure!(
-        parsed.semantic_value() == preparation.document.semantic_value() && parsed.state == preparation.document.state,
+        parsed.document.semantic_value() == preparation.document.semantic_value() && parsed.document.state == preparation.document.state,
         "key preparation would change content/associations"
     );
-    ensure!(parse_with_spans(&result)?.unkeyed().is_empty(), "prepared source still has unkeyed blocks");
+    ensure!(parsed.unkeyed().is_empty(), "prepared source still has unkeyed blocks");
+    ensure!(
+        parse_with_spans(source)?.comment_value(source) == parsed.comment_value(&result),
+        "key preparation would change source comments"
+    );
     Ok(result)
 }

@@ -470,6 +470,23 @@ pub struct Parsed {
 }
 
 impl Parsed {
+    /// Comment identity across key preparation: object order, not provisional
+    /// spelling, so assigning a durable key does not detach its source trivia.
+    pub(crate) fn comment_value(&self, source: &str) -> Vec<(usize, usize, String)> {
+        self.comments
+            .iter()
+            .map(|comment| {
+                let page = self.document.pages.iter().position(|p| p.key == comment.page).expect("comment page");
+                let block = self.document.pages[page]
+                    .blocks
+                    .iter()
+                    .position(|b| b.key == comment.block)
+                    .expect("comment block");
+                (page, block, source[comment.span.start..comment.span.end].to_owned())
+            })
+            .collect()
+    }
+
     pub fn unkeyed(&self) -> Vec<usize> {
         self.keyed.iter().enumerate().filter(|(_, keyed)| !**keyed).map(|(i, _)| i).collect()
     }

@@ -360,6 +360,10 @@ async fn unsupported_remainder_refuses_before_mint_and_preview_never_persists_ke
     for tail in [
         "\n<Page name=\"orphan\" kind=\"linear\">\n\nUnreferenced.\n\n</Page>\n",
         "\n![upload](file:///tmp/image.png)\n",
+        "\n<Image src={\"file:///tmp/image.png\"} fallback={null} width={null} height={null} alt={null} />\n",
+        "\n<Image src={\"https://example.test/image.png\"} fallback={\"data:image/synthetic\"} width={null} height={null} alt={null} />\n",
+        "\nText {/* unsupported inline comment */}\n",
+        "\n{/* unsupported orphan comment */}\n",
         "\n- [x] task\n",
         "\n- outer\n  - nested\n",
     ] {

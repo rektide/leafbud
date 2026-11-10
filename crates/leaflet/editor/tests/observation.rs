@@ -148,3 +148,107 @@ fn list_numbering_override_is_diagnosed() {
     let error = observe(&graph, "e-root", Uuid::nil()).err().map(|e| e.to_string()).unwrap_or_default();
     assert!(error.contains("numbering overrides"), "{error}");
 }
+
+/// Inventory from pinned upstream attributes.ts 600c7b5f, not a claim that
+/// recognizing a block/type string makes its semantics writable.
+#[test]
+fn upstream_richer_kind_inventory_refuses_instead_of_truncating() {
+    for kind in [
+        "datetime",
+        "rsvp",
+        "link",
+        "mailbox",
+        "embed",
+        "html",
+        "button",
+        "poll",
+        "bluesky-post",
+        "standard-site-post",
+        "standard-site-publication",
+        "math",
+        "members-only-delimiter",
+        "posts-list",
+        "recommended-pubs",
+        "reply",
+        "questions",
+        "signup",
+        "image-gallery",
+        "post-header",
+        "embedded-canvas",
+        "group",
+        "drawing",
+    ] {
+        let mut facts = graph();
+        facts.iter_mut().find(|r| r["id"] == "f-t3").unwrap()["data"]["value"] = kind.into();
+        let error = observe(&facts, "e-root", Uuid::nil()).err().unwrap().to_string();
+        assert!(error.contains(&format!("unsupported block type: {kind}")), "{kind}: {error}");
+    }
+    for (entity, attribute, data) in [
+        ("e-b3", "block/text-alignment", json!({"type":"text-alignment-type-union","value":"center"})),
+        ("e-b3", "block/is-locked", json!({"type":"boolean","value":true})),
+        ("e-b3", "block/footnote", json!({"type":"ordered-reference","value":"note","position":"a"})),
+        ("e-b3", "block/comment", json!({"type":"ordered-reference","value":"comment","position":"a"})),
+        ("e-page", "page/title", json!({"type":"string","value":"navigation"})),
+        ("e-root", "theme/body-font", json!({"type":"string","value":"serif"})),
+        ("e-root", "root/cover-image", json!({"type":"reference","value":"cover"})),
+    ] {
+        let mut facts = graph();
+        facts.push(fact("unsupported", entity, attribute, data));
+        let error = observe(&facts, "e-root", Uuid::nil()).err().unwrap().to_string();
+        assert!(error.contains("unrepresented editor attributes") && error.contains(attribute), "{error}");
+    }
+    let mut canvas = graph();
+    canvas.iter_mut().find(|r| r["id"] == "f-type").unwrap()["data"]["value"] = "canvas".into();
+    assert!(
+        observe(&canvas, "e-root", Uuid::nil())
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("unsupported page type: canvas")
+    );
+}
+
+#[test]
+fn native_scalar_and_image_meaning_is_explicit_and_local_resources_refuse() {
+    let mut facts = graph();
+    facts.retain(|r| !["e-b1", "e-b2"].contains(&r["entity"].as_str().unwrap()) && !["f-m1", "f-m2"].contains(&r["id"].as_str().unwrap()));
+    facts.iter_mut().find(|r| r["id"] == "f-t3").unwrap()["data"]["value"] = "code".into();
+    facts.push(fact("code", "e-b3", "block/code", json!({"type":"string","value":"exact\n\n"})));
+    facts.push(fact("lang", "e-b3", "block/code-language", json!({"type":"string","value":"rust"})));
+    let code = observe(&facts, "e-root", Uuid::nil()).unwrap();
+    assert_eq!(
+        code.pages[0].blocks[0].kind,
+        BlockKind::Code {
+            language: "rust".into(),
+            text: "exact\n\n".into()
+        }
+    );
+    assert!(matches!(&code.nodes[&code.pages[0].blocks[0].key].occurrence, Occurrence::Block { inactive_text_fact: Some(id), .. } if id == "f-x3"));
+    facts.retain(|r| !["code", "lang"].contains(&r["id"].as_str().unwrap()));
+    facts.iter_mut().find(|r| r["id"] == "f-t3").unwrap()["data"]["value"] = "image".into();
+    facts.push(fact(
+        "image",
+        "e-b3",
+        "block/image",
+        json!({"type":"image","src":"https://example.test/img","fallback":"data:image/synthetic","width":12,"height":34}),
+    ));
+    facts.push(fact("alt", "e-b3", "image/alt", json!({"type":"string","value":"Alt 😀"})));
+    assert_eq!(
+        observe(&facts, "e-root", Uuid::nil()).unwrap().pages[0].blocks[0].kind,
+        BlockKind::Image {
+            src: "https://example.test/img".into(),
+            fallback: Some("data:image/synthetic".into()),
+            width: Some(12),
+            height: Some(34),
+            alt: Some("Alt 😀".into())
+        }
+    );
+    facts.iter_mut().find(|r| r["id"] == "image").unwrap()["data"]["local"] = "local-upload".into();
+    assert!(
+        observe(&facts, "e-root", Uuid::nil())
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("local image resource")
+    );
+}

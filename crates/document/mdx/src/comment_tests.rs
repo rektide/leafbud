@@ -41,6 +41,15 @@ fn anchored_comments_prepare_tidy_rename_and_fingerprints() {
         },
     )
     .unwrap();
+    let mut damaged = plan.clone();
+    let comment = &parsed.comments[0];
+    damaged.edits.push(TidyEdit {
+        start: comment.span.start,
+        end: comment.span.end,
+        text: String::new(),
+    });
+    damaged.edits.sort_by_key(|e| e.start);
+    assert!(apply_key_preparation(&source, &damaged).unwrap_err().to_string().contains("source comments"));
     let prepared = apply_key_preparation(&source, &plan).unwrap();
     let tidy = plan_markdown_tidy(&prepared).unwrap();
     assert_eq!(tidy.blocks_changed, 1);
