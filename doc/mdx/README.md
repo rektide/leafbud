@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e396fdd15ffedI3bJni7Y1uvTs"
+    title: "Added 0.26 typed tri-state preference ownership, offline merge/clear editing and separate native save/publication semantics"
+  - resource: /design/release-preferences0.gpt61s.md
+    title: "Complete source preference loop, native resolution and fixture evidence"
   - resource: "opencode://ses_e3c10b84effeXUnnnL5oZ5M7TJ"
     title: "Added verified published lifecycle, separate explicit lifecycle patch authority and exact preservation of independent release evidence through editor operations"
   - resource: /doc/release/README.md
@@ -32,7 +36,7 @@ sources:
 
 # Managed MDX source fidelity
 
-Current contract: **Leafbud 0.21**, `leafbud-mdx/2`, draft/published native-editor lifecycle,
+Current contract: **Leafbud 0.26**, `leafbud-mdx/2`, draft/published native-editor lifecycle,
 `leaflet-editor/3` receipts. [Usage](/README.md) and
 [executable content/operation coverage](coverage.md) are companion homes.
 This is a bounded source adapter, not an arbitrary YAML setter or lossless MDX CST.
@@ -43,13 +47,14 @@ This is a bounded source adapter, not an arbitrary YAML setter or lossless MDX C
 | --- | --- | --- |
 | `tidy --keys`, executed push preparation | Missing block/main keys; actual PageLinks to the provisional main key | Existing/retired identities, unrelated bytes, author metadata and receipts |
 | `tidy --markdown` | Selected rich block spans, after checked Markdown rendering | Keys, Page boundaries, comments, header and semantic meaning |
-| `edit` | Selected title/description/tags/explicit publication date | Exact body; unrelated author fields, state, historical attempt hashes and receipts |
+| `edit` | Selected title/description/tags/explicit publication date/preferences | Exact body; unrelated author fields, state, historical attempt hashes and receipts |
 | `keys rename` | One current label, its actual references and current node-map key | Native IDs, binding, writer sequence, receipts and historical provenance |
 | Naming tidy | Explicit author `path` and independent accepted file/path pair; guarded file move when selected | Exact body/comment bytes; other author fields, native identity/associations, writer, sync and historical resolution provenance |
 | Tracking settlement | Reserved `@leafbud` state after verification | Author fields and exact body; established binding and monotonic writer reservations |
 | First-binding default preparation | Explicit verified publication; omitted native theme/contributors | Prose and explicit author choices; original dispatched pushes are never reinterpreted |
 | Pull/watch/remote recovery adoption | Changed editor-owned metadata/body and verified state | Local-only author fields, matched labels, UUID/binding; comments under the rule below |
 | Explicit `pull --adopt-published` | Verified public URI/lifecycle on the same settled draft binding; actual date/path only when omitted/null; guarded editor adoption under ordinary conflict policy | Native identity/publication association, UUID/keys, names, writer/history, explicit author choices; no release receipt is invented |
+| Verified publication settlement | Public URI/lifecycle, declared path/date/byline normalization and editor/release receipts | Exact body, authored preferences (including dispatch-only Discover true), unrelated fields, keys/native binding and names |
 
 Pending attempts block managed edit/rename/tidy and ordinary inbound adoption;
 explicit recovery owns their resolution. Unknown future owned state blocks rather
@@ -58,8 +63,8 @@ Original-byte filesystem guards remain in workflow, not the MDX adapter.
 
 Published binding validation requires the exact public URI and complete native
 editor group; a draft cannot fabricate a URI. Ordinary tracking and editor
-adoption retain the whole binding/lifecycle. Only the separate `adopt_published`
-patch authority can perform the explicit same-binding lifecycle transition.
+adoption retain the whole binding/lifecycle. The separate `adopt_published` and
+verified `settle_release` authorities own their respective same-binding transitions.
 Tracking/editor adoption also require exact equality of the independent optional
 `released` witness. Typed unknown future receipt fields/profiles block managed
 mutation. Date/path changes in joined public output never overwrite local intent
@@ -93,6 +98,23 @@ Description clear means exactly absent/null/empty string, never trimmed nonempty
 whitespace. Explicit tag replacement preserves order/duplicates; empty tags write
 `[]`. Date-only changes remain local intent. An unchanged operation returns exact
 bytes and the workflow does not replace the file.
+
+`preferences` is a typed author mapping of four optional booleans:
+`showInDiscover`, `showComments`, `showMentions`, `showRecommends`. Missing/null
+means inherit; `{}` explicitly clears native overrides. Unknown keys, arrays and
+non-boolean values (including per-key null) refuse. `edit --preference KEY=BOOL`
+merges selected keys; `--clear-preferences` writes `{}`. Removing the field or
+spelling null requests inherit instead. Selected-entry patching retains unrelated
+YAML/body/comments and no-op bytes/mtime in flow and block headers.
+
+Explicit preferences participate in editor intent and native working-row saves;
+inherit remains inherit on refresh rather than becoming an accidental authored
+override. Known imported native values may be represented explicitly. Unreadable
+native preferences remain in the conservative raw witness, not copied into a
+fake supported mapping; publication refuses inheritance or unknown public output.
+First standalone drafts retain preference intent until their publication row
+exists. The native publisher's default/Discover normalization and independent
+settlement rules live in the [release contract](../release/README.md#post-visibility-preferences).
 
 ## Independent local names
 

@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e396fdd15ffedI3bJni7Y1uvTs"
+    title: "0.26 tri-state preference/source/wire/save/settlement fixtures, 1200-case native resolution matrix, narrowed public refusal and no-live-effect evidence"
+  - resource: /design/release-preferences0.gpt61s.md
+    title: "Preferences implementation, native-resolution corrections and verification receipt"
   - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
     title: "Connected 0.25 save-first execution/recovery, explicit-null witness scope, actual retained Flight regressions and final disposable live first/update/native-delete evidence with exact qualifications"
   - resource: /design/native-publish0.gpt61s.md
@@ -46,7 +50,7 @@ sources:
 
 # Executable content and operation fidelity coverage
 
-Scope: **0.25 native draft/published authoring, bounded public comparison and guarded publication/recovery**, not all Leaflet content or every
+Scope: **0.26 native draft/published authoring, bounded public comparison and guarded publication/recovery with four visibility preferences**, not all Leaflet content or every
 cross-product of kinds and operations. [Source ownership](README.md) is the
 source-shape contract; [project usage](/README.md) advertises only this bounded
 profile. Maintain this account when a capability or named fixture changes.
@@ -86,6 +90,7 @@ passing source validation is never shorthand for all columns.
 | Concern | Current supported boundary | Executable evidence |
 | --- | --- | --- |
 | Title, description, ordered tags | Offline selected edit; native metadata save/readback in actual context. Exactly absent/null/empty description clears; whitespace stays meaningful. Standalone tag changes refuse where native storage is unavailable. | C3, M1, W1, W2; [description fixtures](/crates/workflow/src/native/description_tests.rs) |
+| Four post visibility preferences | Typed absent/null inherit, explicit `{}` clear, four optional booleans; offline merge flags; full-replace working metadata where a row exists; paired publish args and default-aware record/linkage verification. No delivery or loose-standalone preference row is invented. | [0.26 fixtures](#026-preferences-loop) |
 | Publication association | Tri-state local intent; verified explicit association after binding; ordinary retarget/inherit of a bound document refuses | M1, [default/retarget tests](/crates/workflow/src/native/defaults_tests.rs) |
 | Watermark theme, contributors | Only watermark theme modeled. First bind adopts omitted verified defaults, keeps explicit choices and records empty contributor arrays. Contributor changes without a supported native operation refuse before push. | C3, M1 |
 | Publication date, path/delivery, custom author values | Local-only author fields survive. Date edits validate an offset; editor hashes exclude them. Release effects/native custom path mutation remain unimplemented. | [author tests](/crates/document/mdx/src/author_tests.rs), C5, R1 |
@@ -112,7 +117,9 @@ Images without resolved blob identity, multiple working contributors (unordered
 native pull versus ordered publication), repeated/cyclic/unreachable page graphs,
 new pages without native identity, colored highlights needing theme resolution,
 legacy release output, richer/unknown public fields, offloading/gating, cover/nondefault-theme/
-preferences/share references and richer list semantics **refuse**, not strip.
+share references and richer list semantics **refuse**, not strip. Preferences now
+decode only the four known boolean keys with an optional exact native type tag;
+persisted Discover true, non-booleans and unknown keys remain refusals.
 No resource fetch/upload or PDS write is implemented by this comparison. S2 still
 exposes observed CID/output change when complete projection is unsupported.
 The [maintained contract](../release/README.md#public-meaning-profile) owns these
@@ -224,9 +231,52 @@ JS harnesses pass. The prior 0.22 gate above is retained historical evidence.
   test is opt-in and makes no network calls. Publication-container live release,
   generic Flight streaming and delivery are not claimed.
 
-Current gate: **411/411 regular tests**, ten opt-in skips, strict workspace/all-target
+0.25 follow-up gate: **411/411 regular tests**, ten opt-in skips, strict workspace/all-target
 Clippy and formatting. Full receipts and exact live limitations:
 [native publish follow-up](/design/native-publish0.gpt61s.md#deployed-witness-correction--2026-11-10).
+
+### 0.26 preferences loop
+
+This batch made **no live requests or effects**. Ten new regular tests extend
+the prior 411-test gate; existing opt-in/deployed fixtures remain skipped.
+
+- [Source and metadata edits](/crates/document/mdx/src/author_tests.rs): missing,
+  null, `{}` and explicit mappings; strict key/boolean/object validation, duplicate
+  rejection, merge/clear, block/flow headers, exact body/unrelated header values,
+  BOM/CRLF, render/parse and repeat no-op. Absent intent preserves earlier scoped
+  hash shapes rather than forcing unchanged default sources dirty.
+- [Actual offline CLI](/crates/cli/tests/author.rs): repeatable merge flags,
+  strict `true|false`, clear conflict, flag-free publish, exact no-op bytes/mtime.
+- [Native wire](/crates/leaflet/protocol/src/tests.rs): literal full-replace
+  `updatePublicationDraft.preferences`, `{}` clear and unknown-key/type refusals.
+  [Publish transport](/crates/leaflet/web/src/publication/tests.rs) sends actual
+  Next requests matching the independent [literal argument fixtures](/crates/leaflet/web/tests/fixtures/publish-preferences-args.json):
+  omission, paired clear/Discover true and explicit values. Invalid key/unpaired
+  arguments refuse before POST. Email stays false throughout.
+- [Public decoder](/crates/leaflet/records/src/projection.rs): each key's true/false
+  meaning and optional type tag; only Discover true is unpersistable. Unknown,
+  nonboolean/null/object-shape/discriminator failures refuse. Native default true
+  shapes share the previous default public-core hash, not merely a tolerated parse.
+- [Preview resolution](/crates/workflow/src/publication/tests.rs): 1200 cases
+  cross each of the other three keys' absent/true/false values with Discover's
+  absent/true/false, explicit versus inherited/null/empty objects, draft/record
+  fallback and both contexts. Each checks predicted output, sends and blockers.
+  Additional cases cover unknown draft replacement, semantic-default inheritance,
+  unreadable existing public output despite explicit clear and unobserved values.
+- [Execution/settlement](/crates/workflow/src/native/publication_tests.rs): first
+  standalone/publication release with all four false, same-URI Discover true update,
+  replacement rather than merge, explicit `{}` clear, full authored save mapping,
+  unknown draft replacement, inherited default acceptance versus nondefault/unknown
+  pre-save refusal, independent direct-linkage mismatch, retained source intent and
+  clean repeat bytes/mtime. [CLI publish](/crates/cli/tests/publish.rs) now prepares
+  preferences through actual `edit`, then exercises both context workflows and
+  uncertain observation-only recovery.
+
+Current gate: **421/421 regular tests**, ten opt-in skips; strict workspace/all-target
+Clippy and formatting pass. [Receipt](/design/release-preferences0.gpt61s.md) records
+exact runs and the research/commission corrections. Cover upload, scheduling,
+email-only/test email, reply submission, Bluesky sharing and publication-level
+preferences remain refused or outside the supported action; none was relaxed.
 
 ## Explicit unsupported native inventory
 

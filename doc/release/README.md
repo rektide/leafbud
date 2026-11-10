@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e396fdd15ffedI3bJni7Y1uvTs"
+    title: "0.26 source-owned visibility preferences, native working replacement, default-aware public comparison and exact linkage settlement with fixture-only verification"
+  - resource: /design/release-preferences0.gpt61s.md
+    title: "Implemented preferences loop, source/wire/native resolution decisions and limitations"
   - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
     title: "Corrected present-null one-to-one effect witnesses, retained publication-response diagnostics and actual Flight shapes; disposable first/update content settlement and record/editor deletion, with first-response evidence limitation"
   - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
@@ -39,6 +43,11 @@ sources:
 ---
 
 # Published editors and independent release evidence
+
+**0.26 adds four source-owned visibility preferences** to the 0.25 workflow below.
+The [preferences receipt](/design/release-preferences0.gpt61s.md) records the
+resolution rules, design corrections and fixture-only evidence; it is not a new
+live publication or delivery proof.
 
 **0.25 implements preview-first native `publish FILE [--yes] [--json] [--take local]`.**
 It saves the complete supported editor under one stable-ID lock, atomically records
@@ -123,6 +132,11 @@ Working title/description/tags are native linkage-table values, not
 `updatePublicationDraft` like publication editors, rather than the loose-draft
 permission-token metadata operation. The pinned native mutation changes these
 working tables only; facts/Yrs continue through the existing keyed compiler.
+Explicit `preferences` joins this full-replace working metadata mutation. Save
+compares the observed working row, sends the entire authored four-key subset
+(including an explicit Discover true) and verifies both row and client-key
+read-back. Absent/null intent sends nothing. Loose standalone drafts have no
+such row until publication; their preferences remain source publication intent.
 
 `push` in either lifecycle never invokes a publication action or PDS write.
 It retains public URI and any older `released` witness exactly. Pull/watch adopt
@@ -153,18 +167,56 @@ author metadata, names, writer/sync and resolution provenance are excluded.
 Editor watermark is excluded because the inspected publisher does not project it;
 this is not permission to ignore an arbitrary public theme.
 
+### Post visibility preferences
+
+`preferences` accepts only `showInDiscover`, `showComments`, `showMentions` and
+`showRecommends`, each strictly boolean. Missing/null inherits, `{}` clears,
+and a populated mapping is explicit whole-object replacement. CLI edits merge
+selected keys into source; publish accepts no override flags.
+
+The publisher selects the `postPreferences` argument, else the draft row, else
+`{}`; it does **not** merge individual keys. It removes Discover from that base
+and resolves Discover separately: dedicated argument, selected object's value,
+existing record's value, then default true. Leafbud sends the three-key object
+and resolved Discover boolean together when source is explicit. Empty clear
+always pairs `{}` with true. Explicit partial mappings which would otherwise
+inherit an existing Discover opt-out require an explicit Discover choice.
+
+Preview reports each preference's explicit-send/inherit/default source, observed
+draft/record values, replacement and predicted record. Offline/unbound values
+without evidence stay unknown. Native persists explicit true for Comments,
+Mentions and Recommends, but **Discover true is dispatch-only**; only its false
+opt-out persists. Settlement compares meaning across the PDS, action/native
+record and direct linkage row, while preserving original authored spelling.
+Native default shapes such as `{showComments:true}` compare as defaults rather
+than blocking. Inherited nondefault meaning needs source control; unreadable
+draft state can be replaced explicitly, but unreadable existing public output
+still refuses before save/publish.
+
+All four public defaults are true. Default public meaning keeps the prior
+canonical hash shape; nondefault meaning participates in the public-core hash.
+No new `released` field or historical body is stored. Explicit clear/value sends
+also check their persisted shape before taking the clean-repeat shortcut, so
+`{}` is not silently ignored merely because a redundant true has default meaning.
+
 Explicit current limits:
 
 - Release projection/diff supports `site.standard.document`; legacy published
   sources can adopt/refresh/save, but legacy release comparison refuses.
 - URL images lack resolved public blob byte identity. No image fetch/upload, fake
   blob equivalence or lossy omission. Offloaded/gated content, canvases, richer
-  blocks/facets, cover/nondefault-theme/preferences/share references and unknown output fields
+  blocks/facets, cover/nondefault-theme/share references and unknown output fields
   refuse a complete comparison. Observed CID/change remains visible when possible.
   The exact pinned standalone default theme (`showPageBackground:true` plus its
   type discriminator only) now compares as default; any extra/nondefault property
   still refuses. The publisher retains that object because its key-count test
   includes the discriminator. Editor watermark remains separate.
+- Public preferences accept only the four-key subset and optional exact native
+  type discriminator; non-booleans, unknown keys and persisted Discover true
+  refuse. Publication-level preferences are not post preferences and stay out
+  of scope. Cover requires blob upload/byte identity; scheduling uses a separate
+  action and publish cancels schedules; email-only/test-email, replies and share
+  need separately verified action/delivery surfaces. Their refusals remain intact.
 - Colored highlight slots needing native theme resolution refuse; default slot 1
   is supported. Nested/task lists, numbered restarts and adjacent separate
   same-style list boundaries refuse rather than flattening public meaning away.

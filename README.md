@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e396fdd15ffedI3bJni7Y1uvTs"
+    title: "0.26 typed publication visibility preferences, offline merge/clear flags, native save/publish wiring and fixture-verified default-aware settlement; no live effects"
+  - resource: /design/release-preferences0.gpt61s.md
+    title: "Preference semantics, native resolution corrections, implementation and verification receipt"
   - resource: "opencode://ses_e3983e092ffeuzOsaIZioZQNKF"
     title: "Corrected explicit-null native witnesses and bounded Flight decoding from retained live update; one fresh quiet first/update settled, record/editor deleted and local unbound, with first-action response limitation disclosed"
   - resource: "opencode://ses_e39a14490ffevJd86pqM2pp36t"
@@ -70,7 +74,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save, independent public status/diff, deliberate native deletion and preview-first quiet native publication, version 0.25.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments, independent filename/path reconciliation, verified published editor adoption/save, independent public status/diff, deliberate native deletion, preview-first quiet native publication and four source-owned visibility preferences, version 0.26.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -127,6 +131,32 @@ retry. Paths normalize to `/rkey`; a missing first date or explicit future date
 uses native now, while omitted update dates preserve the observed value.
 Only complete verified supported output can update the source's URI/path/date
 and compact release receipt. Clean repeats are byte/mtime-stable no-ops.
+
+**0.26 adds the four post visibility preferences**, prepared in source, never
+as `publish` override flags:
+
+```yaml
+preferences:
+  showInDiscover: false
+  showComments: false
+  showMentions: true
+  showRecommends: false
+```
+
+Absent or `null` inherits native state; `{}` explicitly clears overrides.
+Only these keys and boolean values are accepted. Explicit mappings replace the
+native working preferences, not merge them. Preview discloses each sent/inherited
+value, observed sources and predicted output. Nondefault inherited output needs
+explicit source control; unknown existing public preferences still refuse.
+`showInDiscover:true` is sent but never persisted: native records carry only the
+false opt-out. Clear sends `postPreferences:{}` **and** `showInDiscover:true` so
+an old record opt-out cannot survive it. Details and fixture evidence:
+[preferences receipt](design/release-preferences0.gpt61s.md).
+
+Cover upload, scheduling, email-only/test email, Bluesky share and reply submission
+remain unsupported. Preferences do not enable any delivery: email stays forced
+off and no share action runs. There is no separate quiet flag; suppressing Discover
+is `preferences.showInDiscover:false`.
 
 Uncertain dispatch—including a pre-send crash—is never retried by `publish`,
 `push --take local` or `recover`. Recovery uses native association and exact-URI
@@ -510,6 +540,8 @@ leafbud edit drafts/essay.mdx --tag gardens --tag notes # REPLACE ordered tags
 leafbud edit drafts/essay.mdx --clear-tags         # explicitly write []
 leafbud edit drafts/essay.mdx --published-at 2026-11-09T12:00:00Z
 leafbud edit drafts/essay.mdx --now                # mutually exclusive with --published-at
+leafbud edit drafts/essay.mdx --preference showComments=false --preference showInDiscover=false
+leafbud edit drafts/essay.mdx --clear-preferences  # explicitly write preferences: {}
 leafbud keys rename drafts/essay.mdx old-key introduction
 ```
 
@@ -522,6 +554,11 @@ whitespace is not trimmed. Tags replace, never implicitly append/sort/deduplicat
 `--tag` and `--clear-tags` conflict. Ordinary edits preserve dates. Explicit dates
 must have an offset (no local-timezone assumption), and are emitted as Jiff UTC
 timestamps. A date edit changes local publication intent only, not the editor edge.
+Repeatable `--preference KEY=true|false` flags merge into the existing mapping;
+`--clear-preferences` conflicts with them and writes `{}` (not inherit). Remove
+the field or spell `null` by hand to inherit. Working saves carry explicit
+preferences in publication drafts and published editors; a loose standalone draft
+has no preference row yet, so source retains this intent until first publication.
 
 Only selected author entries are normalized; exact body bytes, unrelated YAML,
 unknown author values and compact state survive. Comments on rewritten entries
