@@ -233,7 +233,7 @@ async fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory
         // Defensive: the typed parse already rejects unknown profiles and
         // lifecycles, so this branch keeps the diagnostic explicit if the
         // two validations ever diverge.
-        Some(sync) if sync.profile != EDITOR_PROFILE || existing.state.state != "draft" => {
+        Some(sync) if sync.profile != EDITOR_PROFILE => {
             item.outcome = "unsupported";
             item.detail = "unsupported receipt profile or lifecycle; no historical editor agreement inferred";
             return item;

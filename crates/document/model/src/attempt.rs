@@ -216,7 +216,12 @@ impl State {
         }
         match &attempt.effect {
             Effect::Mint { base_url, publication, stage } => {
-                if base_url.is_empty() || publication.publication().is_some_and(str::is_empty) || self.sync.is_some() || self.writer.is_some() {
+                if self.state != "draft"
+                    || base_url.is_empty()
+                    || publication.publication().is_some_and(str::is_empty)
+                    || self.sync.is_some()
+                    || self.writer.is_some()
+                {
                     return Err("incoherent mint attempt");
                 }
                 if let Some(binding) = &self.binding

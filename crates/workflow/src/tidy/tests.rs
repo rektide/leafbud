@@ -12,6 +12,7 @@ fn document() -> Document {
         state: "draft".into(),
         main_page: Some("p-main".into()),
         binding: Some(Binding {
+            uri: None,
             base_url: "https://leaflet.pub".into(),
             token: Uuid::nil(),
             root: "e-root".into(),

@@ -83,7 +83,11 @@ pub(crate) fn remote_hash(data: &LeafletData, pull: &PullSnapshot) -> String {
 }
 
 pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Result<Document> {
-    ensure!(data.observed_state() == LeafletState::Draft, "published object is outside draft import profile");
+    let published = crate::published::association(data)?;
+    ensure!(
+        published.is_some() == (data.observed_state() == LeafletState::Published),
+        "incoherent published association"
+    );
     let root = data.metadata.root_entity.as_deref().context("missing native root entity")?;
     let id = Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("{base}/{}", data.metadata.id).as_bytes());
     let content = leafbud_editor::observe_view(pull, root, id)?;
@@ -97,6 +101,21 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     ensure!(entity_sets.len() == 1, "expected one readable native entity set");
     let publication = association(data)?;
     let mut extra = BTreeMap::new();
+    if let Some(published) = &published {
+        let date = published.record["publishedAt"].as_str().context("published date missing")?;
+        let _: jiff::Timestamp = date.parse().context("invalid published date")?;
+        extra.insert("publishedAt".into(), json!(date));
+        if let Some(path) = published.record.get("path") {
+            ensure!(path.is_string(), "invalid public path");
+            extra.insert("path".into(), path.clone());
+        }
+        ensure!(
+            pull.extras.contains_key("publication_title")
+                && pull.extras.contains_key("publication_description")
+                && pull.extras.contains_key("publication_tags"),
+            "published working metadata missing; cannot fall back to stale public or loose-draft metadata"
+        );
+    }
     let string = |key: &str| -> Result<Option<String>> {
         match pull.extras.get(key) {
             None | Some(Value::Null) => Ok(None),
@@ -128,7 +147,13 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
     // or public record URI is invented merely to write a local source.
     let title = string("publication_title")?
         .filter(|s| !s.trim().is_empty())
-        .or_else(|| data.metadata.title.clone().filter(|s| !s.trim().is_empty()))
+        .or_else(|| {
+            published
+                .is_none()
+                .then(|| data.metadata.title.clone())
+                .flatten()
+                .filter(|s| !s.trim().is_empty())
+        })
         .unwrap_or_else(|| "Untitled".into());
     let publication_uri = publication.clone();
     // A present publication clear is authoritative; do not resurrect an older
@@ -159,9 +184,10 @@ pub(crate) fn build(base: &str, data: &LeafletData, pull: &PullSnapshot) -> Resu
             pending: None,
             last_resolution: None,
             id,
-            state: "draft".into(),
+            state: if published.is_some() { "published" } else { "draft" }.into(),
             main_page: Some(main_page),
             binding: Some(Binding {
+                uri: published.map(|association| association.uri),
                 base_url: base.into(),
                 token: data.metadata.id,
                 root: root.into(),
@@ -316,7 +342,12 @@ impl RemoteReader {
         let ids = if request.all {
             self.client.list().await?.leaflets.into_iter().map(|l| l.metadata.id).collect::<Vec<_>>()
         } else {
-            vec![self.client.resolve_locator(request.locator.as_deref().expect("validated locator"))?]
+            let locator = request.locator.as_deref().expect("validated locator");
+            vec![if locator.starts_with("at://") {
+                self.published_locator(locator).await?
+            } else {
+                self.client.resolve_locator(locator)?
+            }]
         };
         let mut report = Report {
             version: 1,
@@ -347,9 +378,32 @@ impl RemoteReader {
                     return Ok(None);
                 }
                 report.selected += 1;
-                ensure!(state == LeafletState::Draft, "published-object import is not implemented in this profile");
                 let pull = self.client.pull(id).await?;
                 let document = build(base, &data, &pull)?;
+                let public_uri = document.state.binding.as_ref().and_then(|binding| binding.uri.as_ref());
+                let check_identities = || -> Result<()> {
+                    let inventory = crate::inventory::scan(&root, None)?;
+                    let permitted = index.get(&id);
+                    for paths in inventory
+                        .ids
+                        .get(&document.state.id)
+                        .into_iter()
+                        .chain(public_uri.and_then(|uri| inventory.public.get(uri)))
+                    {
+                        ensure!(
+                            permitted == Some(paths),
+                            "document UUID or public URI already belongs to another local source; duplicate adoption refused"
+                        );
+                    }
+                    Ok(())
+                };
+                check_identities()?;
+                if let Some(uri) = request.locator.as_deref().filter(|locator| locator.starts_with("at://")) {
+                    ensure!(
+                        document.state.binding.as_ref().and_then(|binding| binding.uri.as_deref()) == Some(uri),
+                        "native candidate does not match requested public URI"
+                    );
+                }
                 if let Some(paths) = index.get(&id) {
                     ensure!(paths.len() == 1, "duplicate existing local bindings require resolution");
                     let path = &paths[0];
@@ -361,6 +415,11 @@ impl RemoteReader {
                     }
                     let (_guard, _, source) = crate::lock::read(path, &store)?;
                     let existing = leafbud_mdx::parse(&source).context("existing document has unsupported/invalid local edits; preserved")?;
+                    crate::editor_state::same_identity(existing.state.binding.as_ref().context("existing binding missing")?, &document)?;
+                    ensure!(
+                        existing.state.state == document.state.state,
+                        "observed lifecycle transition requires explicit adoption; existing source preserved"
+                    );
                     ensure!(
                         existing.state.sync.as_ref().is_some_and(|sync| sync.remote_hash == remote_hash(&data, &pull)),
                         "remote changed since import; explicit pull/refresh support required (existing file preserved)"
@@ -387,13 +446,17 @@ impl RemoteReader {
                     Publication::Inherit => unreachable!("imports always carry the confirmed association"),
                 };
                 ensure!(
-                    verified.metadata.root_entity == data.metadata.root_entity && verified.observed_state() == state && association(&verified)? == confirmed,
+                    verified.metadata.root_entity == data.metadata.root_entity
+                        && verified.observed_state() == state
+                        && association(&verified)? == confirmed
+                        && crate::published::association(&verified)? == crate::published::association(&data)?,
                     "remote identity/lifecycle changed during import"
                 );
                 ensure!(
                     !local_index(&root, base)?.contains_key(&id),
                     "binding appeared during import; existing file preserved"
                 );
+                check_identities()?;
                 crate::files::write(&path, None, source.as_bytes())?;
                 Ok(Some((path, "imported")))
             }

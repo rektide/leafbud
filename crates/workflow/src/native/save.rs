@@ -59,7 +59,8 @@ pub(super) fn compile_reusing(
     detached: &[serde_json::Value],
 ) -> Result<leafbud_editor::write::Compiled> {
     let current = import::build(&desired.state.binding.as_ref().context("binding")?.base_url, data, snapshot)?;
-    let persisted_title = if desired.state.binding.as_ref().expect("above").publication.is_some() {
+    let binding = desired.state.binding.as_ref().expect("above");
+    let persisted_title = if binding.publication.is_some() || binding.uri.is_some() {
         snapshot.extras.get("publication_title").and_then(serde_json::Value::as_str)
     } else {
         data.metadata.title.as_deref()
@@ -72,8 +73,8 @@ impl RemoteReader {
         let mut source = Source::open(context, path, selection)?;
         validate_binding_intent(&source.text)?;
         let desired = prepared(&source.text)?;
-        ensure!(desired.state.state == "draft", "only draft editor saves are supported; push never publishes");
-        if resolved_context(&desired, context) == MintContext::Standalone {
+        desired.state.validate_lifecycle().map_err(anyhow::Error::msg)?;
+        if desired.state.state == "draft" && resolved_context(&desired, context) == MintContext::Standalone {
             ensure!(desired.tags.is_empty(), "standalone tags have no established native storage");
         }
         let mut summary = BTreeMap::new();

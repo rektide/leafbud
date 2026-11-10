@@ -300,6 +300,9 @@ impl NamePath {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Binding {
+    /// Exact verified public identity. Absent only for a draft editor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uri: Option<String>,
     pub base_url: String,
     pub token: Uuid,
     pub root: String,
@@ -307,6 +310,32 @@ pub struct Binding {
     pub entry_fact: String,
     /// Confirmed association; explicit null means standalone, never inherited.
     pub publication: Option<String>,
+}
+
+/// Narrow native publication identity profile, using the existing protocol
+/// library's syntax checks rather than a second AT-URI parser. Public identities
+/// persist a DID, never a mutable handle, collection root or fragment.
+pub fn validate_document_uri(value: &str) -> Result<(), &'static str> {
+    let uri = jacquard_common::types::string::AtUri::new(value).map_err(|_| "invalid document AT URI")?;
+    if !uri.authority().as_str().starts_with("did:") || value.contains(['?', '#']) || uri.rkey().is_none() {
+        return Err("document identity requires a complete DID-based record URI without query or fragment");
+    }
+    match uri.collection().as_ref().map(|collection| collection.as_str()) {
+        Some("site.standard.document" | "pub.leaflet.document") => Ok(()),
+        _ => Err("unsupported public document collection"),
+    }
+}
+
+impl State {
+    pub fn validate_lifecycle(&self) -> Result<(), &'static str> {
+        match (self.state.as_str(), self.binding.as_ref().and_then(|binding| binding.uri.as_deref())) {
+            ("draft", None) => Ok(()),
+            ("published", Some(uri)) => validate_document_uri(uri),
+            ("draft", Some(_)) => Err("draft cannot carry a public document URI"),
+            ("published", None) => Err("published requires an exact public identity and complete native editor binding; URI-only adoption is unavailable"),
+            _ => Err("unsupported managed lifecycle"),
+        }
+    }
 }
 /// One typed native occurrence locator. Multiple source keys may share an
 /// entity but always identify distinct occurrences.

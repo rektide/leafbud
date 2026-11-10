@@ -232,8 +232,9 @@ impl RemoteReader {
         let verified = self.client.get(binding.token).await.context("re-verifying remote identity")?;
         ensure!(
             verified.metadata.root_entity == observed.data.metadata.root_entity
-                && verified.observed_state() == LeafletState::Draft
-                && crate::import::association(&verified)? == binding.publication,
+                && verified.observed_state().as_str() == existing.state.state
+                && crate::import::association(&verified)? == binding.publication
+                && crate::published::association(&verified)?.as_ref().map(|association| &association.uri) == binding.uri.as_ref(),
             "remote identity/lifecycle/association changed during refresh; preserved"
         );
         // Rescan after all network awaits. A rename, duplicate or changed

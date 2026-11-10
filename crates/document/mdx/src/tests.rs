@@ -23,6 +23,7 @@ fn document() -> Document {
         state: "draft".into(),
         main_page: Some("p-main".into()),
         binding: Some(Binding {
+            uri: None,
             base_url: "https://leaflet.pub".into(),
             token: Uuid::nil(),
             root: "e-root".into(),
@@ -1463,6 +1464,7 @@ fn patch_tracking_settles_node_promotion_and_receipt_advances() {
     // First binding WITH node promotion: every current key gains its
     // confirmed occurrence, receipts appear.
     let binding = Binding {
+        uri: None,
         base_url: "https://leaflet.pub".into(),
         token: Uuid::new_v5(&Uuid::NAMESPACE_URL, b"fresh"),
         root: "e-root".into(),
@@ -1565,6 +1567,7 @@ fn patch_tracking_settles_envelope_without_touching_body_or_fields() {
     // First binding transition: unbound → bound, receipts appear.
     let mut next = before.state.clone();
     next.binding = Some(Binding {
+        uri: None,
         base_url: "https://leaflet.pub".into(),
         token: Uuid::new_v5(&Uuid::NAMESPACE_URL, b"fresh"),
         root: "e-root2".into(),
@@ -1587,6 +1590,7 @@ fn patch_tracking_settles_envelope_without_touching_body_or_fields() {
     let mut rebinding = next.clone();
     rebinding.binding = Some(Binding {
         base_url: "https://elsewhere".into(),
+        uri: None,
         token: Uuid::nil(),
         root: "r".into(),
         entity_set: "e".into(),

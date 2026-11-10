@@ -210,7 +210,8 @@ pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     let existing = parse(source)?;
     ensure!(existing.state.names == next.names, "tracking settlement cannot accept naming changes");
     ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
-    ensure!(next.state == "draft", "unsupported lifecycle");
+    ensure!(next.state == existing.state.state, "tracking settlement cannot change lifecycle");
+    next.validate_lifecycle().map_err(anyhow::Error::msg)?;
     if let Some(before) = &existing.state.writer {
         let after = next.writer.as_ref().context("tracking cannot discard a writer's reserved mutation IDs")?;
         ensure!(
@@ -260,6 +261,10 @@ pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
 /// persist the intermediate string with the old hashes or use it after a push.
 pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<String> {
     let existing = parse(source)?;
+    ensure!(
+        existing.state.state == "draft" && verified.state.state == "draft",
+        "mint defaults require draft lifecycle"
+    );
     let binding = verified.state.binding.as_ref().context("verified native binding missing")?;
     let attempt = existing.state.pending.as_ref().context("default preparation requires a located mint")?;
     ensure!(
@@ -325,7 +330,8 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
     ensure!(existing.format == document.format, "adoption cannot change the document format");
     ensure!(
         existing.state.id == document.state.id
-            && existing.state.binding.as_ref().map(|b| b.token) == document.state.binding.as_ref().map(|b| b.token)
+            && existing.state.binding == document.state.binding
+            && existing.state.state == document.state.state
             && document.state.binding.is_some(),
         "adoption cannot change document identity"
     );

@@ -3,7 +3,7 @@
 use crate::{RemoteReader, import};
 use anyhow::{Result, ensure};
 use leafbud_document::{Block, BlockKind, Document, EDITOR_OWNED_EXTRA, EDITOR_PROFILE, Occurrence, Page, State, Sync};
-use leafbud_web::{LeafletData, LeafletState};
+use leafbud_web::LeafletData;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -139,10 +139,10 @@ impl RemoteReader {
                 },
             )
         })?;
-        if data.observed_state() != LeafletState::Draft {
+        if data.observed_state().as_str() != existing.state.state {
             return Err(error(
                 "unsupported",
-                "remote lifecycle changed (published); this profile only observes draft editors".into(),
+                "remote lifecycle changed; explicit lifecycle adoption required, current source/receipts preserved".into(),
             ));
         }
         let snapshot = self
@@ -190,6 +190,7 @@ pub(crate) fn same_identity(binding: &leafbud_document::Binding, fresh: &Documen
         (binding.entity_set == b.entity_set, "entity set (rights)"),
         (binding.entry_fact == b.entry_fact, "entry placement"),
         (binding.publication == b.publication, "publication association"),
+        (binding.uri == b.uri, "public document URI"),
     ] {
         ensure!(equal, "remote {name} changed; identity/binding decision required (file preserved)");
     }
@@ -274,9 +275,14 @@ pub(crate) fn adopt(existing: &Document, fresh: &Document) -> Document {
             blocks: page.blocks.iter().map(block).collect(),
         })
         .collect();
-    let mut extra = fresh.extra.clone();
+    let mut extra: BTreeMap<_, _> = fresh
+        .extra
+        .iter()
+        .filter(|(name, _)| EDITOR_OWNED_EXTRA.contains(&name.as_str()))
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect();
     for (name, value) in &existing.extra {
-        if !EDITOR_OWNED_EXTRA.contains(&name.as_str()) && !extra.contains_key(name) {
+        if !EDITOR_OWNED_EXTRA.contains(&name.as_str()) {
             extra.insert(name.clone(), value.clone());
         }
     }

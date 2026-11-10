@@ -531,10 +531,8 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
             "bound publication association is unknown (explicit null or URI required)"
         );
     }
-    ensure!(
-        document.format == FORMAT && document.state.state == "draft",
-        "unsupported managed format/lifecycle"
-    );
+    ensure!(document.format == FORMAT, "unsupported managed format");
+    document.state.validate_lifecycle().map_err(anyhow::Error::msg)?;
     if let Some(sync) = &document.state.sync {
         ensure!(sync.profile == EDITOR_PROFILE, "unsupported receipt profile");
         ensure!(document.state.binding.is_some(), "receipts without a binding are incoherent");
@@ -845,6 +843,7 @@ mod tests {
             state: "draft".into(),
             main_page: Some("p-main".into()),
             binding: Some(Binding {
+                uri: None,
                 base_url: "https://leaflet.pub".into(),
                 token: Uuid::nil(),
                 root: "e-root".into(),

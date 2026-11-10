@@ -509,7 +509,9 @@ fn observed_binding(binding: &Binding, data: &LeafletData, snapshot: &PullSnapsh
         "native origin/token/root changed"
     );
     ensure!(
-        data.observed_state() == LeafletState::Draft && import::association(data)? == binding.publication,
+        (data.observed_state() == LeafletState::Published) == binding.uri.is_some()
+            && import::association(data)? == binding.publication
+            && crate::published::association(data)?.as_ref().map(|association| &association.uri) == binding.uri.as_ref(),
         "native lifecycle/publication changed"
     );
     let sets: BTreeSet<_> = data
@@ -548,7 +550,10 @@ fn wire_target(binding: &Binding) -> Result<Target> {
 
 fn scope(before: &Observation, compiled: &Compiled, binding: &Binding) -> Result<WriteScope> {
     let mut scope = WriteScope {
-        publication: binding.publication.is_some(),
+        // Both publication editors and published standalone editors persist
+        // metadata in the native linkage tables. This scope flag authorizes
+        // updatePublicationDraft, not a public release action.
+        publication: binding.publication.is_some() || binding.uri.is_some(),
         ..Default::default()
     };
     for row in before.verification.values() {

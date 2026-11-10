@@ -15,6 +15,7 @@ pub(crate) struct Inventory {
     pub duplicates: BTreeSet<PathBuf>,
     pub unmanaged: usize,
     pub ids: BTreeMap<Uuid, Vec<PathBuf>>,
+    pub public: BTreeMap<String, Vec<PathBuf>>,
 }
 
 pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
@@ -50,6 +51,9 @@ pub(crate) fn scan(root: &Path, base: Option<&str>) -> Result<Inventory> {
                 if let Some(id) = state["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
                     inventory.ids.entry(id).or_default().push(path.clone());
                 }
+                if let Some(uri) = state["binding"]["uri"].as_str() {
+                    inventory.public.entry(uri.to_owned()).or_default().push(path.clone());
+                }
                 if base.is_some() && origin.is_some() && origin != base {
                     continue;
                 }
@@ -83,6 +87,12 @@ impl Inventory {
                 continue;
             };
             let state = &header["@leafbud"];
+            if let Some(uri) = state["binding"]["uri"].as_str() {
+                let paths = self.public.entry(uri.to_owned()).or_default();
+                if !paths.contains(path) {
+                    paths.push(path.clone());
+                }
+            }
             if let Some((base, token)) = native_locator(state) {
                 let paths = self.index.entry((base.into(), token)).or_default();
                 if !paths.contains(path) {
@@ -100,7 +110,13 @@ impl Inventory {
     }
 
     fn find_duplicates(&mut self) {
-        for paths in self.index.values().chain(self.ids.values()).filter(|paths| paths.len() > 1) {
+        for paths in self
+            .index
+            .values()
+            .chain(self.ids.values())
+            .chain(self.public.values())
+            .filter(|paths| paths.len() > 1)
+        {
             self.duplicates.extend(paths.iter().cloned());
         }
     }

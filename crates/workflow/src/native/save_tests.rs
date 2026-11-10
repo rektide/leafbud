@@ -70,6 +70,98 @@ fn paragraph(key: &str, text: &str) -> Block {
         },
     }
 }
+
+#[tokio::test]
+async fn published_editor_save_updates_working_linkage_only_in_both_contexts() {
+    for publication in [false, true] {
+        let server = Server::new(publication).await;
+        let uri = "at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post";
+        let container = "at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.publication/garden";
+        let public = json!({"$type":"site.standard.document","site":if publication{container.to_owned()}else{"https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx".into()},"title":"Old public title","path":"/post","publishedAt":"2026-10-01T10:00:00Z"});
+        {
+            let mut store = server.store.lock().unwrap();
+            let mut link = json!({"leaflet":store::TOKEN,"title":"Working title","description":"Working description","tags":["working"],"documents":{"uri":uri,"data":public}});
+            if publication {
+                link["doc"] = json!(uri);
+                link["publication"] = json!(container);
+                link["publications"] = json!({"uri":container,"identity_did":"did:plc:abcdefghijklmnopqrstuvwx"});
+                store.data["leaflets_in_publications"] = json!([link]);
+            } else {
+                link["document"] = json!(uri);
+                store.data["leaflets_to_documents"] = json!([link]);
+            }
+            for (key, value) in [
+                ("publication_title", json!("Working title")),
+                ("publication_description", json!("Working description")),
+                ("publication_tags", json!(["working"])),
+            ] {
+                store.extras.insert(key.into(), value);
+            }
+        }
+        let temp = tempfile::tempdir().unwrap();
+        let path = old::seed(&server.http, temp.path(), store::TOKEN, "published.mdx").await;
+        let before = read(&path);
+        let source = std::fs::read_to_string(&path).unwrap();
+        let source = leafbud_mdx::edit_metadata(
+            &source,
+            &leafbud_mdx::MetadataEdit {
+                title: Some("New working title".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        std::fs::write(&path, source).unwrap();
+        let mut desired = read(&path);
+        desired.pages[0].blocks.push(paragraph("new-paragraph", "Unreleased new paragraph"));
+        write(&path, &desired);
+        assert_eq!(save(&server, temp.path(), &path, false).await.outcome, "would-save");
+        let report = save(&server, temp.path(), &path, true).await;
+        assert_eq!(report.outcome, "saved", "{:?}", report.message);
+        let after = read(&path);
+        assert_eq!(after.state.binding, before.state.binding);
+        assert_eq!(after.state.id, before.state.id);
+        assert_eq!(after.state.state, "published");
+        assert_eq!(after.extra["publishedAt"], before.extra["publishedAt"]);
+        let store = server.store.lock().unwrap();
+        assert_eq!(
+            store.data[if publication { "leaflets_in_publications" } else { "leaflets_to_documents" }][0]["documents"]["data"],
+            public,
+            "editor save must never mutate public record"
+        );
+        assert_eq!(store.extras["publication_title"], "New working title");
+        assert!(store.pushes > 0);
+        drop(store);
+        let source = std::fs::read(&path).unwrap();
+        let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+        assert_eq!(save(&server, temp.path(), &path, true).await.outcome, "unchanged");
+        assert_eq!(
+            server
+                .reader()
+                .refresh_document(&old::context(temp.path()), &path, Default::default())
+                .await
+                .outcome,
+            crate::refresh::Outcome::Unchanged
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), source);
+        assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
+        let requests = server.http.requests();
+        assert!(requests.iter().all(|request| matches!(
+            request.path.as_str(),
+            "/api/rpc/get_leaflet_data" | "/api/rpc/pull" | "/api/rpc/push" | "/api/rpc/getFactsForRoots"
+        )));
+        assert!(
+            requests
+                .iter()
+                .filter(|request| request.path == "/api/rpc/push")
+                .all(|request| request.body_json()["pushRequest"]["mutations"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|mutation| mutation["name"] != "updateLeafletMetadata")),
+            "published standalone uses linkage metadata, not loose-draft token metadata"
+        );
+    }
+}
 fn read(path: &Path) -> Document {
     leafbud_mdx::parse(&std::fs::read_to_string(path).unwrap()).unwrap()
 }

@@ -84,6 +84,7 @@ fn comments_follow_same_page_blocks_but_deleted_cross_page_and_orphans_refuse() 
     // Use a synthetic complete binding, not an actual remote effect.
     doc.state.main_page = Some(doc.pages[0].key.clone());
     doc.state.binding = Some(leafbud_document::Binding {
+        uri: None,
         base_url: "https://leaflet.pub".into(),
         token: uuid::Uuid::nil(),
         root: "root".into(),
