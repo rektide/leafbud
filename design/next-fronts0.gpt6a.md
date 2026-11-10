@@ -212,6 +212,11 @@ review question; do not rerun everything to reconstruct confidence after compact
 - **Locks and scope:** use existing stable-ID OS locks, exact source guards and
   all explicit operands in late duplicate checks. Atomic rename is not filesystem
   CAS against unrelated editors. Native server locking is not caller CAS.
+- **One secret; Leaflet brokers all writes.** Leafbud holds only the Leaflet
+  website session cookie. Public-record reads hit the PDS unauthenticated; every
+  PDS write happens inside Leaflet's server via the owner's stored OAuth link.
+  No ATProto credentials are minted, and failures never fall back to raw PDS
+  writes. Researched and confirmed: [auth architecture](auth-architecture0.glm53m.md).
 
 ## 3. Accepted return — local authoring ergonomics
 
@@ -429,7 +434,12 @@ No adaptive controller or live unsaved-Yjs overlay is required by current usage.
 
 `leafbud-pds-publish` and `leafbud-pds-sync` remain P3. Native editor/release
 semantics must not silently switch to a separate PDS-managed identity/lifecycle.
-Reassess these only for an explicit direct-PDS use case.
+Reassess these only for an explicit direct-PDS use case. The
+[auth research](auth-architecture0.glm53m.md) (2026-11-10) confirmed the
+Leaflet-brokered design is sound for current needs and found a complete dormant
+direct-PDS session stack already in `atproto::session` — reviving these tickets
+would start from tested code, with the capability ceiling (custom rkeys,
+scheduling, gated content) as the actual driver, not auth availability.
 
 ## 5. Tracker and session state
 
