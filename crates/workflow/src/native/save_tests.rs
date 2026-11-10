@@ -497,6 +497,34 @@ async fn unsupported_remainder_refuses_before_mint_and_preview_never_persists_ke
 }
 
 #[tokio::test]
+async fn oversized_tags_refuse_before_any_request_or_effect() {
+    let server = Server::new(false).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = source(temp.path());
+    // Native document lexicon caps each tag at 50 characters; there is no
+    // tag-count limit upstream. Preflight must refuse before mint/save.
+    let long: String = "l".repeat(51);
+    let text = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("title: Desired title", &format!("title: Desired title\ntags: [fine, \"{long}\"]"));
+    std::fs::write(&path, &text).unwrap();
+    let before = server.http.requests().len();
+    let result = server
+        .reader()
+        .save_native(
+            &old::context(temp.path()),
+            &path,
+            Selection::default(),
+            SaveOptions { yes: true, ..Default::default() },
+        )
+        .await;
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("50 characters"));
+    assert_eq!(server.http.requests().len(), before);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+}
+
+#[tokio::test]
 async fn skipped_creation_and_restart_pending_never_reencode_or_remint() {
     let server = Server::new(true).await;
     let temp = tempfile::tempdir().unwrap();

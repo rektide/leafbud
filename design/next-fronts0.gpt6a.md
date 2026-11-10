@@ -87,55 +87,40 @@ sources:
 
 ## Resume here after compaction
 
-**Latest accepted baseline: 0.23.0, through `cf523b8b`.** Native publication has
-two accepted foundation checkpoints: the pinned action contract/preflight (0.22,
-368 tests) and the verification prerequisites (0.23, **378/378 tests**) — record
-content-CID verification and a proven native inline-size witness. Root `publish`
-remains unsupported; execution/recovery is the remaining slice (4C).
+**Latest accepted baseline: 0.26.0, through `954cd9f1`** (plus the parent's
+tag-length preflight below). Native publishing is live-proven end-to-end (0.25:
+quiet publish + same-URI update + full deletion on a disposable draft), and
+publication preferences are fully authorable (0.26: tri-state frontmatter,
+`edit --preference/--clear-preferences`, meaning-based settlement). The
+**author, editor and inspect epics are all closed**. Open: `leafbud-release`
+(delivery child) and `leafbud-mdx` (content families) plus the parked P3
+direct-PDS tickets.
 
 **Cleanup policy DECIDED (operator, 2026-11-10): "let Leaflet be Leaflet" — option A.**
 Publishing from Leafbud into a publication accepts Leaflet's own publish-time
 behavior, including its per-post image housekeeping, exactly as the web UI's
-publish button does. The preview must disclose it in plain words — "old image
-copies may be deleted; count unknown," never "no images, therefore nothing to
-delete." This is scoped acceptance of native behavior, not a general approval
-of Leafbud-side deletion: no Leafbud cleanup routines, storage credentials or
-retries join it. Standalone publishing never touches this path. Two independent
-explainers converged on this lean ([g](native-cleanup-question0.glm53m.md),
-[Sol](native-cleanup-question0.gpt61s.md)); the execution slice replaces the
-publication-scoped blocker with the disclosure.
+publish button does. The preview discloses it plainly ("old image copies may
+be deleted; count unknown"). Scoped acceptance of native behavior only — no
+Leafbud-side deletion machinery. Two independent explainers converged:
+[g](native-cleanup-question0.glm53m.md), [Sol](native-cleanup-question0.gpt61s.md).
 
-**Latest accepted baseline: 0.25.0, through `462e6bfb`.** Native publishing is
-**live-proven end-to-end**: one disposable standalone draft was quietly
-published, updated at the same URI, each verified through association +
-content-CID + meaning with settled `released` receipts, then fully deleted with
-both record and editor observed gone. The deployed-server mystery resolved
-soundly — its RPC answers reply/schedule evidence with explicit null (one-to-one
-joins), which our reader had conflated with absence; the guard now requires the
-explicit null for every draft, no exemptions. The Flight decoder gained its
-fixes from a retained 100,686-byte response with literal regressions.
-`leafbud-release-native` is closed with the qualification that
-publication-container live proof was not exercised (fixtures + option-A
-disclosure only) and the original P1 mint attribution remains unproven.
+**Active agent:** g `ses_e3917df05ffexDi7k5XmXAi7Lj` researching
+**`leafbud-release-delivery`** (newsletter + share) — RESEARCH/DESIGN ONLY, no
+code, zero live effects, per operator instruction 2026-11-10. Its doc will land
+as `design/newsletter-delivery0.glm53m.md`; review it and obtain the operator's
+explicit commission before any implementation (email effects are externally
+visible; quiet publication does not authorize delivery).
 
-**Latest accepted baseline: 0.26.0, through `954cd9f1`.** Native publishing is
-live-proven end-to-end (0.25), and publication preferences are now fully
-authorable: tri-state frontmatter, `edit --preference/--clear-preferences`,
-override-free publish, meaning-based settlement — with native whole-object
-replacement and paired-Discover-clear semantics verified from pinned source.
-`leafbud-release-native` and `leafbud-release-preferences` are closed.
+**Handoff note from the operator (2026-11-10):** content expansion (front D)
+is to be **handed to a new session** — that is the next session's starting
+commission. Housekeeping facts verified: the native lexicon caps each tag at
+50 **characters** and has **no tag-count limit** (the "up to 5" recollection
+matches no pinned source); preflight now refuses over-length tags before any
+effect (parent fix, tested in save_tests).
 
-**No agent is currently active.** Remaining fronts need operator steering:
-`leafbud-release-delivery` (newsletter/share — external effects, requires its
-own explicit commission; quiet publication does not authorize it), content
-expansion (`leafbud-mdx-media` / `-rich` / `-structure` — choose one family by
-actual need; media is the prerequisite for lifting the cover-upload refusal),
-and epic housekeeping (editor/inspect/mdx administrative closure). Rotate
-at major task boundaries or **220–320k reported context**, superseding 240–350k.
-
-The user's latest request is a full status/architecture/road-ahead account; this
-document remains the maintained version of it. Completed checks need not repeat
-merely because context was compacted.
+Rotate implementation agents at major task boundaries or **220–320k reported
+context**, superseding the older 240–350k window. Completed checks need not
+repeat merely because context was compacted.
 
 ## 1. What has actually landed
 
@@ -422,19 +407,31 @@ adapter. No parallel PDS publication lifecycle, copied source body, or automatic
 email delivery. **A deployed publish/email/share proof needs a new explicit
 operator instruction:** current live authorization covers unpublished test drafts.
 
-### D. Content/profile expansion — choose one vertical family
+### D. Content/profile expansion — designated next-session commission
 
 **Tickets:** `leafbud-mdx-structure`, `leafbud-mdx-rich`, `leafbud-mdx-media`.
 
-**Payoff:** adopt and edit more real Leaflet content. Pick a concrete fixture family
-from actual user need—such as nested structures, one richer block, or media
-resources—and carry model/parse/render/observe/write/read-back together. Keep the
-keyed foundation and declare shared/interactive identity consequences. Uploading
-bytes is a different capability from preserving a remote image URL.
+**Operator designation (2026-11-10):** this front is handed to a new parent
+session as its starting commission. Ask the operator which family to build
+first — do not pick for them — with this framing: **media** (image/cover
+resources — also the prerequisite for lifting the cover-upload refusal on
+publish), **rich blocks** (one concrete richer kind, e.g. embeds/polls/buttons,
+chosen by user need), or **nested structures** (nesting/task lists). Each is
+carried model/parse/render/observe/write/read-back together on the keyed
+foundation, with shared/interactive identity consequences declared and explicit
+refusals retained for the rest.
 
-Do not commission all these tickets as an abstract “support everything” batch.
-Choose the next useful family with its native source evidence and a complete
-round-trip case; retain explicit unsupported diagnostics for the rest.
+**Payoff:** adopt and edit more real Leaflet content. Pick a concrete fixture
+family from actual user need and carry it end-to-end. Uploading bytes is a
+different capability from preserving a remote image URL; the current profile
+supports URL images only, and `members-only/gated` content remains web-UI-only.
+
+Do not commission all three as an abstract "support everything" batch. Choose
+one family with its native source evidence (verify the pinned archive revision
+first) and a complete round-trip case. `leafbud-mdx-source`/`-coverage`
+(the epic's completed children) established the pattern: bounded source forms
+plus the maintained [coverage matrix](/doc/mdx/coverage.md) naming every
+supported/refused cell.
 
 ### E. Live-sync efficiency — ready seam, lower immediate payoff
 

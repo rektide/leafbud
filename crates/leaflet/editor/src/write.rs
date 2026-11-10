@@ -21,6 +21,15 @@ pub struct Compiled {
 /// identity/causal/permission checks, never narrow this supported source profile.
 pub fn preflight(desired: &Document) -> Result<()> {
     ensure!(!desired.pages.is_empty(), "document requires a main page");
+    // Native document lexicon caps each tag at 50 characters (items.maxLength;
+    // there is no tag-count limit upstream). Refuse before any effect.
+    if desired
+        .tags
+        .iter()
+        .any(|tag| tag.chars().count() > 50)
+    {
+        anyhow::bail!("tags are limited to 50 characters each by the native record schema");
+    }
     let mut keys = BTreeSet::new();
     for page in &desired.pages {
         ensure!(!page.key.is_empty() && keys.insert(&page.key), "missing/duplicate page key");
