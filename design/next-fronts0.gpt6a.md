@@ -118,12 +118,19 @@ fixes from a retained 100,686-byte response with literal regressions.
 publication-container live proof was not exercised (fixtures + option-A
 disclosure only) and the original P1 mint attribution remains unproven.
 
-**Active agent:** fresh Sol high on **`leafbud-release-preferences`** — exposing
-the four publication visibility preferences through tri-state frontmatter and
-`edit --preference` flags per the researched design
-([publish options](publish-options0.glm53m.md)). Fixture/loopback only; no live
-effects commissioned. `leafbud-release-delivery` remains uncommissioned. Keep
-implementation agents serial in this checkout. Rotate
+**Latest accepted baseline: 0.26.0, through `954cd9f1`.** Native publishing is
+live-proven end-to-end (0.25), and publication preferences are now fully
+authorable: tri-state frontmatter, `edit --preference/--clear-preferences`,
+override-free publish, meaning-based settlement — with native whole-object
+replacement and paired-Discover-clear semantics verified from pinned source.
+`leafbud-release-native` and `leafbud-release-preferences` are closed.
+
+**No agent is currently active.** Remaining fronts need operator steering:
+`leafbud-release-delivery` (newsletter/share — external effects, requires its
+own explicit commission; quiet publication does not authorize it), content
+expansion (`leafbud-mdx-media` / `-rich` / `-structure` — choose one family by
+actual need; media is the prerequisite for lifting the cover-upload refusal),
+and epic housekeeping (editor/inspect/mdx administrative closure). Rotate
 at major task boundaries or **220–320k reported context**, superseding 240–350k.
 
 The user's latest request is a full status/architecture/road-ahead account; this
@@ -147,6 +154,7 @@ merely because context was compacted.
 | Native publication foundation | Pinned `publishToPublication` contract, read-only readiness preview, content-CID verification, proven inline-size witness; execution not wired | [Action/preflight](native-publication0.gpt61s.md), [verification](publication-verification0.gpt61s.md) |
 | Deliberate native deletion | Preview-first `delete` for draft and published; record-first native order; observation-verified; clean local unbinding | [Delete receipt](native-delete0.glm53m.md), `web::delete`, `native::delete` |
 | Publish execution and recovery | Live-proven quiet first publish + same-URI update with content-verified settlement; finite recovery; explicit-null evidence guards | [Publish receipt](native-publish0.gpt61s.md), `native::publish`, `mdx::settle_release` |
+| Publication preferences | Tri-state authorable visibility preferences; whole-object native replacement; meaning-based settlement; dispatch-only Discover prediction | [Preferences receipt](release-preferences0.gpt61s.md), [options design](publish-options0.glm53m.md) |
 
 The supported native editor lifecycles are **draft and published**. Canvas,
 nested/task lists, richer interactive objects, uploads and native public-release
