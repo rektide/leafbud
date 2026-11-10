@@ -198,6 +198,78 @@ async fn source_spellings_prepare_save_and_repeat_preserve_page_associations() {
 }
 
 #[tokio::test]
+async fn whole_flow_header_edit_defaults_save_refresh_and_noop_keep_unknown_author_source() {
+    let (server, store) = server(true).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("doc.mdx");
+    assert!(
+        cli(
+            &server.base_url,
+            root.path(),
+            &["--publication", store::URI, "create", "doc.mdx", "--title", "Title"]
+        )
+        .output()
+        .await
+        .unwrap()
+        .status
+        .success()
+    );
+    let header = leafbud_mdx::header(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let mut flow = serde_json::to_string(&header).unwrap();
+    flow.insert_str(1, "custom: {nested: [1, 'yes']}, # custom stays\r\n");
+    let source = format!("\u{feff}---\r\n{flow}\r\n---\r\n\r\n<Key id='b' />\r\nbody 😀\r\n");
+    std::fs::write(&path, &source).unwrap();
+    let edit = cli(
+        &server.base_url,
+        root.path(),
+        &["edit", "doc.mdx", "--title", "Edited", "--tag", "one", "--description", "Description"],
+    )
+    .output()
+    .await
+    .unwrap();
+    assert!(edit.status.success(), "{}", String::from_utf8_lossy(&edit.stderr));
+    assert!(server.requests().is_empty());
+    let edited = std::fs::read_to_string(&path).unwrap();
+    assert!(edited.contains("custom: {nested: [1, 'yes']}, # custom stays\r\n"));
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--json"], 0).await["items"][0]["outcome"],
+        "would-bind-and-save"
+    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), edited);
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "saved"
+    );
+    let saved = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(saved.title, "Edited");
+    assert_eq!(saved.tags, ["one"]);
+    assert_eq!(saved.extra["contributors"], json!(["did:plc:contributor-default"]));
+    assert!(saved.theme.as_ref().unwrap().leaflet_watermark);
+    store.lock().unwrap().data["title"] = json!("Remote title");
+    store.lock().unwrap().data["leaflets_in_publications"][0]["title"] = json!("Remote title");
+    store.lock().unwrap().extras.insert("publication_title".into(), json!("Remote title"));
+    let pull = invoke(&server.base_url, root.path(), &["pull", "doc.mdx", "--json"], 0).await;
+    assert_eq!(pull["updated"], 1, "{pull}");
+    let bytes = std::fs::read_to_string(&path).unwrap();
+    let adopted = leafbud_mdx::parse(&bytes).unwrap();
+    assert_eq!(adopted.title, "Remote title");
+    assert_eq!(adopted.state.nodes, saved.state.nodes);
+    assert!(bytes.contains("custom: {nested: [1, 'yes']}, # custom stays\r\n"));
+    assert!(bytes.starts_with("\u{feff}---\r\n{"));
+    assert!(bytes.ends_with("\r\n<Key id='b' />\r\nbody 😀\r\n"));
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let pushes = store.lock().unwrap().pushes;
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "unchanged"
+    );
+    assert_eq!(invoke(&server.base_url, root.path(), &["pull", "doc.mdx", "--json"], 0).await["unchanged"], 1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), bytes);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+}
+
+#[tokio::test]
 async fn confirmed_key_rename_preserves_receipts_and_no_effect_push_and_metadata_classification() {
     let (server, store) = server(false).await;
     let root = tempfile::tempdir().unwrap();

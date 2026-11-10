@@ -136,7 +136,7 @@ fn metadata_clear_noops_dates_validation_and_bom_crlf() {
 }
 
 #[test]
-fn metadata_block_tags_comments_and_unsupported_flow_root() {
+fn metadata_block_tags_comments_and_flow_root() {
     let source = input("\nbody\n").replace("tags: [a, b] # tag comment", "tags:\n  - a # item a\n  # between\n  - b");
     let out = edit_metadata(
         &source,
@@ -159,8 +159,35 @@ fn metadata_block_tags_comments_and_unsupported_flow_root() {
                 ..Default::default()
             }
         )
-        .is_err()
+        .is_ok()
     );
+}
+
+#[test]
+fn flow_root_metadata_preserves_unrelated_entries_comments_and_exact_body() {
+    let source = "\u{feff}---\r\n{format: leafbud-mdx/2, 'title': 'Héllo', # title\r\n tags: [a, # item\r\n b], custom: {deep: [1, 'yes']}, # custom\r\n \"@leafbud\": {id: 00000000-0000-0000-0000-000000000000, state: draft, mainPage: main}}\r\n---\r\n\r\n<Key id='b' />\r\nbody 😀\r\n";
+    let edit = MetadataEdit {
+        title: Some("New".into()),
+        tags: Some(vec![]),
+        description: Some("Description".into()),
+        ..Default::default()
+    };
+    assert!(parse(source).is_ok());
+    let out = edit_metadata(source, &edit).unwrap();
+    for raw in [
+        "'title': \"New\"",
+        "# title\r\n",
+        "# item\r\n",
+        "custom: {deep: [1, 'yes']}, # custom\r\n",
+        "\"@leafbud\": {id: 00000000-0000-0000-0000-000000000000, state: draft, mainPage: main}",
+    ] {
+        assert!(out.contains(raw), "missing {raw:?}: {out}");
+    }
+    assert_eq!(header(&out).unwrap()["tags"], json!([]));
+    assert_eq!(parse(&out).unwrap().description.as_deref(), Some("Description"));
+    assert_eq!(patch::split_managed(source).unwrap().1, patch::split_managed(&out).unwrap().1);
+    assert_eq!(edit_metadata(&out, &edit).unwrap(), out);
+    assert!(!out.replace("\r\n", "").contains('\n'));
 }
 
 #[test]

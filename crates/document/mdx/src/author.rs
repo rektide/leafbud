@@ -64,7 +64,9 @@ pub fn edit_metadata(input: &str, edit: &MetadataEdit) -> Result<String> {
     let mut inserts = String::new();
     for (name, value) in updates {
         expected[name] = value.clone();
-        if positions.node.entry(name).is_some() {
+        if positions.flow_root() {
+            edits.extend(positions.flow_edit(name, Some(&value))?);
+        } else if positions.node.entry(name).is_some() {
             edits.push(field_edit(input, &positions, name, &value)?);
         } else {
             let newline = if input.starts_with("---\r\n") || input.starts_with("\u{feff}---\r\n") {

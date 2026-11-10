@@ -1385,6 +1385,48 @@ fn preparation_handles_flow_blank_line_and_four_space_block_envelopes() {
 }
 
 #[test]
+fn flow_root_preparation_tracking_and_adoption_keep_author_bytes() {
+    let source = "---\n{format: leafbud-mdx/2, title: 'Héllo', description: old, # keep\n custom: {nested: [1, 'yes']}, \"@leafbud\": {id: 00000000-0000-0000-0000-000000000000, # state\n state: draft}}\n---\n\ntext 😀\n";
+    let (mut block, mut page) = (counter("b"), counter("p"));
+    let plan = prepare_keys(
+        source,
+        KeySource {
+            block: &mut block,
+            page: &mut page,
+        },
+    )
+    .unwrap();
+    let prepared = apply_key_preparation(source, &plan).unwrap();
+    assert!(prepared.contains("# state\n state: draft"));
+    let mut doc = parse(&prepared).unwrap();
+    doc.state.binding = document().state.binding;
+    let bound = patch_tracking(&prepared, &doc.state).unwrap();
+    assert!(bound.contains("title: 'Héllo', description: old, # keep\n custom: {nested: [1, 'yes']}"));
+    assert_eq!(patch_tracking(&bound, &doc.state).unwrap(), bound);
+    doc.title = "Changed".into();
+    doc.description = None;
+    doc.pages[0].blocks[0].kind = BlockKind::Rule;
+    let adopted = adopt_remote(&bound, &doc).unwrap();
+    assert!(adopted.contains("custom: {nested: [1, 'yes']}"));
+    assert!(adopted.contains("# keep"));
+    assert_eq!(parse(&adopted).unwrap().title, "Changed");
+    assert_eq!(parse(&adopted).unwrap().pages[0].blocks[0].kind, BlockKind::Rule);
+    for forbidden in ["custom: &x {a: 1}", "custom: *missing", "custom: !thing yes"] {
+        let bad = source.replace("custom: {nested: [1, 'yes']}", forbidden);
+        assert!(
+            edit_metadata(
+                &bad,
+                &MetadataEdit {
+                    title: Some("New".into()),
+                    ..Default::default()
+                }
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
 fn preparation_keeps_retired_rows_and_existing_keys() {
     // A retired row in the envelope plus one keyed block and one new block.
     let source = "---\nformat: leafbud-mdx/2\ntitle: T\n\"@leafbud\": {\"id\": \"00000000-0000-0000-0000-000000000000\", \"state\": \"draft\", \"mainPage\": \"p-main\", \"nodes\": {\"b-gone\": {\"entity\": \"e-gone\", \"kind\": \"block\", \"placement\": \"f-gone\"}}}\n---\n\n<Key id=\"b-1\" />\nkept\n\nadded\n";

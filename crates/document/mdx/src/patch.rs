@@ -4,7 +4,7 @@
 //! reformat the author's body; [`adopt_remote`] additionally adopts changed
 //! remote content and owned author fields for guarded refresh.
 //! [`prepare_binding_defaults`] is separate pre-content-write preparation.
-use super::{json, parse, yaml};
+use super::{parse, yaml};
 use anyhow::{Context, Result, bail, ensure};
 use leafbud_document::*;
 use serde_json::{Value, json};
@@ -92,6 +92,19 @@ enum Patch {
     Set(Value),
 }
 
+fn patch_top(source: &str, key: &str, patch: &Patch) -> Result<String> {
+    let value = match patch {
+        Patch::Remove => None,
+        Patch::Set(value) => Some(value),
+    };
+    if let Some(result) = super::source::patch_flow_root(source, key, value)? {
+        return Ok(result);
+    }
+    let (mut lines, body) = split_managed(source)?;
+    patch_key(&mut lines, key, patch)?;
+    Ok(reassemble(source, &lines, &body))
+}
+
 fn patch_key(lines: &mut Vec<String>, key: &str, patch: &Patch) -> Result<()> {
     match patch {
         Patch::Remove => {
@@ -114,90 +127,40 @@ fn patch_key(lines: &mut Vec<String>, key: &str, patch: &Patch) -> Result<()> {
     Ok(())
 }
 
-/// Byte range of the value following a column-0 mapping key's colon on its
-/// own line. Returns None when the line carries no value (block style: the
-/// value, if any, lives on following indented lines). A trailing comment is
-/// not part of the value range.
-fn line_value_range(line: &str) -> Option<(usize, usize)> {
-    let body = line.trim_end_matches(['\r', '\n']);
-    let first = body.chars().next()?;
-    let colon = if first == '"' || first == '\'' {
-        let close = body[1..].find(first)? + 1;
-        body[close + 1..].find(':')? + close + 1
-    } else {
-        body.find(':')?
-    };
-    let rest = &body[colon + 1..];
-    let trimmed = rest.trim_start();
-    if trimmed.is_empty() || trimmed.starts_with('#') {
-        return None;
-    }
-    Some((body.len() - trimmed.len(), body.len()))
-}
-
 /// Persist one mapping entry in the reserved `@leafbud` envelope (used for
 /// main-page identity during preparation). Envelope shape is detected from
 /// the envelope line's own syntax, not its surroundings: a block-style
 /// envelope keeps every other line byte-for-byte and the entry joins at the
-/// children's measured indentation; a flow-style envelope is edited as the
-/// literal JSON mapping it must be, preserving its flow spelling. No full
-/// document parse happens here; callers prove the composed result.
+/// children's measured indentation; a flow-style envelope uses parser-paired
+/// opening/closing delimiters, preserving its YAML spelling and comments.
+/// Callers prove the composed document after insertion.
 pub(crate) fn insert_state_line(source: &str, line: &str) -> Result<String> {
     let (key, value) = line.split_once(':').context("state line must be a mapping entry")?;
     let parsed_value: Value = serde_json::from_str(value.trim()).with_context(|| format!("parsing prepared state line {line:?}"))?;
     ensure!(key == "\"mainPage\"", "preparation does not own state field {key}");
+    // Parser-paired flow extents also cover YAML (not only literal JSON),
+    // multiline/commented envelopes and envelopes inside a whole-flow root.
+    let header = super::source::header(source)?;
+    let (_, envelope_value) = header.node.entry("@leafbud").context("reserved envelope missing")?;
+    if let Ok(range) = header.flow_range(envelope_value) {
+        ensure!(envelope_value.value.entry("mainPage").is_none(), "mainPage already exists in the envelope");
+        return super::source::splice(source, vec![header.insert_member(&range, "mainPage", &parsed_value)]);
+    }
     let (lines, body) = split_managed(source)?;
     let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for preparation")?;
     if lines.iter().any(|l| column_key(l).is_some_and(|k| k == key)) {
         bail!("frontmatter key {key:?} already exists elsewhere; refusing nested insertion");
     }
     let newline = if source.contains("\r\n") { "\r\n" } else { "\n" };
-    match line_value_range(&lines[envelope]) {
-        // Flow style: edit the literal JSON mapping in place, inserting the
-        // new member before the closing brace with the mapping's own
-        // separator style, so the author's line keeps its bytes otherwise.
-        Some((start, end)) => {
-            let line = lines[envelope].clone();
-            let segment = &line[start..end];
-            let raw = segment.trim();
-            let mut flow: Value = serde_json::from_str(raw).with_context(|| "reserved envelope is flow-style but its value is not literal JSON")?;
-            let Some(map) = flow.as_object_mut() else {
-                bail!("reserved envelope is flow-style but its value is not a mapping");
-            };
-            let name: String = serde_json::from_str(key).context("state line key")?;
-            let member_value = json(&parsed_value);
-            ensure!(map.insert(name, parsed_value).is_none(), "state key {key:?} already exists in the envelope");
-            ensure!(raw.ends_with('}'), "the flow envelope mapping does not end on its own line");
-            let (separator, colon) = if segment.contains("\": ") { (", ", ": ") } else { (",", ":") };
-            let inner = &raw[..raw.len() - 1];
-            let member = format!("{}{key}{colon}{member_value}", if inner.trim_end().ends_with('{') { "" } else { separator },);
-            let brace_at = start + segment.trim_end().len() - 1;
-            let mut updated = line[..brace_at].to_owned();
-            updated.push_str(&member);
-            updated.push_str(&line[brace_at..]);
-            let mut lines = lines;
-            lines[envelope] = updated;
-            Ok(reassemble(source, &lines, &body))
-        }
-        // Block style: splice one indented line at the children's measured
-        // indentation, keeping every existing line byte-for-byte.
-        None => {
-            let extent = value_extent(&lines, envelope);
-            let child = lines[envelope + 1..extent].iter().find(|l| !l.trim().is_empty());
-            let indent = child.map(|l| l.len() - l.trim_start().len()).unwrap_or(2);
-            if child.is_some_and(|l| l.trim_start().starts_with('\t')) {
-                bail!("envelope children use tab indentation; refusing to mix indentation");
-            }
-            for l in &lines[envelope..extent] {
-                if l.trim_start().starts_with(&format!("{key}:")) {
-                    bail!("state key {key:?} already exists in the envelope");
-                }
-            }
-            let mut lines = lines;
-            lines.splice(envelope + 1..envelope + 1, vec![format!("{}{line}{newline}", " ".repeat(indent))]);
-            Ok(reassemble(source, &lines, &body))
-        }
+    let extent = value_extent(&lines, envelope);
+    let child = lines[envelope + 1..extent].iter().find(|l| !l.trim().is_empty());
+    let indent = child.map(|l| l.len() - l.trim_start().len()).unwrap_or(2);
+    if child.is_some_and(|l| l.trim_start().starts_with('\t')) {
+        bail!("envelope children use tab indentation; refusing to mix indentation");
     }
+    let mut lines = lines;
+    lines.splice(envelope + 1..envelope + 1, vec![format!("{}{line}{newline}", " ".repeat(indent))]);
+    Ok(reassemble(source, &lines, &body))
 }
 
 /// Rebuild a managed source from frontmatter lines and the body, keeping the
@@ -220,6 +183,9 @@ fn reassemble(source: &str, lines: &[String], body: &str) -> String {
 /// Regenerate the reserved `@leafbud` envelope in-place, preserving every
 /// other frontmatter line and the body bytes.
 fn replace_envelope(source: &str, state: &State) -> Result<String> {
+    if let Some(result) = super::source::patch_flow_root(source, "@leafbud", Some(&json!(state)))? {
+        return Ok(result);
+    }
     let (mut lines, body) = split_managed(source)?;
     let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for source-preserving patch")?;
     let end = value_extent(&lines, envelope);
@@ -313,11 +279,12 @@ pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<Str
     );
     let header = super::header(source)?;
     let mut expected = existing.clone();
-    let (mut lines, body) = split_managed(source)?;
+    let (_, body) = split_managed(source)?;
+    let mut result = source.to_owned();
     if header.get("theme").is_none() {
         if let Some(theme) = &verified.theme {
             expected.theme = Some(theme.clone());
-            patch_key(&mut lines, "theme", &Patch::Set(json!(theme)))?;
+            result = patch_top(&result, "theme", &Patch::Set(json!(theme)))?;
         }
     } else {
         ensure!(!header["theme"].is_null(), "explicit theme null has no supported native meaning");
@@ -328,13 +295,12 @@ pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<Str
     } else if let Some(contributors) = verified.extra.get("contributors") {
         let _: Vec<String> = serde_json::from_value(contributors.clone()).context("invalid verified contributors")?;
         expected.extra.insert("contributors".into(), contributors.clone());
-        patch_key(&mut lines, "contributors", &Patch::Set(contributors.clone()))?;
+        result = patch_top(&result, "contributors", &Patch::Set(contributors.clone()))?;
     }
     if existing.publication != publication {
-        patch_key(&mut lines, "publication", &Patch::Set(json!(binding.publication)))?;
+        result = patch_top(&result, "publication", &Patch::Set(json!(binding.publication)))?;
         expected.publication = publication;
     }
-    let result = reassemble(source, &lines, &body);
     let parsed = parse(&result).context("binding-default preparation validation")?;
     ensure!(parsed == expected, "binding-default preparation changed unrelated content/tracking");
     ensure!(split_managed(&result)?.1 == body, "binding-default preparation changed the body");
@@ -357,7 +323,8 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
             && document.state.binding.is_some(),
         "adoption cannot change document identity"
     );
-    let (mut lines, body) = split_managed(source)?;
+    let (_, body) = split_managed(source)?;
+    let mut result = source.to_owned();
     for (key, old, new) in [
         ("title", json!(existing.title), json!(document.title)),
         (
@@ -377,7 +344,7 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
             continue;
         }
         let patch = if new.is_null() { Patch::Remove } else { Patch::Set(new) };
-        patch_key(&mut lines, key, &patch)?;
+        result = patch_top(&result, key, &patch)?;
     }
     // Publication intent is tri-state: absent inherits, explicit null is
     // standalone, a URI targets a publication. Preserve the distinction.
@@ -387,30 +354,16 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
             Publication::Standalone => Patch::Set(json!(null)),
             Publication::At(uri) => Patch::Set(json!(uri)),
         };
-        patch_key(&mut lines, "publication", &patch)?;
+        result = patch_top(&result, "publication", &patch)?;
     }
-    let envelope = find_key(&lines, "@leafbud")?.context("reserved @leafbud envelope not found for source-preserving patch")?;
-    let end = value_extent(&lines, envelope);
-    let mut regenerated = String::new();
-    yaml(&json!({"@leafbud": &document.state}), 0, &mut regenerated);
-    lines.splice(envelope..end, regenerated.split_inclusive('\n').map(str::to_owned));
-    let fence = if source.strip_prefix('\u{feff}').unwrap_or(source).starts_with("---\r\n") {
-        "---\r\n"
-    } else {
-        "---\n"
-    };
-    let frontmatter = format!("{fence}{}{fence}", lines.join(""));
+    result = replace_envelope(&result, &document.state)?;
+    let frontmatter = &result[..result.len() - body.len()];
     let body = if existing.pages == document.pages {
         body
     } else {
-        super::render::verified_body(document, &frontmatter)?
+        super::render::verified_body(document, frontmatter)?
     };
-    let bom = if source.starts_with('\u{feff}') {
-        "\u{feff}".to_string()
-    } else {
-        String::new()
-    };
-    let result = bom.clone() + &frontmatter + &body;
+    let result = frontmatter.to_owned() + &body;
     let parsed = parse(&result).context("source-preserving adoption validation")?;
     ensure!(
         parsed.semantic_value() == document.semantic_value() && parsed.state == document.state,
