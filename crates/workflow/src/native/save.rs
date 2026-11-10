@@ -18,7 +18,7 @@ pub struct SaveReport {
     pub message: Option<String>,
 }
 
-pub(super) fn prepared(text: &str) -> Result<Document> {
+pub(crate) fn prepared(text: &str) -> Result<Document> {
     let plan = leafbud_mdx::prepare_keys(
         text,
         leafbud_mdx::KeySource {
@@ -31,7 +31,7 @@ pub(super) fn prepared(text: &str) -> Result<Document> {
     Ok(document)
 }
 
-pub(super) fn effects(mutations: &[NativeMutation]) -> BTreeMap<String, usize> {
+pub(crate) fn effects(mutations: &[NativeMutation]) -> BTreeMap<String, usize> {
     let mut result = BTreeMap::new();
     for mutation in mutations {
         let name = match mutation {

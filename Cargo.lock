@@ -1928,7 +1928,7 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "leafbud"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "base64 0.22.1",
  "clap",
@@ -1944,7 +1944,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-atproto"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "base64 0.22.1",
  "regex",
@@ -1958,7 +1958,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-document"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "jacquard-common",
  "serde",
@@ -1968,7 +1968,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-editor"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1981,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-mdx"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "anyhow",
  "jiff",
@@ -1997,7 +1997,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-protocol"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2007,7 +2007,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-records"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "anyhow",
  "jacquard-common",
@@ -2024,7 +2024,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-web"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "base64 0.22.1",
  "futures-util",
@@ -2047,7 +2047,7 @@ dependencies = [
 
 [[package]]
 name = "leafbud-workflow"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

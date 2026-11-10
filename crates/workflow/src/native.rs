@@ -15,7 +15,12 @@ mod write;
 pub use leafbud_document::ResolutionDirection;
 pub use resolve::{RecoverOptions, ResolveReport};
 pub use save::{SaveOptions, SaveReport};
+pub(crate) use save::{effects as preview_effects, prepared as prepared_preview};
 pub use write::{RecoveryOutcome, RecoveryReport};
+
+pub(crate) fn compile_preview(desired: &Document, observed: &crate::editor_state::Observed) -> Result<leafbud_editor::write::Compiled> {
+    save::compile_reusing(desired, &observed.data, &observed.snapshot, &Default::default(), &[])
+}
 
 #[derive(Default)]
 pub struct Selection {

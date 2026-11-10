@@ -16,6 +16,7 @@ mod actions;
 mod home;
 pub mod live;
 mod mint;
+pub mod publication;
 mod pull;
 mod push;
 pub use actions::ActionResponse;
@@ -33,7 +34,7 @@ pub enum Error {
     Pull(&'static str),
     #[error("native effect protocol: {0}")]
     Native(&'static str),
-    #[error("native mint response could not be decoded ({reason}); response retained in memory, outcome uncertain")]
+    #[error("native action response could not be decoded ({reason}); response retained in memory, outcome uncertain")]
     ActionResponse { reason: &'static str, response: ActionResponse },
     #[error("Leaflet transport failed")]
     Transport(#[source] reqwest::Error),

@@ -46,9 +46,7 @@ pub fn working(source: &Document) -> Result<Projection> {
         uri.collection == "site.standard.document",
         "release comparison for legacy collection is unavailable"
     );
-    for name in ["cover", "coverImage", "delivery", "preferences"] {
-        ensure!(!source.extra.contains_key(name), "release intent {name} has no supported projection");
-    }
+    supported_metadata(source)?;
     let page_id = |key: &str| -> Result<String> {
         let node = source
             .state
@@ -61,6 +59,69 @@ pub fn working(source: &Document) -> Result<Projection> {
         );
         Ok(node.entity.clone())
     };
+    let pages = encode_pages(source, page_id)?;
+    let contributors = contributors(source)?;
+    let mut record = json!({"$type":"site.standard.document","title":source.title,"description":canonical_description(source.description.as_deref()),
+        "tags":source.tags,"site":binding.publication.clone().unwrap_or_else(||format!("https://leaflet.pub/p/{}",uri.authority)),
+        "path":source.extra.get("path").context("public path intent unavailable")?,
+        "publishedAt":source.extra.get("publishedAt").context("publication date intent unavailable")?,
+        "contributors":contributors.into_iter().map(|did|json!({"did":did})).collect::<Vec<_>>(),
+        "content":{"$type":"pub.leaflet.content","pages":pages}});
+    if record["description"].is_null() {
+        record.as_object_mut().expect("record").remove("description");
+    }
+    from_record(&record, source)
+}
+
+fn supported_metadata(source: &Document) -> Result<()> {
+    for name in ["cover", "coverImage", "delivery", "preferences"] {
+        ensure!(!source.extra.contains_key(name), "release intent {name} has no supported projection");
+    }
+    Ok(())
+}
+
+fn contributors(source: &Document) -> Result<Vec<String>> {
+    let contributors: Vec<String> = source
+        .extra
+        .get("contributors")
+        .map(|v| serde_json::from_value(v.clone()))
+        .transpose()?
+        .unwrap_or_default();
+    ensure!(
+        contributors.len() <= 1,
+        "multi-contributor publication order is unavailable from the unordered native pull; complete input projection refused"
+    );
+    Ok(contributors)
+}
+
+/// Pure full-body release validation BEFORE mint/save. Symbolic source page
+/// labels validate reachability only; they are NEVER confirmed native IDs or a
+/// receipt/hash. The executor must project the actual saved native pages again.
+pub fn preflight(source: &Document) -> Result<usize> {
+    supported_metadata(source)?;
+    contributors(source)?;
+    let pages = encode_pages(source, |key| Ok(key.to_owned()))?;
+    // Validate every encoded block using the existing strict public decoder.
+    let ids: BTreeMap<_, _> = source.pages.iter().map(|page| (page.key.clone(), page.key.clone())).collect();
+    for page in &pages {
+        for block in page["blocks"].as_array().expect("encoded blocks") {
+            decode_block(&block["block"], &ids, &mut vec![])?;
+        }
+    }
+    Ok(source
+        .pages
+        .iter()
+        .filter(|page| {
+            !source
+                .state
+                .nodes
+                .get(&page.key)
+                .is_some_and(|node| matches!(node.occurrence, Occurrence::Page { .. }))
+        })
+        .count())
+}
+
+fn encode_pages(source: &Document, page_id: impl Fn(&str) -> Result<String>) -> Result<Vec<Value>> {
     let mut reached = BTreeSet::new();
     let mut pending = vec![source.pages.first().context("missing working entry page")?.key.as_str()];
     while let Some(key) = pending.pop() {
@@ -139,26 +200,7 @@ pub fn working(source: &Document) -> Result<Projection> {
         }
         pages.push(json!({"$type":"pub.leaflet.pages.linearDocument","id":page_id(&page.key)?,"blocks":blocks}));
     }
-    let contributors: Vec<String> = source
-        .extra
-        .get("contributors")
-        .map(|v| serde_json::from_value(v.clone()))
-        .transpose()?
-        .unwrap_or_default();
-    ensure!(
-        contributors.len() <= 1,
-        "multi-contributor publication order is unavailable from the unordered native pull; complete input projection refused"
-    );
-    let mut record = json!({"$type":"site.standard.document","title":source.title,"description":canonical_description(source.description.as_deref()),
-        "tags":source.tags,"site":binding.publication.clone().unwrap_or_else(||format!("https://leaflet.pub/p/{}",uri.authority)),
-        "path":source.extra.get("path").context("public path intent unavailable")?,
-        "publishedAt":source.extra.get("publishedAt").context("publication date intent unavailable")?,
-        "contributors":contributors.into_iter().map(|did|json!({"did":did})).collect::<Vec<_>>(),
-        "content":{"$type":"pub.leaflet.content","pages":pages}});
-    if record["description"].is_null() {
-        record.as_object_mut().expect("record").remove("description");
-    }
-    from_record(&record, source)
+    Ok(pages)
 }
 
 fn feature(mark: &Mark) -> Result<Value> {
@@ -245,9 +287,19 @@ pub fn from_record(record: &Value, template: &Document) -> Result<Projection> {
             "publishedAt",
             "contributors",
             "content",
+            "theme",
         ],
     )?;
     let site = text(record, "site")?;
+    // Pinned extractThemeFromFacts always includes $type, so the publisher's
+    // Object.keys(extracted).length > 1 retains even this exact default theme.
+    // No arbitrary theme, page color, image or nondefault property is ignored.
+    if let Some(theme) = record.get("theme") {
+        ensure!(
+            theme == &json!({"$type":"pub.leaflet.publication#theme","showPageBackground":true}),
+            "nondefault public theme requires a supported mapping"
+        );
+    }
     let path = text(record, "path")?;
     ensure!(path.starts_with('/'), "invalid public path");
     let published_at = date(&record["publishedAt"])?;
@@ -447,6 +499,18 @@ mod tests {
     }
     fn record() -> Value {
         json!({"$type":"site.standard.document","site":"https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx","title":"Title","path":"/post","publishedAt":"2026-10-01T10:00:00.000Z","content":{"$type":"pub.leaflet.content","pages":[{"$type":"pub.leaflet.pages.linearDocument","id":"native-page","blocks":[{"$type":"pub.leaflet.pages.linearDocument#block","block":{"$type":"pub.leaflet.blocks.text","plaintext":"Hi 🦋 café","facets":[{"index":{"byteStart":3,"byteEnd":7},"features":[{"$type":"pub.leaflet.richtext.facet#bold"},{"$type":"pub.leaflet.richtext.facet#link","uri":"https://example.com"}]}]}}]}]}})
+    }
+    #[test]
+    fn pinned_standalone_publisher_default_theme_is_exact_not_an_arbitrary_wildcard() {
+        let plain = from_record(&record(), &template()).unwrap();
+        let mut native = record();
+        native["theme"] = json!({"$type":"pub.leaflet.publication#theme","showPageBackground":true});
+        assert_eq!(from_record(&native, &template()).unwrap().value, plain.value);
+        native["theme"]["showPageBackground"] = json!(false);
+        assert!(from_record(&native, &template()).is_err());
+        native["theme"]["showPageBackground"] = json!(true);
+        native["theme"]["headingFont"] = json!("serif");
+        assert!(from_record(&native, &template()).is_err());
     }
     #[test]
     fn explicit_utf8_facets_date_defaults_and_spelling_free_public_meaning() {

@@ -1,4 +1,4 @@
-//! Bounded adapter for ONE literal-argument Next action; not a Flight runtime.
+//! Bounded literal-argument Next action adapters; not a Flight runtime.
 use crate::{Error, LeafletClient, transport};
 use regex::Regex;
 use reqwest::Url;
@@ -24,7 +24,11 @@ impl std::fmt::Debug for ActionResponse {
 
 impl LeafletClient {
     pub(crate) async fn discover_mint_action(&self, dashboard: &Url) -> Result<String, Error> {
-        let response = self.http.get(dashboard.clone()).send().await.map_err(transport)?;
+        self.discover_action(dashboard, "createPublicationDraft").await
+    }
+
+    pub(crate) async fn discover_action(&self, page: &Url, name: &str) -> Result<String, Error> {
+        let response = self.http.get(page.clone()).send().await.map_err(transport)?;
         let mut remaining = MAX_TOTAL;
         let html = bounded_text(response, "GET publication dashboard", MAX_PAGE, &mut remaining).await?;
         let tags = Regex::new(r#"(?is)<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>"#).expect("static regex");
@@ -53,22 +57,27 @@ impl LeafletClient {
         for url in urls {
             let response = self.http.get(url).send().await.map_err(transport)?;
             let text = bounded_text(response, "GET action asset", MAX_ASSET, &mut remaining).await?;
-            references.extend(mint_references(&text));
+            references.extend(action_references(&text, name));
             if references.len() > 1 {
-                return Err(Error::Native("ambiguous publication mint action reference"));
+                return Err(Error::Native("ambiguous native action reference"));
             }
         }
         if references.len() != 1 {
-            return Err(Error::Native("current publication mint action reference unavailable; no standalone fallback"));
+            return Err(Error::Native("current native action reference unavailable; no fallback"));
         }
         Ok(references.into_iter().next().expect("one reference"))
     }
 }
 
+#[cfg(test)]
 pub(crate) fn mint_references(text: &str) -> BTreeSet<String> {
+    action_references(text, "createPublicationDraft")
+}
+
+fn action_references(text: &str, name: &str) -> BTreeSet<String> {
     // Observed 2026-11-09 on the actual dashboard's same-origin client chunk.
     // Pin the function/export pairing, not a deployment's generated hash.
-    let pattern = Regex::new(r#"createServerReference\)\(\s*"([0-9a-f]{40,42})"\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*)\.callServer\s*,\s*void 0\s*,\s*[A-Za-z_$][A-Za-z0-9_$]*\.findSourceMapURL\s*,\s*"createPublicationDraft"\s*\)"#).expect("static regex");
+    let pattern = Regex::new(&format!(r#"createServerReference\)\(\s*"([0-9a-f]{{40,42}})"\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*)\.callServer\s*,\s*void 0\s*,\s*[A-Za-z_$][A-Za-z0-9_$]*\.findSourceMapURL\s*,\s*"{}"\s*\)"#, regex::escape(name))).expect("escaped regex");
     pattern.captures_iter(text).map(|c| c[1].to_owned()).collect()
 }
 
@@ -96,6 +105,16 @@ pub(crate) async fn bounded_text(mut response: reqwest::Response, operation: &'s
 /// Decode just the action return slot, either literal or a single promise row.
 /// Unrelated render payloads are not interpreted as mint results.
 pub(crate) fn mint_result(body: &str) -> Result<Option<uuid::Uuid>, Error> {
+    match action_result(body)? {
+        Value::Null => Ok(None),
+        Value::String(token) => uuid::Uuid::parse_str(&token)
+            .map(Some)
+            .map_err(|_| Error::Native("action returned invalid permission token")),
+        _ => Err(Error::Native("unsupported action result")),
+    }
+}
+
+pub(crate) fn action_result(body: &str) -> Result<Value, Error> {
     if body.len() > 1024 * 1024 {
         return Err(Error::Native("action response size limit"));
     }
@@ -132,11 +151,5 @@ pub(crate) fn mint_result(body: &str) -> Result<Option<uuid::Uuid>, Error> {
         let row = rows.get(reference).ok_or(Error::Native("action result promise unresolved"))?;
         result = serde_json::from_str(row).map_err(|_| Error::Native("action result failed or unsupported"))?;
     }
-    match result {
-        Value::Null => Ok(None),
-        Value::String(token) => uuid::Uuid::parse_str(&token)
-            .map(Some)
-            .map_err(|_| Error::Native("action returned invalid permission token")),
-        _ => Err(Error::Native("unsupported action result")),
-    }
+    Ok(result)
 }

@@ -1,0 +1,3 @@
+:HL["/_next/static/publish.css","style"]
+0:{"a":"$@1","f":["unrelated render payload"]}
+1:{"success":true,"rkey":"post","uri":"at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post","record":{"$type":"site.standard.document","title":"Fixture","site":"https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx","path":"/post","publishedAt":"2026-10-01T10:00:00.000Z","theme":{"$type":"pub.leaflet.publication#theme","showPageBackground":true},"content":{"$type":"pub.leaflet.content","pages":[{"$type":"pub.leaflet.pages.linearDocument","id":"native-page","blocks":[]}]}},"firstPublish":true,"blocks":0}

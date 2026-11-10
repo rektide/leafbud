@@ -53,6 +53,11 @@ pub fn parse_home(html: &str) -> Result<Discovery, Error> {
     let slice = enclosing_object(&stream, "permission_token_on_homepage").ok_or(Error::NoHomePayload)?;
     let identity: HomeIdentity = serde_json::from_str(slice).map_err(|_| Error::Home("invalid identity/row arrays"))?;
     let profile = identity.bsky_profiles;
+    if let (Some(auth), Some(profile)) = (&identity.atp_did, profile.as_ref().and_then(|p| p.did.as_ref()))
+        && auth != profile
+    {
+        return Err(Error::Home("authenticated/profile DID mismatch"));
+    }
     let mut leaflets: Vec<DiscoveredLeaflet> = Vec::new();
     let mut index = HashMap::new();
     for (rows, contributor) in [(identity.permission_token_on_homepage, false), (identity.contributor_leaflets, true)] {

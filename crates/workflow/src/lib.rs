@@ -14,6 +14,7 @@ pub mod list;
 mod lock;
 pub mod names;
 pub mod native;
+pub mod publication;
 mod published;
 pub mod pull;
 pub mod push;
