@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c29df03ffeKTX7z5IHA3nup5"
+    title: "Added explicit naming patch authority, independent witness preservation through native observation, and guarded recoverable file moves"
+  - resource: /design/naming0.gpt61s.md
+    title: "0.20 naming mapping, filesystem ordering and executable proof"
   - resource: "opencode://ses_e3c420e5affeLoQfS0oTd9wu5b"
     title: "Implemented parser-selected preparation, whole-flow author headers and block-anchored source comments; defined preservation/refusal contracts and executable evidence"
   - resource: /design/authoring-interface0.gpt6a.md
@@ -24,7 +28,7 @@ sources:
 
 # Managed MDX source fidelity
 
-Current contract: **Leafbud 0.19**, `leafbud-mdx/2`, draft lifecycle,
+Current contract: **Leafbud 0.20**, `leafbud-mdx/2`, draft lifecycle,
 `leaflet-editor/3` receipts. [Usage](/README.md) and
 [executable content/operation coverage](coverage.md) are companion homes.
 This is a bounded source adapter, not an arbitrary YAML setter or lossless MDX CST.
@@ -37,6 +41,7 @@ This is a bounded source adapter, not an arbitrary YAML setter or lossless MDX C
 | `tidy --markdown` | Selected rich block spans, after checked Markdown rendering | Keys, Page boundaries, comments, header and semantic meaning |
 | `edit` | Selected title/description/tags/explicit publication date | Exact body; unrelated author fields, state, historical attempt hashes and receipts |
 | `keys rename` | One current label, its actual references and current node-map key | Native IDs, binding, writer sequence, receipts and historical provenance |
+| Naming tidy | Explicit author `path` and independent accepted file/path pair; guarded file move when selected | Exact body/comment bytes; other author fields, native identity/associations, writer, sync and historical resolution provenance |
 | Tracking settlement | Reserved `@leafbud` state after verification | Author fields and exact body; established binding and monotonic writer reservations |
 | First-binding default preparation | Explicit verified publication; omitted native theme/contributors | Prose and explicit author choices; original dispatched pushes are never reinterpreted |
 | Pull/watch/remote recovery adoption | Changed editor-owned metadata/body and verified state | Local-only author fields, matched labels, UUID/binding; comments under the rule below |
@@ -73,6 +78,44 @@ Description clear means exactly absent/null/empty string, never trimmed nonempty
 whitespace. Explicit tag replacement preserves order/duplicates; empty tags write
 `[]`. Date-only changes remain local intent. An unchanged operation returns exact
 bytes and the workflow does not replace the file.
+
+## Independent local names
+
+The optional compact witness is separate from editor `sync`, writer/pending state
+and `lastResolution`:
+
+```yaml
+names:
+  file: notes/Éssay.mdx
+  path: {kind: value, value: /notes/Éssay}
+```
+
+This is inside `@leafbud`. A missing author `path` uses `{kind: missing}`;
+explicit null uses `{kind: "null"}` (the kind is a string, not YAML null).
+The serializer quotes discriminator values, avoiding YAML null interpretation.
+No acceptance timestamp is needed, no body is copied and no history is appended.
+Witness file coordinates are validated; unknown fields/kinds or unsafe stored file
+coordinates refuse managed mutation instead of supplying false direction evidence.
+Author path strings may intentionally be unmappable: `--accept` can witness that
+mismatch without enacting it. An invalid non-string/non-null author path refuses
+naming, not ordinary unrelated field preservation.
+
+`mdx::patch_names` has explicit authority to patch author `path` and `state.names`
+only. It shares the parser-backed selected-field source adapter with metadata
+edits, then proves the complete intended header/document and exact raw body.
+Unrelated author bytes remain exact, selected path comments survive and the
+tool-owned envelope may normalize. `patch_tracking` and `adopt_remote` cannot
+change the accepted names pair. Current remote observations carry it through
+unchanged; push/pull/watch neither infer a filename nor settle naming evidence.
+
+Workflow uses one shared classification for tidy/status/list, and the existing
+stable-UUID lock, full-selection duplicate inventory, canonical route/file identity
+and original-byte guards. The literal nested workspace mapping and explicit external
+operand boundary are in [usage](/README.md#deliberate-filenames-and-author-path-intent).
+Moves use actual no-replace rename followed by a guarded complete source/witness
+write. A second-phase error reports the new path as partial/unconfirmed, never
+deletes it or restores over a concurrent save. This is not atomic filesystem CAS.
+See [ordering and evidence](/design/naming0.gpt61s.md).
 
 ## Body comments: source-only, block-anchored
 

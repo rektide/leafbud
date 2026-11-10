@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c29df03ffeKTX7z5IHA3nup5"
+    title: "Version-0.20 independent filename/path witnesses, offline tidy directions, guarded no-clobber moves and read-only naming status; CLI/HTTP/Phoenix verification"
+  - resource: /design/naming0.gpt61s.md
+    title: "Naming mapping, source authority, recoverable move ordering and implementation evidence"
   - resource: "opencode://ses_e3c420e5affeLoQfS0oTd9wu5b"
     title: "Version-0.19 parser-selected preparation, flow-header authoring loop, anchored source comments and maintained executable fidelity coverage"
   - resource: /design/source-fidelity0.gpt61s.md
@@ -50,7 +54,7 @@ Status: **offline draft creation, one-time source-key preparation
 (`tidy --keys`), format-2 implicit-main-page MDX with flat lists,
 Markdown-first rich text with checked fallbacks, scoped read-only status,
 external-tool human diff, guarded pull, connected inbound `watch`, passive
-advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers and block-anchored source comments, version 0.19.0.** The accepted authoring interface
+advisory presence, cooperative writer locks, layered config, complete keyed native editor saves through public `push`, explicit terminal `recover`, offline metadata `edit`, identity-preserving `keys rename`, local `list`, whole-flow YAML headers, block-anchored source comments and independent filename/path reconciliation, version 0.20.0.** The accepted authoring interface
 ([`design/authoring-interface0.gpt6a.md`](design/authoring-interface0.gpt6a.md))
 settles root CLI verbs (`create`/`check`/`list`/`status`/`diff`/
 `push`/`pull`/`publish`/`import`/`edit`/`tidy`/`export`, plus connected `watch`,
@@ -64,8 +68,8 @@ destination shape. Implemented versus pending:
 | `leafbud-atproto` — retained identity resolution, XRPC, app-password sessions; `leafbud-records` — pinned record types/validation/helpers | public release/publishing workflow |
 | `leafbud-protocol` + native web/workflow — actual native mutation vocabulary, bounded immutable requests, both mint contexts, writer-group acknowledgments, explicit known-entity reads, compact attempts, guarded first-binding default preparation, selected-locator recovery and deliberate terminal accept-current/replan | original lost publication-mint attribution; general repair of incomplete/unsupported partial graphs |
 | `leafbud-web` — cookie-authenticated discovery, metadata and full editor pull; origin-bound cookie-free realtime bootstrap, managed Phoenix joins/heartbeat/reconnect and passive presence; `leafbud-editor` — raw-fact scanning and complete keyed create/update/place/detach compiler, loaded Yrs text/marks/break editing and selected supported-block recreation | canvas, nested/task lists, interactive/other unsupported editor content; whole-body recreation |
-| `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, tracking-only settlement separate from remote-content adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | naming tidy passes; nested/task lists |
-| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, selected-field `edit`, `keys rename`, `list --state/--json`, preparation-aware `check`, read-only `status [FILE...] --offline/--json`, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, `recover FILE [--take remote\|local] [--yes] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--dry-run/--json`, Figment2 config show/set and shared workspace root | `publish`, `export`, `pubs`, `auth` commands; `diff --edge names/release`; `tidy --from/--accept` naming selectors (rejected honestly until built) |
+| `leafbud-document` + `leafbud-mdx` — format-2 (`leafbud-mdx/2`) current-document model with implicit main pages, optional binding/receipts, tri-state publication intent, independent naming pairs and typed block/page occurrence locators; real Satteri/YAML parse accepting new/retired keys, flat lists, one-time key preparation with proof, explicit naming patches separate from tracking settlement and remote adoption, loss-checked Markdown-first writer with block-local exact fallback, parser-derived Markdown tidy planning | nested/task lists |
+| `leafbud-workflow` + CLI — `remote list/show`, draft `import`, offline `create FILE --title [--standalone|--publication URI]`, selected-field `edit`, `keys rename`, `list --state/--json`, preparation-aware `check`, read-only `status [FILE...] --offline/--json` with independent names, `diff FILE --edge editor` via configured external tool, preview-first complete `push FILE.../--all [--yes] [--take local] [--recreate KEY] [--json]`, `recover FILE [--take remote\|local] [--yes] [--json]`, guarded `pull`, connected `watch FILE.../--all` with rescan/backstop/JSONL and optional presence, cooperative stable-ID locks, `tidy FILE.../--all` with `--keys/--markdown/--from filename\|path/--accept/--dry-run/--json`, Figment2 config show/set and shared workspace root | `publish`, `export`, `pubs`, `auth` commands; `diff --edge names/release`; native custom public-path mutation |
 
 The pre-reset stage-5 client (cookie web surface, JSON/sidecar
 publish+sync lifecycle, append authoring, hand-rolled Yjs codec) was
@@ -826,16 +830,65 @@ exactly or nothing is written.
 spans only (frontmatter bytes, comments outside replaced spans, Key markers
 and Page boundaries are preserved; supported standalone comments remain exact,
 while inline/orphan comments and unknown components fail loudly), inserted syntax
-keeps the file's line-ending convention, BOM/CRLF files work, witnesses and
-stale receipts are never touched (formatting never accepts local edits), a
-second tidy writes nothing, and writes are atomic under the original-byte
+keeps the file's line-ending convention, BOM/CRLF files work, editor
+receipts are never advanced (formatting never accepts local edits), a
+second tidy writes nothing, and source replacements use the original-byte
 guard. Plans bind the original source bytes and prove unchanged comment anchors
 as well as content. `--all` selects the workspace's managed files; unmanaged files are
 ignored. `--keys` assigns missing durable source identities (see
-[authoring](#local-authoring-create-check-and-key-preparation)); `--from`
-and `--accept` (naming reconciliation) are not implemented yet and are
-rejected with exit 1 instead of half-running. Exit codes: 0 success/no-op,
-1 all failed, 4 mixed batches (2 usage).
+[authoring](#local-authoring-create-check-and-key-preparation)). No selectors
+means all implemented passes, including naming below; selectors choose their
+union. A naming decision blocks that item's entire composed rewrite, not its
+neighbors. Exit codes: 0 success/no-op, 1 operational failure, 2 usage,
+3 naming choice/unsupported mapping, 4 mixed or partial execution.
+
+### Deliberate filenames and author path intent
+
+```sh
+cargo run -p leafbud -- tidy drafts/essay.mdx --from filename # path becomes /drafts/essay
+cargo run -p leafbud -- tidy drafts/essay.mdx --from path --dry-run --json
+cargo run -p leafbud -- tidy drafts/essay.mdx --accept        # accept a present mismatch
+cargo run -p leafbud -- tidy drafts/essay.mdx --keys --from path
+cargo run -p leafbud -- status --offline --json
+```
+
+`--from path` makes the actual filename follow existing author `path` intent;
+`--from filename` changes only that author field and the independent naming pair.
+`--accept` records the actual pair without changing path or body. `--from` and
+`--accept` are exclusive. These commands need no credentials or network and work
+on local-only and bound drafts. No ordinary push/pull/watch renames or accepts names.
+UUID, native binding/node IDs, writer, pending provenance and editor receipts are
+not derived from filenames; accepting names cannot clear editor or release drift.
+Pending/future owned state still blocks managed mutation.
+
+Mapping is literal and reversible: logical `/notes/Éssay` ↔ workspace-relative
+`notes/Éssay.mdx`. Nested directories participate; case/Unicode are not slugified
+or normalized; one final lowercase `.mdx` is added/removed (`x.mdx.mdx` ↔ `/x.mdx`).
+Empty/traversal segments, backslashes, percent encodings, controls and `:?#` refuse.
+The leading slash is a logical root, not an OS absolute destination. Destination
+directories must already exist inside the workspace and cannot be symlinks.
+No collision is overwritten, including identical copies and dangling symlinks.
+External operands retain key/Markdown passes; naming requires a workspace coordinate.
+
+Optional `@leafbud.names` records only accepted `file` and tagged author `path`
+presence (missing/null/value). Status/list report current equal, untracked,
+unassigned, accepted-mismatch, file-changed, path-changed, both-changed or converged
+evidence without settling it. Default tidy follows only an unambiguous one-sided
+change, settles equal/converged pairs, leaves accepted mismatches alone and never
+invents a path for an unassigned draft. Otherwise choose `--from` or `--accept`.
+Unsupported logical intent can be accepted as a mismatch, not enacted as a move.
+Local `path` does **not** reserve or change a native public route/record identity.
+
+Moves use Linux no-replace rename **before** writing the prepared witness/source
+at the new path. This is recoverable ordering, not atomic multi-file CAS. If the
+second phase fails, the report names the destination and exits 4: inspect it and
+rerun tidy there. It may contain original, completely patched or externally edited
+source; no rollback deletes the good copy. Cross-device moves and unsupported
+no-replace platforms refuse. Dry runs validate/report real proposed paths/pairs
+but write no source, rename or witness. Details and evidence:
+[naming receipt](design/naming0.gpt61s.md), [source contract](doc/mdx/README.md).
+
+### Earlier Markdown-only evidence
 
 A read-only `tidy --all --markdown --dry-run` over the (then-format-1) live
 27-file workspace predicted 26 files normalizable (281 blocks) and 0

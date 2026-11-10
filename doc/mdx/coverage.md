@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3c29df03ffeKTX7z5IHA3nup5"
+    title: "Added independent local names, real CLI offline/HTTP no-effect proofs, move interruption and late-race fixtures, and watcher rescan preserving naming/comment/native evidence"
+  - resource: /design/naming0.gpt61s.md
+    title: "0.20 mapping and recovery policy with exact naming evidence"
   - resource: "opencode://ses_e3c420e5affeLoQfS0oTd9wu5b"
     title: "Inspected pinned native inventory and production mappings, extended negative native/resource fixtures, and linked current operation evidence without equating parser acceptance to writable coverage"
   - resource: https://github.com/hyperlink-academy/leaflet/blob/600c7b5f1f7b31b66fb626c293cc104312a12caf/src/replicache/attributes.ts
@@ -26,7 +30,7 @@ sources:
 
 # Executable content and operation fidelity coverage
 
-Scope: **0.19 current draft authoring**, not all Leaflet content or every
+Scope: **0.20 current draft authoring**, not all Leaflet content or every
 cross-product of kinds and operations. [Source ownership](README.md) is the
 source-shape contract; [project usage](/README.md) advertises only this bounded
 profile. Maintain this account when a capability or named fixture changes.
@@ -68,7 +72,9 @@ passing source validation is never shorthand for all columns.
 | Title, description, ordered tags | Offline selected edit; native metadata save/readback in actual context. Exactly absent/null/empty description clears; whitespace stays meaningful. Standalone tag changes refuse where native storage is unavailable. | C3, M1, W1, W2; [description fixtures](/crates/workflow/src/native/description_tests.rs) |
 | Publication association | Tri-state local intent; verified explicit association after binding; ordinary retarget/inherit of a bound document refuses | M1, [default/retarget tests](/crates/workflow/src/native/defaults_tests.rs) |
 | Watermark theme, contributors | Only watermark theme modeled. First bind adopts omitted verified defaults, keeps explicit choices and records empty contributor arrays. Contributor changes without a supported native operation refuse before push. | C3, M1 |
-| Publication date, path/delivery, custom author values | Local-only author fields survive. Date edits validate an offset; editor hashes exclude them. Filename/path reconciliation and release effects are not implemented. | [author tests](/crates/document/mdx/src/author_tests.rs), C5, R1 |
+| Publication date, path/delivery, custom author values | Local-only author fields survive. Date edits validate an offset; editor hashes exclude them. Release effects/native custom path mutation remain unimplemented. | [author tests](/crates/document/mdx/src/author_tests.rs), C5, R1 |
+| Independent filename/author path intent | Offline explicit directions/acceptance; literal nested workspace mapping, missing/null/string witnesses and shared read-only classification; no native retarget or receipt settlement | N1, N2, N3, L2 |
+| Naming filesystem transaction | Stable-ID lock and all explicit operands in late duplicate checks; no-clobber Linux rename before guarded witness/source write; source bytes/inode/route/target races and interruption produce preserved or partial destination outcomes | N2, N3, L2; [primitive guard](/crates/workflow/src/files.rs): `no_replace_rename_primitive_never_overwrites_even_identical_bytes_or_links` |
 | Block/whole-flow headers; comments, quoted keys, BOM/CRLF/Unicode | Selected edits/preparation/defaults/tracking/adoption with full-output proof; no whole-header author normalization | C3, P2, [source/author tests](/crates/document/mdx/src/source.rs) |
 | Image resources | Native `local` payload fields refuse; read source/fallback is not an upload. Writer requires HTTP(S) source/fallback. `file:`, `data:` fallbacks and Markdown image syntax are not writable managed inputs. No download/cache/upload/export promise. | O2, U1; [source preflight](/crates/leaflet/editor/src/write.rs) |
 | UUID, current/retired node rows, manual aliases | New keys are new identity; retained native locators ignore spelling. Preparation cannot borrow confirmed/retired identities; drops detach rather than delete. | P2, C2, C5, W2, R2 |
@@ -164,6 +170,10 @@ Node harness, not nextest. Keep test names and these explanations aligned.
 | C5 | [CLI author](/crates/cli/tests/author.rs): `edit_flags_dates_tags_clear_noops_and_keys_are_offline`, `list_reads_config_root_without_locks_or_auth_and_reports_partial_failures` |
 | C6 | [CLI remote](/crates/cli/tests/remote.rs): `uncommissioned_commands_remain_unimplemented_and_usage_is_two` |
 | L1 | [Phoenix/HTTP watch](/crates/workflow/src/watch/tests.rs): `actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identity`, `source_save_during_await_is_preserved_and_cancellation_releases_writer_lock`, `refresh_preserves_raw_future_pending_and_owned_state_without_network` |
+| N1 | [Pure author tests](/crates/document/mdx/src/author_tests.rs): `naming_authority_flow_comments_presence_and_exact_body_proof`, `naming_future_owned_state_refuses_instead_of_dropping_unknown_evidence` — block/flow headers, selected comments, BOM/CRLF/body equality, explicit authority and unknown/invalid witness refusal |
+| N2 | [Naming workflow tests](/crates/workflow/src/tidy/tests.rs): `names_pair_classification_direction_acceptance_and_repeat_noop`, `names_missing_null_equal_external_and_selectors_are_independent`, `names_mapping_nested_unicode_extension_and_unsafe_intent`, `names_dry_run_composes_keys_reports_path_and_preserves_body_state`, `names_no_clobber_symlinks_aliases_and_batch_destination_conflicts`, `names_late_source_identity_route_target_and_duplicate_guards`, `names_interruption_after_move_retains_good_source_and_retry_settles_truth`, `names_after_move_external_source_save_wins_over_witness_patch`, `names_readonly_status_and_list_do_not_accept_or_clear_dirty_editor` |
+| N3 | [Offline CLI](/crates/cli/tests/author.rs): `offline_naming_directions_preview_selectors_status_and_noop` — intentionally bad credential/origin environment; [CLI/HTTP](/crates/cli/tests/push.rs): `confirmed_naming_is_content_noop_push_and_never_settles_editor_drift` — bound IDs/receipts/writer retained, status does not settle name drift, repeat push/pull bytes/mtime and no native push; names acceptance leaves dirty editor dirty |
+| L2 | [Phoenix/HTTP watch](/crates/workflow/src/watch/tests.rs): `rescan_follows_explicit_identity_rename_blocks_duplicates_and_never_recreates_removed_path` now uses actual naming tidy, then remote adoption at the new path retaining UUID/binding, accepted names and comment anchor; no new watcher framework or deployed-edit claim |
 | Y1 | [Actual Yjs harness](/crates/leaflet/editor/tests/text-interop.mjs), [production-output producer](/crates/leaflet/editor/examples/text-write.rs), [received seven-group receipt](/design/keyed-save0.gpt61s.md) |
 
 Safety is operation-wide, not repeated as a fake per-kind certification:
