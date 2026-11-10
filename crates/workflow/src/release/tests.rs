@@ -23,6 +23,43 @@ fn data() -> (Document, Value) {
     let document = projection::from_record(&record, &original).unwrap().document;
     (document, record)
 }
+
+#[tokio::test]
+async fn explicit_content_verification_does_not_upgrade_reported_status_or_create_receipt() {
+    let (document, record) = data();
+    let (_server, current, reader) = serving(record.clone()).await;
+    let uri = document.state.binding.as_ref().unwrap().uri.as_deref().unwrap();
+    // The older reported-CID fixture is syntactically valid but deliberately
+    // not the record hash. Status remains honest; the stronger API refuses it.
+    assert!(matches!(
+        reader.fetch_content_verified(uri).await,
+        Err(ContentFetchError::Content(leafbud_atproto::content::Error::DigestMismatch))
+    ));
+    assert_eq!(
+        observe(&document, Some(&reader), false).await.cid_evidence,
+        "PDS-reported-CID; syntax-validated, not rehashed"
+    );
+    let cid = leafbud_atproto::content::record_content_cid(&record).unwrap();
+    current.write().unwrap().1["cid"] = json!(cid);
+    let verified = reader.fetch_content_verified(uri).await.unwrap();
+    assert_eq!(verified.record().value, record);
+    assert_eq!(verified.content().cid(), cid);
+    assert!(verified.content().dag_cbor_bytes() > 0);
+    assert!(document.state.released.is_none());
+    current.write().unwrap().1.as_object_mut().unwrap().remove("cid");
+    assert!(matches!(reader.fetch_content_verified(uri).await, Err(ContentFetchError::MissingCid)));
+    current.write().unwrap().1["cid"] = json!("malformed");
+    assert!(matches!(
+        reader.fetch_content_verified(uri).await,
+        Err(ContentFetchError::Fetch(FetchError::Mismatch))
+    ));
+    current.write().unwrap().0 = 404;
+    current.write().unwrap().1 = json!({"error":"RecordNotFound"});
+    assert!(matches!(
+        reader.fetch_content_verified(uri).await,
+        Err(ContentFetchError::Fetch(FetchError::Missing))
+    ));
+}
 fn confirmed(document: &mut Document) {
     document.state.released = Some(Released {
         profile: RELEASE_PROFILE.into(),

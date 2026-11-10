@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{Error, RawRecord, validate_nsid, validate_rkey};
+mod json;
 
 /// An app-password session (`com.atproto.server.createSession` /
 /// `refreshSession`). JWTs are secrets: `Debug` shows only the identity,
@@ -168,7 +169,7 @@ impl XrpcClient {
                 status: status.as_u16(),
             });
         }
-        serde_json::from_str(&text).map_err(|e| Error::Decode(method.into(), e))
+        json::parse(&text).map_err(|e| Error::Decode(method.into(), e))
     }
 
     /// `com.atproto.server.createSession` with an app password.

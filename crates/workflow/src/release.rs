@@ -57,6 +57,16 @@ impl PublicReader {
         Ok(record)
     }
 
+    /// Separate stronger acquisition for future publication settlement. Ordinary
+    /// status/diff intentionally retain their reported/syntax-only evidence.
+    /// Still NOT authorship, time, repo-signature, semantic/linkage or delivery proof.
+    pub async fn fetch_content_verified(&self, uri: &str) -> std::result::Result<ContentVerifiedRecord, ContentFetchError> {
+        let record = self.fetch(uri).await.map_err(ContentFetchError::Fetch)?;
+        let cid = record.cid.as_deref().ok_or(ContentFetchError::MissingCid)?;
+        let content = leafbud_atproto::content::verify_record_content(&record.value, cid).map_err(ContentFetchError::Content)?;
+        Ok(ContentVerifiedRecord { record, content })
+    }
+
     pub async fn comparison(&self, document: &Document) -> Result<(Projection, Projection)> {
         let binding = document.state.binding.as_ref().context("public binding missing")?;
         let uri = binding.uri.as_deref().context("document is not published")?;
@@ -70,6 +80,29 @@ impl PublicReader {
         // read-only comparison may show it without accepting either endpoint.
         Ok((projection::working(document)?, projection::from_record(&record.value, document)?))
     }
+}
+
+/// The record cannot be mutated independently of its content-address witness.
+pub struct ContentVerifiedRecord {
+    record: Record,
+    content: leafbud_atproto::content::VerifiedContent,
+}
+impl ContentVerifiedRecord {
+    pub fn record(&self) -> &Record {
+        &self.record
+    }
+    pub fn content(&self) -> &leafbud_atproto::content::VerifiedContent {
+        &self.content
+    }
+}
+#[derive(Debug, thiserror::Error)]
+pub enum ContentFetchError {
+    #[error("public acquisition failed: {0:?}")]
+    Fetch(FetchError),
+    #[error("public endpoint returned no record CID")]
+    MissingCid,
+    #[error("record content addressing: {0}")]
+    Content(leafbud_atproto::content::Error),
 }
 
 #[derive(Debug)]

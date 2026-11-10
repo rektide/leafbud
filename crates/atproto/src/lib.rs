@@ -54,6 +54,7 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 use thiserror::Error;
 
+pub mod content;
 pub mod dns;
 pub mod identity;
 pub mod session;

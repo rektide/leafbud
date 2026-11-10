@@ -1,0 +1,15 @@
+{
+  "name": "leafbud-publication-verification-oracle",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:cid": "node cid.mjs"
+  },
+  "dependencies": {
+    "@atproto/api": "0.16.9",
+    "@ipld/dag-cbor": "10.0.2",
+    "multiformats": "14.0.5",
+    "typescript": "7.0.2",
+    "yjs": "13.6.15"
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "unicode-length-first-key-order",
+    "record_json": "{\"zz\":1,\"a\":\"🦋 café\",\"é\":\"雪\",\"$type\":\"example.test.record\",\"aa\":false}",
+    "dag_cbor_hex": "a561616af09fa68b20636166c3a9626161f4627a7a0162c3a963e99baa652474797065736578616d706c652e746573742e7265636f7264",
+    "cid": "bafyreie7rieyasmylhgdudxoivcsq2n2kmc5edrmbz5lqounep5czylnwe"
+  },
+  {
+    "name": "cid-tag42-bytes-plain-strongref",
+    "record_json": "{\"$type\":\"example.test.record\",\"link\":{\"$link\":\"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\"},\"bytes\":{\"$bytes\":\"AP/+\"},\"ref\":{\"cid\":\"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"uri\":\"at://did:plc:abc/example.test.record/r\"},\"empty\":{\"$bytes\":\"\"}}",
+    "dag_cbor_hex": "a563726566a263636964783b626166797265696864776463656667683464716b6a763637757a636d77376f6a6565367865647a6465746f6a757a6a657674656e78717576796b7563757269782661743a2f2f6469643a706c633a6162632f6578616d706c652e746573742e7265636f72642f72646c696e6bd82a58250001711220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855652474797065736578616d706c652e746573742e7265636f72646562797465734300fffe65656d70747940",
+    "cid": "bafyreif5ou7xw2phqh4hy2yzafwpcwd6aukhi7z2bxin6vneyqztbmmwpq"
+  },
+  {
+    "name": "signed-integer-boundaries",
+    "record_json": "{\"$type\":\"example.test.record\",\"values\":[-9223372036854775808,9223372036854775807,-9007199254740991,9007199254740991,-25,-24,-1,0,23,24,255,256,65535,65536,4294967295,4294967296]}",
+    "dag_cbor_hex": "a2652474797065736578616d706c652e746573742e7265636f72646676616c756573903b7fffffffffffffff1b7fffffffffffffff3b001ffffffffffffe1b001fffffffffffff381837200017181818ff19010019ffff1a000100001affffffff1b0000000100000000",
+    "cid": "bafyreibki2zmbf5rdt7vevckmzgomqb2lp3ywgj7f5ef3gxq63prbpjhlm"
+  },
+  {
+    "name": "nested-null-false-empty",
+    "record_json": "{\"$type\":\"example.test.record\",\"n\":null,\"f\":false,\"s\":\"\",\"a\":[{},[],true,{\"longer\":0,\"z\":null}]}",
+    "dag_cbor_hex": "a5616184a080f5a2617af6666c6f6e676572006166f4616ef6617360652474797065736578616d706c652e746573742e7265636f7264",
+    "cid": "bafyreibod6ww74bmikx2j62kbicqxjumeak7zwu5rgou4xko273fg72ry4"
+  }
+]
