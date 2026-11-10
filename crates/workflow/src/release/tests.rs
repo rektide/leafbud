@@ -57,6 +57,11 @@ async fn independent_release_matrix_unknown_baseline_input_output_both_convergen
     let (mut document, record) = data();
     let (_server, current, reader) = serving(record.clone()).await;
     let evidence = observe(&document, Some(&reader), false).await;
+    assert_eq!(evidence.endpoint_scope, "explicit-endpoint");
+    assert_eq!(
+        evidence.uri.as_deref(),
+        Some("at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post")
+    );
     assert_eq!(
         (evidence.state, evidence.baseline, evidence.endpoints_equal),
         ("equal-untracked", "unknown-imported", Some(true))
@@ -92,6 +97,25 @@ async fn independent_release_matrix_unknown_baseline_input_output_both_convergen
     let mut changed = document.clone();
     changed.state.released.as_mut().unwrap().profile = "future/2".into();
     assert!(leafbud_mdx::render(&changed).is_err());
+    let mut header = leafbud_mdx::header(&source).unwrap();
+    header["@leafbud"]["released"]["futureEvidence"] = json!({"must":"survive"});
+    let future = format!(
+        "---\n{}\n---\n{}",
+        serde_json::to_string(&header).unwrap(),
+        source.split_once("\n---\n").unwrap().1
+    );
+    assert!(leafbud_mdx::parse(&future).is_err());
+    assert!(leafbud_mdx::patch_tracking(&future, &document.state).is_err());
+    assert!(
+        leafbud_mdx::edit_metadata(
+            &future,
+            &leafbud_mdx::MetadataEdit {
+                title: Some("must refuse".into()),
+                ..Default::default()
+            }
+        )
+        .is_err()
+    );
 }
 
 #[tokio::test]
@@ -118,6 +142,11 @@ async fn missing_unavailable_mismatched_unsupported_and_not_requested_evidence_s
     current.write().unwrap().1["uri"] = json!("at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post");
     current.write().unwrap().1["value"]["site"] = json!("https://wrong.example");
     assert_eq!(observe(&document, Some(&reader), false).await.state, "linkage-mismatch");
+    let (input, output) = reader.comparison(&document).await.unwrap();
+    assert_ne!(
+        input.value, output.value,
+        "same-URI site drift remains inspectable without accepting a new binding"
+    );
     current.write().unwrap().1["value"]["site"] = json!("https://leaflet.pub/p/did:plc:abcdefghijklmnopqrstuvwx");
     current.write().unwrap().1["value"]["futurePublicField"] = json!("must not disappear");
     current.write().unwrap().1["cid"] = json!(OTHER_CID);
@@ -163,4 +192,36 @@ async fn public_only_status_and_diff_use_fetched_current_markdown_without_native
     assert_eq!(std::fs::read(&path).unwrap(), original);
     assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), mtime);
     assert!(server.requests().iter().all(|request| request.path == "/xrpc/com.atproto.repo.getRecord"));
+}
+
+#[tokio::test]
+async fn public_read_local_source_race_never_reports_stale_clean_or_overwrites_new_source() {
+    let (mut document, record) = data();
+    confirmed(&mut document);
+    let temp = tempfile::tempdir().unwrap();
+    let context = support::context(temp.path());
+    let path = temp.path().join("post.mdx");
+    let original = leafbud_mdx::render(&document).unwrap();
+    std::fs::write(&path, &original).unwrap();
+    let saved = original.replace("Public title", "Saved concurrently");
+    let expected = saved.clone();
+    let target = path.clone();
+    let server = TestServer::spawn(Arc::new(move |_| {
+        std::fs::write(&target, &saved).unwrap();
+        (
+            200,
+            json!({"uri":"at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.document/post","cid":CID,"value":record}).to_string(),
+        )
+    }))
+    .await;
+    let reader = PublicReader::with_endpoint(XrpcClient::new(&server.base_url).unwrap());
+    let report = crate::status::inspect_with_public(&context, crate::status::Request { files: vec![path.clone()] }, None, Some(&reader), false)
+        .await
+        .unwrap();
+    assert_eq!(report.items[0].outcome, "raced");
+    assert_eq!(report.items[0].release.state, "stale-local-source");
+    assert_eq!(report.items[0].release.input, Change::Unknown);
+    assert_eq!(report.items[0].release.endpoints_equal, None);
+    assert_eq!(report.items[0].release.observed_cid.as_deref(), Some(CID));
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), expected);
 }

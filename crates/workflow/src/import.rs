@@ -1,6 +1,6 @@
-//! Read native drafts into one current keyed MDX file per remote binding.
+//! Read native draft/published editors into one current keyed MDX file per binding.
 //! No remote mutations and no raw-JSON siblings/snapshots. Reimport is guarded:
-//! equal observations are no-ops, differing files are preserved for explicit pull.
+//! equal observations are no-ops and reimports reuse guarded pull/conflict policy.
 use crate::{RemoteReader, config};
 use anyhow::{Context, Result, bail, ensure};
 use leafbud_document::{Binding, Document, EDITOR_PROFILE, FORMAT, Node, Publication, State, Sync};

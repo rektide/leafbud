@@ -249,7 +249,18 @@ impl RemoteReader {
         if std::fs::read(path).ok().as_deref() != Some(original.as_slice()) {
             return decision(Outcome::SourceChanged, "local file changed during pull/refresh; not overwritten");
         }
-        if outcome == Outcome::Unchanged || policy.dry_run {
+        if outcome == Outcome::Unchanged {
+            return Ok((outcome, None));
+        }
+        // Preview proves the real pure source patch as well, including lost
+        // comment anchors and explicit lifecycle/independent-receipt authority.
+        let next = if existing.state.state != observed.merged.state.state {
+            leafbud_mdx::adopt_published(&source, &observed.merged)
+        } else {
+            leafbud_mdx::adopt_remote(&source, &observed.merged)
+        }
+        .context("composing guarded refresh")?;
+        if policy.dry_run {
             return Ok((outcome, None));
         }
         let verified = self.client.get(binding.token).await.context("re-verifying remote identity")?;
@@ -267,12 +278,6 @@ impl RemoteReader {
             return decision(Outcome::Ambiguous, &format!("{error:#}"));
         }
         validate_public_selection(context, path, &observed.merged, policy)?;
-        let next = if existing.state.state != observed.merged.state.state {
-            leafbud_mdx::adopt_published(&source, &observed.merged)
-        } else {
-            leafbud_mdx::adopt_remote(&source, &observed.merged)
-        }
-        .context("composing guarded refresh")?;
         if next.as_bytes() != original.as_slice() {
             crate::files::write(path, Some(&original), next.as_bytes()).context("local file changed during pull; not overwritten")?;
         }

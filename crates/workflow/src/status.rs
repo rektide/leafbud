@@ -1,4 +1,4 @@
-//! Read-only status of selected current files and their bound draft editors.
+//! Read-only, independently scoped editor, naming and public release evidence.
 //! Observation never accepts correspondence or writes receipts, even on convergence.
 use crate::{
     RemoteReader, config,
@@ -204,7 +204,7 @@ async fn inspect_file(
         item.outcome = "raced";
         item.detail = "local file changed during public observation; rerun status; no files were written";
         item.local = Change::Unknown;
-        item.release.freshness = "stale-local-source";
+        item.release.source_raced();
         item.names = None;
         return item;
     }
@@ -323,7 +323,9 @@ async fn inspect_file(
             item.detail = match error.kind {
                 "missing" => "native object is missing or inaccessible; this does not prove deletion; local file remains",
                 "identity-changed" => "remote identity, rights, placement or publication association differs; no rebinding inferred",
-                "unsupported" => "remote lifecycle/content cannot be represented by this draft profile; conservative evidence retained when available",
+                "unsupported" => {
+                    "remote lifecycle/content requires an explicit adoption decision or supported mapping; conservative evidence retained when available"
+                }
                 _ => "remote read failed; freshness and change direction are unknown; no credentials or remote bodies included",
             };
             if let Some(hash) = &error.remote_hash {
@@ -343,7 +345,7 @@ async fn inspect_file(
         item.local = Change::Unknown;
         item.endpoints_equal = None;
         item.names = None;
-        item.release.freshness = "stale-local-source";
+        item.release.source_raced();
     }
     item
 }

@@ -84,6 +84,37 @@ fn published_build_uses_current_working_metadata_and_preserves_exact_public_iden
 }
 
 #[test]
+fn legacy_public_identity_still_adopts_current_native_content_without_claiming_release_projection() {
+    for publication in [false, true] {
+        let mut fixture = fixture(publication);
+        let link = link(&mut fixture, publication);
+        let uri = URI.replace("site.standard.document", "pub.leaflet.document");
+        link[if publication { "doc" } else { "document" }] = json!(uri);
+        link["documents"]["uri"] = json!(uri);
+        let record = link["documents"]["data"].as_object_mut().unwrap();
+        record.insert("$type".into(), json!("pub.leaflet.document"));
+        record.insert("author".into(), json!(OWNER));
+        record.remove("site");
+        record.remove("path");
+        let pages = record.remove("content").unwrap()["pages"].clone();
+        record.insert("pages".into(), pages);
+        if publication {
+            record.insert("publication".into(), json!(PUBLICATION));
+        }
+        let document = import::build(
+            "https://leaflet.pub",
+            &support::data(&fixture),
+            &parse_pull(fixture["response"].clone()).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(document.state.binding.as_ref().unwrap().uri.as_deref(), Some(uri.as_str()));
+        let source = leafbud_mdx::render(&document).unwrap();
+        assert!(source.contains("Current unreleased editor prose"));
+        assert!(leafbud_records::projection::working(&document).is_err());
+    }
+}
+
+#[test]
 fn published_linkage_missing_ambiguous_wrong_owner_and_working_metadata_refuse() {
     for publication in [false, true] {
         for case in 0..7 {
@@ -301,6 +332,21 @@ async fn exact_uri_discovery_import_all_and_duplicate_public_binding_are_guarded
         .unwrap();
     assert_eq!(report.failed, 1);
     assert_eq!(std::fs::read(path).unwrap(), original);
+    let listed = crate::list::inspect(
+        &context,
+        crate::list::Request {
+            state: Some(leafbud_web::LeafletState::Published),
+        },
+    )
+    .unwrap();
+    assert_eq!(listed.items.len(), 2);
+    assert!(
+        listed
+            .items
+            .iter()
+            .all(|item| item.valid && item.duplicate_binding && item.outcome == "ambiguous"),
+        "list supports published sources and independently detects URI copies across origins"
+    );
 }
 
 #[tokio::test]

@@ -175,10 +175,14 @@ fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory) -> I
     item.last_resolution = !state["lastResolution"].is_null();
     item.resolution_direction = text(&state["lastResolution"], "direction");
     item.duplicate_id = inventory.ids.values().any(|paths| paths.len() > 1 && paths.iter().any(|p| p == path));
-    item.duplicate_binding = inventory.index.values().any(|paths| paths.len() > 1 && paths.iter().any(|p| p == path));
+    item.duplicate_binding = inventory
+        .index
+        .values()
+        .chain(inventory.public.values())
+        .any(|paths| paths.len() > 1 && paths.iter().any(|p| p == path));
     let unsupported = header.get("@springleaf").is_some()
         || item.format.as_deref() != Some(leafbud_document::FORMAT)
-        || item.lifecycle.as_deref().is_some_and(|s| s != "draft")
+        || item.lifecycle.as_deref().is_some_and(|s| !matches!(s, "draft" | "published"))
         || item.receipt_profile.as_deref().is_some_and(|p| p != leafbud_document::EDITOR_PROFILE);
     if unsupported {
         item.outcome = "unsupported";
@@ -197,7 +201,7 @@ fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory) -> I
     if item.duplicate_id || item.duplicate_binding {
         item.outcome = "ambiguous";
         item.diagnostics
-            .push("duplicate local UUID or native binding in workspace (including files outside state filter)".into());
+            .push("duplicate local UUID, native binding or public URI in workspace (including files outside state filter)".into());
     }
     if std::fs::read(path).ok().as_deref() != Some(original.as_slice()) {
         item.outcome = "raced";

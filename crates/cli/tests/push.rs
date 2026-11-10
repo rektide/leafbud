@@ -185,6 +185,8 @@ async fn published_cli_import_edit_save_refresh_public_only_status_and_fetched_r
     let status: Value = serde_json::from_slice(&status.stdout).unwrap();
     assert_eq!(status["items"][0]["release"]["state"], "different-untracked");
     assert_eq!(status["items"][0]["release"]["baseline"], "unknown-imported");
+    assert_eq!(status["items"][0]["release"]["uri"], uri);
+    assert_eq!(status["items"][0]["release"]["endpoint_scope"], "explicit-endpoint");
     assert_eq!(status["items"][0]["remote"]["freshness"], "not-requested");
     let diff = public_cli(&[
         "diff",

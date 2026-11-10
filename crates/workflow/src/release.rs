@@ -64,7 +64,10 @@ impl PublicReader {
             .fetch(uri)
             .await
             .map_err(|error| anyhow::anyhow!("public read {}: no comparison produced", error.as_str()))?;
-        verify_linkage(document, &record)?;
+        // URI/type/CID acquisition still verifies the exact selected record.
+        // A changed supported site/publication field is useful diff content,
+        // not permission to rebind. Status reports that linkage mismatch;
+        // read-only comparison may show it without accepting either endpoint.
         Ok((projection::working(document)?, projection::from_record(&record.value, document)?))
     }
 }
@@ -88,6 +91,13 @@ impl FetchError {
 fn verify_linkage(document: &Document, record: &Record) -> Result<()> {
     let binding = document.state.binding.as_ref().context("binding unavailable")?;
     let uri = AtUri::parse(&record.uri)?;
+    if uri.collection == "pub.leaflet.document" {
+        ensure!(
+            record.value["author"] == uri.authority && record.value.get("publication").and_then(serde_json::Value::as_str) == binding.publication.as_deref(),
+            "legacy public author/publication differs from established native binding"
+        );
+        return Ok(());
+    }
     let site = binding
         .publication
         .clone()
@@ -98,6 +108,8 @@ fn verify_linkage(document: &Document, record: &Record) -> Result<()> {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Evidence {
+    pub uri: Option<String>,
+    pub endpoint_scope: &'static str,
     pub profile: &'static str,
     pub state: &'static str,
     pub baseline: &'static str,
@@ -116,6 +128,8 @@ pub struct Evidence {
 impl Default for Evidence {
     fn default() -> Self {
         Self {
+            uri: None,
+            endpoint_scope: "not-requested",
             profile: RELEASE_PROFILE,
             state: "unknown",
             baseline: "unknown",
@@ -133,12 +147,25 @@ impl Default for Evidence {
     }
 }
 
+impl Evidence {
+    pub(crate) fn source_raced(&mut self) {
+        self.state = "stale-local-source";
+        self.freshness = "stale-local-source";
+        self.baseline = "stale-source";
+        self.input = Change::Unknown;
+        self.output = Change::Unknown;
+        self.input_hash = None;
+        self.endpoints_equal = None;
+    }
+}
+
 pub async fn observe(document: &Document, public: Option<&PublicReader>, offline: bool) -> Evidence {
     let mut evidence = Evidence::default();
     if document.state.state != "published" {
         evidence.state = "not-published";
         return evidence;
     }
+    evidence.uri = document.state.binding.as_ref().and_then(|binding| binding.uri.clone());
     let baseline = document.state.released.as_ref();
     evidence.baseline = if baseline.is_some() { "confirmed-input-output" } else { "unknown-imported" };
     let input = projection::working(document);
@@ -157,6 +184,11 @@ pub async fn observe(document: &Document, public: Option<&PublicReader>, offline
             "unknown"
         };
         return evidence;
+    };
+    evidence.endpoint_scope = if public.endpoint.is_some() {
+        "explicit-endpoint"
+    } else {
+        "bound-owner-DID-resolution"
     };
     let Some(uri) = document.state.binding.as_ref().and_then(|binding| binding.uri.as_deref()) else {
         evidence.state = "binding-unavailable";

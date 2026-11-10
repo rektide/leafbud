@@ -362,7 +362,20 @@ impl State {
     pub fn validate_lifecycle(&self) -> Result<(), &'static str> {
         match (self.state.as_str(), self.binding.as_ref().and_then(|binding| binding.uri.as_deref())) {
             ("draft", None) => Ok(()),
-            ("published", Some(uri)) => validate_document_uri(uri),
+            ("published", Some(uri)) => {
+                validate_document_uri(uri)?;
+                if self.released.is_some()
+                    && jacquard_common::types::string::AtUri::new(uri)
+                        .map_err(|_| "invalid public URI")?
+                        .collection()
+                        .as_ref()
+                        .map(|collection| collection.as_str())
+                        != Some("site.standard.document")
+                {
+                    return Err("current release evidence profile does not support legacy document collections");
+                }
+                Ok(())
+            }
             ("draft", Some(_)) => Err("draft cannot carry a public document URI"),
             ("published", None) => Err("published requires an exact public identity and complete native editor binding; URI-only adoption is unavailable"),
             _ => Err("unsupported managed lifecycle"),

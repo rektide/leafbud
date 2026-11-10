@@ -17,8 +17,9 @@
 //! The old frontmatter → record builder (`build_record`), its social-cli
 //! frontmatter parser, the slug→rkey policy, and the markdown→blocks
 //! converter reset with the sidecar/JSON lifecycle: the accepted design
-//! replaces local record assembly with an MDX document model and a
-//! document-to-public projection that does not exist yet. Pre-reset code
+//! replaces local record assembly with an MDX document model. The bounded,
+//! read-only public-meaning mapping now lives in [`crate::projection`]; it is
+//! not a release-effect implementation or the retired builder. Pre-reset code
 //! is recoverable at revision `80436b61`.
 
 use jacquard_common::DefaultStr;

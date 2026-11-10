@@ -19,7 +19,7 @@ pub async fn run(
     let public = if offline {
         None
     } else {
-        Some(leafbud_workflow::release::PublicReader::new(context.effective.pds.as_deref())?)
+        Some(leafbud_workflow::release::PublicReader::new(flags.pds.as_deref())?)
     };
     let report = status::inspect_with_public(&context, request, remote.as_ref(), public.as_ref(), offline).await?;
     if json {

@@ -6,7 +6,7 @@ pub async fn run(options: RemoteOptions, root: Option<&Path>, flags: &config::Co
     let context = config::load(root, flags, None)?;
     let tool = Tool::from_config(&context.effective)?;
     let report = if release {
-        let public = leafbud_workflow::release::PublicReader::new(context.effective.pds.as_deref())?;
+        let public = leafbud_workflow::release::PublicReader::new(flags.pds.as_deref())?;
         public.diff_release(&context, file, &tool).await?
     } else {
         options.connect().await?.diff(&context, file, &tool).await?

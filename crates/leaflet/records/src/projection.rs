@@ -188,8 +188,8 @@ fn rich(value: &Value) -> Result<Vec<Inline>> {
                 ensure!(kind == "pub.leaflet.richtext.facet", "unsupported facet discriminator");
             }
             fields(&facet["index"], &["byteStart", "byteEnd"])?;
-            let start = facet["index"]["byteStart"].as_u64().context("invalid facet start")? as usize;
-            let end = facet["index"]["byteEnd"].as_u64().context("invalid facet end")? as usize;
+            let start = usize::try_from(facet["index"]["byteStart"].as_u64().context("invalid facet start")?)?;
+            let end = usize::try_from(facet["index"]["byteEnd"].as_u64().context("invalid facet end")?)?;
             ensure!(
                 start < end && end <= plaintext.len() && plaintext.is_char_boundary(start) && plaintext.is_char_boundary(end),
                 "facet is outside UTF-8 text boundaries"
