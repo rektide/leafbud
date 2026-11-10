@@ -29,6 +29,8 @@ struct Reader {
     spans: Vec<(u32, u32)>,
     /// Whether each block carried an explicit Key marker.
     keyed: Vec<bool>,
+    /// Source-only comments, attached to the following block in its container.
+    comments: Vec<(String, u32, u32)>,
     /// Next provisional suffix (`b-auto-N`), skipping supplied spellings.
     auto: usize,
 }
@@ -357,6 +359,29 @@ impl Reader {
         ensure!(props.is_empty() && self.arena.get_children(id).is_empty(), "invalid Key marker");
         Ok(key)
     }
+
+    fn comment(&self, id: u32) -> Result<Option<(u32, u32)>> {
+        if self.kind(id) != MdastNodeType::MdxFlowExpression {
+            return Ok(None);
+        }
+        let value = self.value(id).trim();
+        let comment = value.strip_prefix("/*").and_then(|v| v.strip_suffix("*/"));
+        ensure!(
+            comment.is_some_and(|v| !v.contains("*/")),
+            "only standalone {{/* comment */}} expressions are supported; expressions are never evaluated"
+        );
+        let node = self.arena.get_node(id);
+        Ok(Some((node.start_offset, node.end_offset)))
+    }
+
+    fn attach_comments(&mut self, pending: &mut Vec<(u32, u32)>, blocks: &[Block]) -> Result<()> {
+        if pending.is_empty() {
+            return Ok(());
+        }
+        let block = blocks.first().context("body comments require a following block in the same page")?;
+        self.comments.extend(pending.drain(..).map(|(start, end)| (block.key.clone(), start, end)));
+        Ok(())
+    }
     fn push_block(&mut self, id: u32, key: Option<String>) -> Result<Vec<Block>> {
         // A multi-item authored list expands to one keyed block per item: the
         // first item may carry an explicit Key marker, the rest are new.
@@ -393,15 +418,24 @@ impl Reader {
     fn blocks(&mut self, children: &[u32]) -> Result<Vec<Block>> {
         let mut blocks = vec![];
         let mut pending = None;
+        let mut comments = vec![];
         for &id in children {
-            if self.kind(id) == MdastNodeType::MdxJsxFlowElement && self.name(id) == "Key" {
+            if let Some(span) = self.comment(id)? {
+                comments.push(span);
+            } else if self.kind(id) == MdastNodeType::MdxJsxFlowElement && self.name(id) == "Key" {
                 ensure!(pending.is_none(), "duplicate Key marker");
                 pending = Some(self.key_marker(id)?);
             } else {
-                blocks.extend(self.push_block(id, pending.take())?);
+                let next = self.push_block(id, pending.take())?;
+                self.attach_comments(&mut comments, &next)?;
+                blocks.extend(next);
             }
         }
         ensure!(pending.is_none(), "orphan Key marker");
+        ensure!(
+            comments.is_empty(),
+            "body comments require a following block in the same page; trailing/orphan comments are unsupported"
+        );
         Ok(blocks)
     }
 }
@@ -414,6 +448,16 @@ pub struct BlockSpan {
     pub end: usize,
 }
 
+/// One source-only standalone MDX comment. It follows its block within this
+/// page on remote adoption; deletion or cross-page movement requires a local
+/// author decision. It never participates in native/desired fingerprints.
+#[derive(Clone, Debug)]
+pub struct BlockComment {
+    pub page: String,
+    pub block: String,
+    pub span: BlockSpan,
+}
+
 /// Parse result: the document plus per-block spans and which blocks carried
 /// explicit Key markers (document order: main page blocks, then each named
 /// page's blocks).
@@ -422,6 +466,7 @@ pub struct Parsed {
     pub document: Document,
     pub spans: Vec<BlockSpan>,
     pub keyed: Vec<bool>,
+    pub comments: Vec<BlockComment>,
 }
 
 impl Parsed {
@@ -452,6 +497,7 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
         reserved: BTreeSet::new(),
         spans: vec![],
         keyed: vec![],
+        comments: vec![],
         auto: 0,
     };
     let children = reader.arena.get_children(0).to_vec();
@@ -509,9 +555,14 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
     let mut main_span_indices: Vec<usize> = Vec::new();
     let mut definition_span_ranges: Vec<(usize, usize)> = Vec::new();
     let mut pending = None;
+    let mut comments = vec![];
     let mut definitions = Vec::new();
     for id in children.iter().skip(1) {
         if reader.kind(*id) == MdastNodeType::MdxJsxFlowElement && reader.name(*id) == "Page" {
+            ensure!(
+                comments.is_empty(),
+                "comments before Page definitions are ambiguous; place them before a block inside the page"
+            );
             ensure!(
                 pending.is_none(),
                 "orphan Key marker: top-level Keys bind main-page blocks, not Page definitions"
@@ -519,17 +570,25 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
             let spans_before = reader.spans.len();
             definitions.push(named_page(&mut reader, *id)?);
             definition_span_ranges.push((spans_before, reader.spans.len()));
+        } else if let Some(span) = reader.comment(*id)? {
+            comments.push(span);
         } else if reader.kind(*id) == MdastNodeType::MdxJsxFlowElement && reader.name(*id) == "Key" {
             ensure!(pending.is_none(), "duplicate Key marker");
             pending = Some(reader.key_marker(*id)?);
         } else {
             let key = pending.take();
             let spans_before = reader.spans.len();
-            main_blocks.extend(reader.push_block(*id, key)?);
+            let next = reader.push_block(*id, key)?;
+            reader.attach_comments(&mut comments, &next)?;
+            main_blocks.extend(next);
             main_span_indices.extend(spans_before..reader.spans.len());
         }
     }
     ensure!(pending.is_none(), "orphan Key marker");
+    ensure!(
+        comments.is_empty(),
+        "body comments require a following block in the same page; trailing/orphan comments are unsupported"
+    );
     let mut pages = vec![Page {
         key: main_key,
         blocks: main_blocks,
@@ -568,7 +627,33 @@ pub fn parse_with_spans(source: &str) -> Result<Parsed> {
         })
         .collect();
     let keyed = order.iter().map(|&index| reader.keyed[index]).collect();
-    Ok(Parsed { document, spans, keyed })
+    let comments = reader
+        .comments
+        .into_iter()
+        .map(|(block, start, end)| {
+            let page = document
+                .pages
+                .iter()
+                .find(|p| p.blocks.iter().any(|b| b.key == block))
+                .expect("attached block")
+                .key
+                .clone();
+            BlockComment {
+                page,
+                block,
+                span: BlockSpan {
+                    start: start as usize + bom,
+                    end: end as usize + bom,
+                },
+            }
+        })
+        .collect();
+    Ok(Parsed {
+        document,
+        spans,
+        keyed,
+        comments,
+    })
 }
 
 /// One explicit named page definition.
@@ -616,9 +701,11 @@ fn replace_attributes(source: &str, old: &str, new: &str, identities: bool) -> R
         reserved: BTreeSet::new(),
         spans: vec![],
         keyed: vec![],
+        comments: vec![],
         auto: 0,
     };
-    fn visit(reader: &Reader, id: u32, source: &str, bom: usize, old: &str, new: &str, identities: bool, edits: &mut Vec<super::TidyEdit>) -> Result<()> {
+    fn visit(reader: &Reader, id: u32, source: &str, bom: usize, replacement: (&str, &str), identities: bool, edits: &mut Vec<super::TidyEdit>) -> Result<()> {
+        let (old, new) = replacement;
         if reader.kind(id) == MdastNodeType::MdxJsxFlowElement {
             let prop = match reader.name(id) {
                 "Key" if identities => Some("id"),
@@ -639,7 +726,7 @@ fn replace_attributes(source: &str, old: &str, new: &str, identities: bool) -> R
             }
         }
         for &child in reader.arena.get_children(id) {
-            visit(reader, child, source, bom, old, new, identities, edits)?;
+            visit(reader, child, source, bom, replacement, identities, edits)?;
         }
         Ok(())
     }
@@ -649,8 +736,7 @@ fn replace_attributes(source: &str, old: &str, new: &str, identities: bool) -> R
         0,
         source,
         usize::from(source.starts_with('\u{feff}')) * 3,
-        old,
-        new,
+        (old, new),
         identities,
         &mut edits,
     )?;

@@ -315,7 +315,8 @@ pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<Str
 /// re-serialized only when page content actually changed. The result is
 /// verified to parse back to exactly `document`.
 pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
-    let existing = parse(source)?;
+    let parsed_source = super::parse_with_spans(source)?;
+    let existing = &parsed_source.document;
     ensure!(existing.format == document.format, "adoption cannot change the document format");
     ensure!(
         existing.state.id == document.state.id
@@ -361,7 +362,8 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
     let body = if existing.pages == document.pages {
         body
     } else {
-        super::render::verified_body(document, frontmatter)?
+        let body = super::render::verified_body(document, frontmatter)?;
+        retain_block_comments(source, &parsed_source.comments, document, frontmatter, &body)?
     };
     let result = frontmatter.to_owned() + &body;
     let parsed = parse(&result).context("source-preserving adoption validation")?;
@@ -370,4 +372,36 @@ pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
         "source-preserving adoption would lose content/associations"
     );
     Ok(result)
+}
+
+/// No historical body or generic diff: source-only trivia has one explicit
+/// block/page anchor. A vanished or cross-page anchor is a preserved refusal,
+/// including when a caller deliberately takes remote content.
+fn retain_block_comments(source: &str, comments: &[super::BlockComment], document: &Document, frontmatter: &str, body: &str) -> Result<String> {
+    if comments.is_empty() {
+        return Ok(body.to_owned());
+    }
+    let rendered = super::parse_with_spans(&(frontmatter.to_owned() + body))?;
+    let blocks: Vec<_> = document
+        .pages
+        .iter()
+        .flat_map(|page| page.blocks.iter().map(move |block| (&page.key, &block.key)))
+        .collect();
+    let newline = if source.contains("\r\n") { "\r\n" } else { "\n" };
+    let mut edits = vec![];
+    for comment in comments {
+        let index = blocks.iter().position(|(page, block)| **page == comment.page && **block == comment.block)
+            .with_context(|| format!("source comment anchor {:?} in page {:?} disappeared or moved pages; preserve source and explicitly move/remove that comment before adopting remote content", comment.block, comment.page))?;
+        let at = rendered.spans[index]
+            .start
+            .checked_sub(frontmatter.len())
+            .context("comment body coordinate invalid")?;
+        edits.push(super::TidyEdit {
+            start: at,
+            end: at,
+            text: format!("{}{newline}{newline}", &source[comment.span.start..comment.span.end]),
+        });
+    }
+    // Equal-position insertions retain authored comment order under descending splice.
+    super::source::splice(body, edits)
 }

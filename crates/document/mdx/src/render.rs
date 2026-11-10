@@ -589,6 +589,9 @@ pub(crate) fn metadata_value(document: &Document) -> Value {
 /// and Page boundaries are never touched.
 #[derive(Clone, Debug, Default)]
 pub struct TidyPlan {
+    /// Exact in-memory operand, never persisted. Applying stale coordinates
+    /// must not erase source-only trivia with equal semantic meaning.
+    pub source: String,
     pub edits: Vec<super::keys::TidyEdit>,
     pub blocks_examined: usize,
     pub blocks_changed: usize,
@@ -600,12 +603,15 @@ pub struct TidyPlan {
 /// Plan source-span Markdown normalization for a managed file. Only rich
 /// blocks whose Markdown-first candidate validates through the production
 /// parser are rewritten; everything else is reported, never approximated.
-/// Unparsable files (including body MDX comments/unknown components) are
-/// refused whole rather than partially rewritten.
+/// Standalone anchored comments are outside block spans and remain exact.
+/// Unsupported inline/orphan comments and unknown components refuse the file.
 pub fn plan_markdown_tidy(source: &str) -> Result<TidyPlan> {
     let parsed = super::parse::parse_with_spans(source)?;
     let document = &parsed.document;
-    let mut plan = TidyPlan::default();
+    let mut plan = TidyPlan {
+        source: source.to_owned(),
+        ..Default::default()
+    };
     let mut index = 0;
     for page in &document.pages {
         for block in &page.blocks {
@@ -649,15 +655,24 @@ pub fn plan_markdown_tidy(source: &str) -> Result<TidyPlan> {
 /// to parse back to exactly the same semantics, bindings and state. On any
 /// mismatch the original source is returned untouched by failing.
 pub fn apply_markdown_tidy(source: &str, plan: &TidyPlan) -> Result<String> {
-    let expected = parse(source)?;
-    let mut result = source.to_owned();
-    for TidyEdit { start, end, text } in plan.edits.iter().rev() {
-        result.replace_range(start..end, text);
-    }
-    let parsed = parse(&result).context("tidy validation")?;
+    ensure!(source == plan.source, "Markdown tidy input changed since planning; re-plan before applying");
+    let expected = super::parse_with_spans(source)?;
+    let result = super::source::splice(source, plan.edits.clone())?;
+    let parsed = super::parse_with_spans(&result).context("tidy validation")?;
     ensure!(
-        parsed.semantic_value() == expected.semantic_value() && parsed.state == expected.state,
+        parsed.document.semantic_value() == expected.document.semantic_value() && parsed.document.state == expected.document.state,
         "Markdown tidy would change content/associations"
+    );
+    let trivia = |parsed: &super::Parsed, bytes: &str| {
+        parsed
+            .comments
+            .iter()
+            .map(|c| (c.page.clone(), c.block.clone(), bytes[c.span.start..c.span.end].to_owned()))
+            .collect::<Vec<_>>()
+    };
+    ensure!(
+        trivia(&expected, source) == trivia(&parsed, &result),
+        "Markdown tidy would change source comments"
     );
     Ok(result)
 }

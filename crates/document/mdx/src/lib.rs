@@ -29,6 +29,8 @@ mod view;
 #[cfg(test)]
 mod author_tests;
 #[cfg(test)]
+mod comment_tests;
+#[cfg(test)]
 mod tests;
 
 use anyhow::Result;
@@ -37,7 +39,7 @@ use serde_json::Value;
 
 pub use author::{MetadataEdit, edit_metadata};
 pub use keys::{KeyPreparation, KeySource, TidyEdit, apply_key_preparation, prepare_keys};
-pub use parse::{BlockSpan, PROVISIONAL_MAIN_PAGE, Parsed, header, parse, parse_with_spans};
+pub use parse::{BlockComment, BlockSpan, PROVISIONAL_MAIN_PAGE, Parsed, header, parse, parse_with_spans};
 pub use patch::{adopt_remote, patch_tracking, prepare_binding_defaults};
 pub use rekey::rename_key;
 pub use render::{apply_markdown_tidy, plan_markdown_tidy, render};

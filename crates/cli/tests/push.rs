@@ -270,6 +270,82 @@ async fn whole_flow_header_edit_defaults_save_refresh_and_noop_keep_unknown_auth
 }
 
 #[tokio::test]
+async fn body_comment_workflow_preserves_trivia_and_refuses_deleted_anchor_even_take_remote() {
+    let (server, store) = server(false).await;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("doc.mdx");
+    assert!(
+        cli(&server.base_url, root.path(), &["create", "doc.mdx", "--title", "Title", "--standalone"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    let source = format!(
+        "{}\n{{/* author note 😀 */}}\n\n<Paragraph>\n\n<Run text={{\"Body\"}} marks={{[]}} />\n\n</Paragraph>\n\n***\n",
+        std::fs::read_to_string(&path).unwrap()
+    );
+    std::fs::write(&path, &source).unwrap();
+    let preview = invoke(&server.base_url, root.path(), &["tidy", "doc.mdx", "--dry-run", "--json"], 0).await;
+    assert_eq!(preview["normalized"], 1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    invoke(&server.base_url, root.path(), &["tidy", "doc.mdx", "--json"], 0).await;
+    assert!(std::fs::read_to_string(&path).unwrap().contains("{/* author note 😀 */}"));
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--json"], 0).await["items"][0]["outcome"],
+        "would-bind-and-save"
+    );
+    assert!(server.requests().is_empty());
+    invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await;
+    let saved = leafbud_mdx::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let key = &saved.pages[0].blocks[0].key;
+    assert!(
+        cli(&server.base_url, root.path(), &["keys", "rename", "doc.mdx", key, "intro"])
+            .output()
+            .await
+            .unwrap()
+            .status
+            .success()
+    );
+    // A local-only comment edit is not editor drift and must be an exact no-op save.
+    let source = std::fs::read_to_string(&path).unwrap().replace("author note", "revised note");
+    std::fs::write(&path, &source).unwrap();
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let pushes = store.lock().unwrap().pushes;
+    assert_eq!(
+        invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await["items"][0]["outcome"],
+        "unchanged"
+    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    let entity = saved.state.nodes[key].entity.clone();
+    for row in store.lock().unwrap().facts.values_mut() {
+        if row["entity"] == entity && row["attribute"] == "block/type" {
+            row["data"]["value"] = "horizontal-rule".into();
+        }
+    }
+    let pull = invoke(&server.base_url, root.path(), &["pull", "doc.mdx", "--json"], 0).await;
+    assert_eq!(pull["updated"], 1, "{pull}");
+    let source = std::fs::read_to_string(&path).unwrap();
+    assert!(source.contains("{/* revised note 😀 */}\n\n***"));
+    let adopted = leafbud_mdx::parse(&source).unwrap();
+    assert_eq!(adopted.state.nodes["intro"].entity, entity);
+    let placement = match &adopted.state.nodes["intro"].occurrence {
+        leafbud_document::Occurrence::Block { placement, .. } => placement.clone(),
+        _ => panic!("block"),
+    };
+    store.lock().unwrap().facts.remove(&placement);
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let refused = invoke(&server.base_url, root.path(), &["pull", "doc.mdx", "--take", "remote", "--json"], 1).await;
+    assert_eq!(refused["failed"], 1, "{refused}");
+    assert!(refused.to_string().contains("comment anchor"));
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+}
+
+#[tokio::test]
 async fn confirmed_key_rename_preserves_receipts_and_no_effect_push_and_metadata_classification() {
     let (server, store) = server(false).await;
     let root = tempfile::tempdir().unwrap();

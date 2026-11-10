@@ -285,9 +285,11 @@ async fn actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identi
     let mut doc = leafbud_mdx::parse(&source).unwrap();
     doc.state.id = Uuid::new_v4();
     let old = doc.pages[0].blocks[0].key.clone();
-    let source = leafbud_mdx::render(&doc)
+    let mut source = leafbud_mdx::render(&doc)
         .unwrap()
         .replacen("\n\"@leafbud\":", "\ncustom: {keep: [1, 2]}\n\"@leafbud\":", 1);
+    let at = leafbud_mdx::parse_with_spans(&source).unwrap().spans[0].start;
+    source.insert_str(at, "{/* local note 😀 */}\n\n");
     std::fs::write(&path, &source).unwrap();
     let reader = http.reader();
     let context = fixtures::context(temp.path());
@@ -316,6 +318,8 @@ async fn actual_poke_adopts_and_duplicate_is_exact_noop_preserving_author_identi
         let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
         let source = String::from_utf8(bytes.clone()).unwrap();
         assert!(source.contains("Durable remote edit") && source.contains("manual-key") && source.contains("custom: {keep: [1, 2]}"));
+        assert!(source.contains("{/* local note 😀 */}"));
+        assert_eq!(leafbud_mdx::parse_with_spans(&source).unwrap().comments[0].block, "manual-key");
         assert_eq!(leafbud_mdx::parse(&source).unwrap().state.id, doc.state.id);
         socket.poke();
         outcome(&mut events, refresh::Outcome::Unchanged).await;
