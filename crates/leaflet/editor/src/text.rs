@@ -9,6 +9,20 @@ use yrs::{Any, Doc, Map, Out, ReadTxn, Text, Transact, Update, Xml, XmlFragment,
 pub mod write;
 
 pub fn read(update: &str) -> Result<Vec<Inline>> {
+    let mut content = vec![];
+    for segment in read_segments(update)? {
+        match segment {
+            Inline::Run { text, marks } => push_run(&mut content, &text, &marks),
+            Inline::HardBreak => content.push(Inline::HardBreak),
+        }
+    }
+    Ok(content)
+}
+
+/// The same strict loaded-state reader, WITHOUT coalescing adjacent XmlText or
+/// delta runs. Native publication emits a facet for each marked delta of each
+/// active XmlText, even when normalized editor meaning would merge them.
+pub fn read_segments(update: &str) -> Result<Vec<Inline>> {
     let doc = Doc::new();
     doc.get_or_insert_xml_fragment("prosemirror");
     doc.transact_mut()
@@ -74,7 +88,13 @@ pub fn read(update: &str) -> Result<Vec<Inline>> {
                         };
                         marks.push(mark);
                     }
-                    push_run(&mut out, &value, &marks);
+                    marks.sort();
+                    if !value.is_empty() {
+                        out.push(Inline::Run {
+                            text: value.to_string(),
+                            marks,
+                        });
+                    }
                 }
             }
             XmlOut::Element(e) if e.tag().as_ref() == "hard_break" && e.len(&txn) == 0 && e.attributes(&txn).next().is_none() => out.push(Inline::HardBreak),

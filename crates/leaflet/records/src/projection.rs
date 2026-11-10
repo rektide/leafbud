@@ -203,6 +203,25 @@ fn encode_pages(source: &Document, page_id: impl Fn(&str) -> Result<String>) -> 
     Ok(pages)
 }
 
+/// JSON UTF-8 upper bound for THIS transient supported view, preserving its
+/// supplied inline segmentation. This alone is NOT evidence of native size:
+/// callers must supply actual active loaded/cumulative Yrs segments, validated
+/// facts and actual or bounded provisional UUID page IDs. Semantic runs alone
+/// can underestimate facets. Native optional absent code language can make this
+/// larger (we include language:""), never smaller. Key order is size-neutral.
+pub fn inline_pages_json_upper_bound(source: &Document) -> Result<usize> {
+    preflight(source)?;
+    let pages = encode_pages(source, |key| {
+        let node = source.state.nodes.get(key).context("size witness needs native/bounded page identity")?;
+        ensure!(matches!(node.occurrence, Occurrence::Page { .. }), "size witness page occurrence mismatch");
+        Ok(node.entity.clone())
+    })?;
+    // Supported JSON contains only strings, finite small integers, arrays and
+    // ordinary maps. serde_json matches JSON.stringify escaping/UTF-8 lengths:
+    // quotes, slash/backslash, C0 controls, BMP/non-BMP and U+2028/U+2029.
+    Ok(serde_json::to_vec(&pages)?.len())
+}
+
 fn feature(mark: &Mark) -> Result<Value> {
     let kind = match mark {
         Mark::Strong => "bold",

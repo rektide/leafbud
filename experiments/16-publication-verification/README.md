@@ -23,3 +23,17 @@ Integer-limit inputs use JS BigInt rather than rounded JSON.parse numbers.
 
 This directory contains only synthetic evidence. It does not load credentials or
 contact a PDS/Leaflet deployment. See the [verification receipt](/design/publication-verification0.gpt61s.md).
+
+`node native-size.mjs` additionally requires a clean archived Leaflet checkout at
+`600c7b5f1f7b31b66fb626c293cc104312a12caf` (default
+`~/archive/hyperlink-academy/leaflet`; override `LEAFLET_SOURCE`). It transpiles and
+executes actual source modules/declarations, recording eight source hashes; it
+does not copy their algorithms into a second publisher. Six fixed fixtures cover
+retained Yjs fragmentation, all supported marks/links, Unicode JSON escaping,
+lists/pages/hard breaks, ignored inactive text and exact native offload boundaries.
+Resource hooks throw; upload is only an in-memory threshold counter, never HTTP.
+`node native-size.mjs --write` deliberately regenerates the Rust fixture.
+
+TypeScript 6 supplies `transpileModule`; latest 7 no longer exports that API, so
+the harness deliberately uses 6. Existing native Yjs 13.6.15 baseline is pinned;
+the old ordinary-writer harness is not rerun by these scripts.

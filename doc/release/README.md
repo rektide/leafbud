@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
+    title: "Added separate canonical record-content verification and actual loaded/compiled native inline-size witness; retained all execution/cleanup/delivery boundaries"
+  - resource: /design/publication-verification0.gpt61s.md
+    title: "0.23 content-CID and native size proof derivation, independent fixtures and fresh execution receiving brief"
   - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
     title: "Added bounded native action/preflight foundation, exact standalone default-theme correction, and explicit hidden-effect/execution boundaries"
   - resource: /design/native-publication0.gpt61s.md
@@ -43,8 +47,16 @@ and path/date normalization, and rechecks source/duplicates/native metadata afte
 awaits. It writes nothing and is not exposed as root `publish`; `--yes` remains an
 honest unsupported-command refusal. No workflow invokes the effect adapter.
 
-Every preview retains execution/size-verification blockers. Publication context
-also blocks unavoidable native gated-image pruning, which has no suppression flag
+Every preview retains the execution blocker. **0.23 adds verification prerequisites,
+not execution:** a bound/online preview can replace the blanket size blocker with
+an actual loaded/compiled cumulative-native size witness. It retains XmlText/delta
+facet fragmentation, counts UTF-8 JSON overhead, and proves no offload only when
+the conservative bound is at most 102400 bytes. Saves/new UUID page IDs are explicitly
+conditional/provisional; unbound/offline previews remain size-unwitnessed. Native
+facts/metadata are rechecked after awaits, and future dispatch still requires fresh
+saved-state proof—not a semantic estimate or server-CAS claim.
+
+Publication-container context also blocks unavoidable native gated-image pruning, which has no suppression flag
 and cannot be ruled out from an image-free current source. Nonempty reply/schedule,
 unsupported inherited preferences/current output and incomplete authority evidence
 refuse or block. Native email is forced off; Bluesky sharing is a separate unused
@@ -183,8 +195,15 @@ mismatch, linkage mismatch, unsupported projection, offline and not-requested ar
 distinct. Source changes during reads mark stale evidence and preserve the file.
 Known missing public output is not permission to resurrect it.
 
-CID evidence is **PDS-reported and syntax/profile validated, not independently
-rehashed or signature verified**. Full supported current meaning is compared as
+Status/diff CID evidence remains **PDS-reported and syntax/profile validated, not
+independently rehashed or signature verified**. Separately,
+`atproto::content::verify_record_content` and
+`PublicReader::fetch_content_verified` verify actual canonical AT-data DAG-CBOR
+content against its reported CID, with typed data/profile/digest refusals. This
+stronger API is available for future settlement, not silently applied to old
+observations or used to create a receipt now. Rehash establishes content addressing
+only, not authorship, actor, time, repo signature or delivery.
+Full supported current meaning is compared as
 well; a claimed unchanged CID with inconsistent current meaning is not clean.
 Unknown future owned receipt fields/profiles refuse managed mutation, not drop.
 

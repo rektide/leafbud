@@ -8,6 +8,10 @@ updated:
   at: 2026-11-10
   by: model:openai/gpt-6.1-sol#high
 sources:
+  - resource: "opencode://ses_e3bb92bc4ffeN77oF8X2ayoH9a"
+    title: "Added independent canonical CID vectors, stronger-read/strict-JSON tests and pinned actual native segmentation/size/offload fixtures without publication execution"
+  - resource: /design/publication-verification0.gpt61s.md
+    title: "Verification proof, independent native harness and receiving limitations"
   - resource: "opencode://ses_e3bcb6540ffegZC39tN1E6wuTc"
     title: "Added 0.22 literal native action/preflight fixtures and exact default-theme coverage without claiming execution/delivery"
   - resource: /design/native-publication0.gpt61s.md
@@ -38,7 +42,7 @@ sources:
 
 # Executable content and operation fidelity coverage
 
-Scope: **0.22 native draft/published authoring, bounded public comparison and internal publication preflight**, not all Leaflet content or every
+Scope: **0.23 native draft/published authoring, bounded public comparison and internal publication verification/preflight**, not all Leaflet content or every
 cross-product of kinds and operations. [Source ownership](README.md) is the
 source-shape contract; [project usage](/README.md) advertises only this bounded
 profile. Maintain this account when a capability or named fixture changes.
@@ -139,14 +143,40 @@ remains unsupported, including `--yes`. In 0.22, eleven added pure/HTTP tests co
   refusal before remote reads, unsaved editor effects, future-date/path disclosure,
   preserved observed date, write-right/owner/linkage/inherited-field refusals and
   source/late-duplicate races. Publication gated-image pruning remains an explicit
-  blocker; unresolved native output-size/offload coverage is not called ready.
+   blocker; unsupported/unobserved native size is not called ready.
 - [Projection](/crates/leaflet/records/src/projection.rs): the exact pinned standalone
   default theme is equivalent to default absence; false and extra properties refuse.
 
-Gate: **368/368 regular tests**, six deployment skips, strict Clippy and formatting.
-No CID rehash, locked publication state machine, source release-patch authority,
+0.22 gate: **368/368 regular tests**, six deployment skips, strict Clippy and formatting.
+No locked publication state machine, source release-patch authority,
 deployed publication/update or delivery success is claimed. The
 [checkpoint](/design/native-publication0.gpt61s.md) owns the next fresh-session slice.
+
+### 0.23 verification prerequisites
+
+- [Content verifier](/crates/atproto/src/content/tests.rs): four independent JS
+  literal DAG-CBOR/CID vectors (Unicode, length-first map keys, tag42/bytes,
+  plain string strongRef and signed integer boundaries); digest mutation,
+  malformed special maps/base64/CID profiles and floats/out-of-range refusals.
+  [Strict XRPC JSON](/crates/atproto/src/xrpc/json.rs) rejects duplicate keys.
+- [Stronger public read](/crates/workflow/src/release/tests.rs): explicit verified
+  content acquisition, absent CID/digest mismatch versus existing fetch failures;
+  ordinary status remains reported-only and no receipt is created.
+- [Native size](/crates/workflow/src/publication/size/tests.rs): actual Yjs/native
+  serializer fixtures show 1600 retained same-mark fragments exceed threshold
+  despite a small semantic estimate; mixed Unicode/escapes/links/all supported
+  marks/lists/pages/hard breaks pass; inactive malformed text is ignored only when
+  native ignores it. Exact native JSON boundaries 102399/102400/102401, cumulative
+  compiled text/new blocks/pages/provisional UUID width, code transitions and
+  unsupported native non-text list wrapping are covered.
+- [Preview](/crates/workflow/src/publication/tests.rs) now proves a fresh fact
+  change after action discovery invalidates size readiness; no writes/effects.
+  Unbound/offline stays conditional; all hidden-effect/execution blockers remain.
+
+The [independent harness](/experiments/16-publication-verification/README.md)
+executes source from the clean pinned native revision, not a hand-ported publisher.
+The [verification receipt](/design/publication-verification0.gpt61s.md) owns the
+bound derivation and fresh execution join. No live proof or ticket completion.
 
 ## Explicit unsupported native inventory
 

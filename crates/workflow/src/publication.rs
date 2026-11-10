@@ -8,6 +8,7 @@ use leafbud_records::projection;
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::Path};
+pub mod size;
 
 /// A summary of actual native behavior, not an executable plan or authorization.
 #[derive(Debug, Serialize)]
@@ -18,6 +19,7 @@ pub struct Preview {
     pub native_pages_after_save: usize,
     pub editor: &'static str,
     pub editor_effects: BTreeMap<String, usize>,
+    pub inline_size: Option<size::Witness>,
     pub actor: Option<String>,
     pub owner: Option<String>,
     pub publication: Option<String>,
@@ -108,6 +110,7 @@ pub async fn preview(
             "not-observed"
         },
         editor_effects: BTreeMap::new(),
+        inline_size: None,
         actor: None,
         owner: None,
         publication,
@@ -123,10 +126,7 @@ pub async fn preview(
             "path revalidation",
             "publish analytics",
         ],
-        blockers: vec![
-            "execution/recovery and verified release patch authority are not implemented".into(),
-            "saved native output-size/offload coverage must be verified before dispatch (semantic body size alone is insufficient)".into(),
-        ],
+        blockers: vec!["execution/recovery and verified release patch authority are not implemented".into()],
     };
     if result.publication.is_some() {
         // This runs for EVERY publication, even an image-free update, and can
@@ -149,12 +149,16 @@ pub async fn preview(
         result
             .blockers
             .push("first binding/defaults/owner and actual saved native page identities require future guarded mint/save; none performed".into());
+        result
+            .blockers
+            .push("native inline size not witnessed before first binding; needs actual seed/compiled cumulative state, not semantic estimate".into());
         return Ok(result);
     };
     let Some(remote) = remote else {
         result
             .blockers
             .push("native identity/rights/owner, effect fields and action lookup not observed".into());
+        result.blockers.push("native inline size not witnessed offline".into());
         return Ok(result);
     };
     ensure!(
@@ -177,6 +181,18 @@ pub async fn preview(
         "native editor write rights not verified"
     );
     let compiled = native::compile_preview(&desired, &observed)?;
+    match size::compiled(&desired, &observed.snapshot.facts, &compiled) {
+        Ok(size) => {
+            if !size.no_offload_at_witness {
+                result.blockers.push(format!(
+                    "native pages JSON upper bound {} exceeds {} bytes; no inline/no-offload proof",
+                    size.pages_json_utf8_upper_bound, size.inline_threshold
+                ));
+            }
+            result.inline_size = Some(size);
+        }
+        Err(error) => result.blockers.push(format!("native inline-size profile unproven: {error:#}")),
+    }
     result.editor = if compiled.mutations.is_empty() {
         "saved-current-input"
     } else {
@@ -210,6 +226,12 @@ pub async fn preview(
     ensure!(
         confirmed?.raw == observed.data.raw,
         "native metadata/effect context changed during preview; rerun, no effect performed"
+    );
+    let confirmed = remote.client.pull(binding.token).await;
+    check()?;
+    ensure!(
+        crate::import::remote_hash(&observed.data, &confirmed?) == crate::import::remote_hash(&observed.data, &observed.snapshot),
+        "native facts changed during preview; size/input witness invalidated, no effect performed"
     );
     Ok(result)
 }

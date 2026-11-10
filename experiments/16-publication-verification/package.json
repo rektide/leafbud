@@ -3,13 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:cid": "node cid.mjs"
+    "test:cid": "node cid.mjs",
+    "test:native-size": "node native-size.mjs"
   },
   "dependencies": {
     "@atproto/api": "0.16.9",
     "@ipld/dag-cbor": "10.0.2",
+    "base64-js": "1.5.1",
     "multiformats": "14.0.5",
-    "typescript": "7.0.2",
+    "typescript": "^6.0.3",
     "yjs": "13.6.15"
   }
 }

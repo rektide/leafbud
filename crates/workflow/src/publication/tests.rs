@@ -85,6 +85,10 @@ async fn first_and_update_preview_normalization_no_file_or_effect_changes() {
             assert_eq!(report.path["kind"], if published { "fixed-by-existing-rkey" } else { "server-chosen-rkey" });
             assert_eq!(report.date["kind"], if published { "explicit" } else { "server-now-on-first-release" });
             assert!(report.blockers.iter().any(|s| s.contains("execution/recovery")));
+            let size = report.inline_size.as_ref().expect("actual native facts witnessed");
+            assert!(size.no_offload_at_witness);
+            assert_eq!(size.scope.contains("conditional-on-save"), report.editor == "save-required");
+            assert!(!report.blockers.iter().any(|s| s.contains("inline size") || s.contains("size profile")));
             assert_eq!(report.blockers.iter().any(|s| s.contains("prunes")), publication);
             assert_eq!(std::fs::read(&path).unwrap(), source.as_bytes());
             assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), before);
@@ -111,6 +115,8 @@ async fn unbound_new_structure_and_unsupported_body_preflight_before_remote_read
     assert!(report.keys_to_prepare >= 2);
     assert_eq!(report.native_pages_after_save, 1);
     assert_eq!(report.editor, "bind-and-save-required");
+    assert!(report.inline_size.is_none());
+    assert!(report.blockers.iter().any(|s| s.contains("inline size not witnessed")));
     assert_eq!(report.uri, None);
     assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
     let server = serving(fixture(false, false), OWNER, || {}).await;
@@ -142,7 +148,51 @@ async fn unsaved_content_reported_without_key_or_receipt_preparation() {
     assert_eq!(report.editor, "save-required");
     assert_eq!(report.keys_to_prepare, 1);
     assert!(!report.editor_effects.is_empty());
+    let size = report.inline_size.as_ref().unwrap();
+    assert!(size.no_offload_at_witness);
+    assert!(size.scope.contains("conditional-on-save"));
     assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+}
+
+#[tokio::test]
+async fn native_fact_race_after_size_proof_invalidates_preview_without_effects() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let root = tempfile::tempdir().unwrap();
+    let context = context(root.path());
+    let fixture = fixture(false, true);
+    let source_fixture = fixture.clone();
+    let pulls = Arc::new(AtomicUsize::new(0));
+    let count = pulls.clone();
+    let server = TestServer::spawn(Arc::new(move |r| {
+        (
+            200,
+            match r.path.as_str() {
+                "/api/rpc/get_leaflet_data" => json!({"result":{"error":null,"data":fixture["leaflet_data"]}}).to_string(),
+                "/api/rpc/pull" => {
+                    let mut response = fixture.clone();
+                    if count.fetch_add(1, Ordering::SeqCst) > 0 {
+                        support::set_paragraph_text(&mut response, &support::yrs_payload("Changed during action discovery", None));
+                    }
+                    response["response"].to_string()
+                }
+                "/home" => home(OWNER),
+                "/_next/static/publish.js" => include_str!("../../../leaflet/web/tests/fixtures/publish-reference.js").into(),
+                path if r.method == "GET" && path.ends_with("/publish") => "<script src=\"/_next/static/publish.js\"></script>".into(),
+                _ => panic!("publication preview attempted an effect"),
+            },
+        )
+    }))
+    .await;
+    let path = root.path().join("post.mdx");
+    let source = leafbud_mdx::render(&document(&source_fixture, &server.base_url)).unwrap();
+    std::fs::write(&path, &source).unwrap();
+    let before = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let remote = RemoteReader::new(LeafletClient::new(&server.base_url, Some("synthetic")).unwrap());
+    let error = preview(&context, &path, Default::default(), Some(&remote), now()).await.unwrap_err();
+    assert!(format!("{error:#}").contains("size/input witness invalidated"));
+    assert_eq!(pulls.load(Ordering::SeqCst), 2);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), before);
 }
 
 #[tokio::test]
@@ -211,6 +261,7 @@ fn explicit_future_dates_preservation_and_native_effect_blockers() {
         native_pages_after_save: 0,
         editor: "unknown",
         editor_effects: Default::default(),
+        inline_size: None,
         actor: None,
         owner: None,
         publication: Some(PUBLICATION.into()),

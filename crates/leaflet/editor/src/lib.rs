@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 mod text;
 pub use text::read as read_text;
+pub use text::read_segments as read_text_segments;
+pub use text::write::normalize as normalize_text;
 pub use text::write::write as write_text;
 
 pub mod write;
