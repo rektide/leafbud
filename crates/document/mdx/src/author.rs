@@ -59,15 +59,36 @@ pub fn edit_metadata(input: &str, edit: &MetadataEdit) -> Result<String> {
     if updates.is_empty() {
         return Ok(input.to_owned());
     }
+    let out = patch_fields(input, &updates)?;
+    for (name, value) in updates {
+        expected[name] = value;
+    }
+    ensure!(
+        super::header(&out)? == expected,
+        "metadata patch shape is unsupported; unrelated YAML would change; nothing was written"
+    );
+    let parsed = super::parse(&out).context("edited source failed validation; nothing was written")?;
+    ensure!(
+        parsed.state == existing.state && parsed.pages == existing.pages,
+        "metadata edit changed tracking or body meaning"
+    );
+    ensure!(
+        super::patch::split_managed(input)?.1 == super::patch::split_managed(&out)?.1,
+        "metadata edit changed body bytes"
+    );
+    Ok(out)
+}
+
+/// Source adapter only; callers own authority and exact full-output proof.
+pub(crate) fn patch_fields(input: &str, updates: &[(&str, Value)]) -> Result<String> {
     let positions = source::header(input)?;
     let mut edits = vec![];
     let mut inserts = String::new();
     for (name, value) in updates {
-        expected[name] = value.clone();
         if positions.flow_root() {
-            edits.extend(positions.flow_edit(name, Some(&value))?);
+            edits.extend(positions.flow_edit(name, Some(value))?);
         } else if positions.node.entry(name).is_some() {
-            edits.push(field_edit(input, &positions, name, &value)?);
+            edits.push(field_edit(input, &positions, name, value)?);
         } else {
             let newline = if input.starts_with("---\r\n") || input.starts_with("\u{feff}---\r\n") {
                 "\r\n"
@@ -90,21 +111,7 @@ pub fn edit_metadata(input: &str, edit: &MetadataEdit) -> Result<String> {
             text: inserts,
         });
     }
-    let out = source::splice(input, edits)?;
-    ensure!(
-        super::header(&out)? == expected,
-        "metadata patch shape is unsupported; unrelated YAML would change; nothing was written"
-    );
-    let parsed = super::parse(&out).context("edited source failed validation; nothing was written")?;
-    ensure!(
-        parsed.state == existing.state && parsed.pages == existing.pages,
-        "metadata edit changed tracking or body meaning"
-    );
-    ensure!(
-        super::patch::split_managed(input)?.1 == super::patch::split_managed(&out)?.1,
-        "metadata edit changed body bytes"
-    );
-    Ok(out)
+    source::splice(input, edits)
 }
 
 /// Rewrite only the selected entry in a block top-level mapping. Key and

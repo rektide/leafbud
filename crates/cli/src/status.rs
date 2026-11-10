@@ -41,12 +41,19 @@ pub async fn run(
                 item.baseline,
                 item.detail
             );
+            if let Some(names) = &item.names {
+                println!("  names: {} (file: {:?}; path: {:?})", names.disposition, names.file, names.path);
+                if let Some(limitation) = &names.limitation {
+                    println!("    {limitation}");
+                }
+                println!("    {}", names.native);
+            }
         }
         println!(
             "{} selected; {} failed; read-only (no files, receipts or remotes written)",
             report.selected, report.failed
         );
-        println!("Names: not tracked; release: unknown (not implemented); local-only metadata: not compared to editor");
+        println!("Release: unknown (not implemented); local-only metadata: not compared to editor");
     }
     Ok(if report.failed == 0 {
         ExitCode::SUCCESS

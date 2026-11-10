@@ -14,6 +14,15 @@ pub fn run(root: Option<&Path>, flags: &Config, request: Request, json: bool) ->
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
         for item in &report.items {
+            if let Some(destination) = &item.destination {
+                println!("{} -> {}", item.path.display(), destination.display());
+            }
+            if let Some(names) = &item.names {
+                println!("names: {} -> {} ({})", names.disposition, item.naming_action, names.native);
+            }
+            if let Some(pair) = &item.proposed_names {
+                println!("  selected pair: {:?} / {:?}", pair.file, pair.path);
+            }
             if let Some(error) = &item.error {
                 eprintln!("{}: {} ({})", item.path.display(), item.outcome, error);
             }
@@ -36,16 +45,20 @@ pub fn run(root: Option<&Path>, flags: &Config, request: Request, json: bool) ->
             );
         }
         println!(
-            "{} selected; {} normalized; {} unchanged; {} failed (pass: {})",
-            report.selected, report.normalized, report.unchanged, report.failed, report.pass
+            "{} selected; {} normalized; {} unchanged; {} failed; {} need choice (pass: {})",
+            report.selected, report.normalized, report.unchanged, report.failed, report.needs_choice, report.pass
         );
         if report.dry_run {
             println!("dry run: no files were written");
         }
     }
     let successes = report.normalized + report.unchanged;
-    Ok(if report.failed == 0 {
+    Ok(if report.items.iter().any(|item| item.outcome == "partial") {
+        ExitCode::from(4)
+    } else if report.failed == 0 && report.needs_choice == 0 {
         ExitCode::SUCCESS
+    } else if report.failed == 0 && successes == 0 {
+        ExitCode::from(3)
     } else if successes == 0 {
         ExitCode::FAILURE
     } else {

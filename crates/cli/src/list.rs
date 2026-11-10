@@ -36,6 +36,12 @@ pub fn run(root: Option<&Path>, flags: &Config, request: list::Request, json: bo
                 if item.pending { " [pending]" } else { "" },
                 if item.last_resolution { " [last resolution retained]" } else { "" }
             );
+            if let Some(names) = &item.names {
+                println!("  names: {} (file: {:?}; path: {:?})", names.disposition, names.file, names.path);
+                if let Some(limitation) = &names.limitation {
+                    println!("    {limitation}");
+                }
+            }
             for diagnostic in &item.diagnostics {
                 eprintln!("{}: {diagnostic}", item.path.display());
             }

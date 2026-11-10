@@ -225,6 +225,37 @@ pub struct State {
     /// Last deliberate terminal resolution; provenance, never a receipt or journal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_resolution: Option<Resolution>,
+    /// Accepted local file/path pair, independent of native/editor evidence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub names: Option<Names>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Names {
+    /// Workspace-relative, slash-separated coordinate, including `.mdx`.
+    pub file: String,
+    pub path: NamePath,
+}
+
+/// Preserve actual author-field presence, including missing versus null.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "camelCase", deny_unknown_fields)]
+pub enum NamePath {
+    Missing,
+    Null,
+    Value(String),
+}
+
+impl NamePath {
+    pub fn from_author(extra: &BTreeMap<String, Value>) -> Result<Self, &'static str> {
+        match extra.get("path") {
+            None => Ok(Self::Missing),
+            Some(Value::Null) => Ok(Self::Null),
+            Some(Value::String(value)) => Ok(Self::Value(value.clone())),
+            _ => Err("author path must be a string or null"),
+        }
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

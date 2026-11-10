@@ -316,16 +316,16 @@ enum Command {
         /// Tidy every managed file in the workspace
         #[arg(long)]
         all: bool,
-        /// Markdown body normalization only (the default without selectors)
+        /// Select Markdown body normalization
         #[arg(long)]
         markdown: bool,
-        /// Assign missing source identities only (not implemented yet)
+        /// Select missing source identity assignment
         #[arg(long)]
         keys: bool,
-        /// Naming: the filename follows the path intent (not implemented yet)
+        /// Naming: reconcile from the actual filename or author path intent
         #[arg(long, value_name = "FROM", conflicts_with = "accept")]
         from: Option<NameFrom>,
-        /// Naming: witness the present filename/path pair as intentional (not implemented yet)
+        /// Naming: witness the present filename/path pair as intentional
         #[arg(long)]
         accept: bool,
         /// Preview outcomes and edits without writing anything
@@ -739,16 +739,6 @@ async fn main() -> ExitCode {
         json,
     } = &cli.command
     {
-        // Honest rejection of the accepted-but-unimplemented selectors: this
-        // build assigns keys and normalizes Markdown bodies; naming
-        // reconciliation is still refused rather than half-run.
-        if from.is_some() || *accept {
-            eprintln!(
-                "leafbud: tidy --from/--accept (naming reconciliation) is not implemented yet; \
-                 this build assigns missing keys and normalizes Markdown bodies"
-            );
-            return ExitCode::FAILURE;
-        }
         return match tidy::run(
             cli.root.as_deref(),
             &flags,
@@ -758,6 +748,11 @@ async fn main() -> ExitCode {
                 dry_run: *dry_run,
                 keys: *keys,
                 markdown: *markdown,
+                from: from.map(|from| match from {
+                    NameFrom::Filename => leafbud_workflow::names::Direction::Filename,
+                    NameFrom::Path => leafbud_workflow::names::Direction::Path,
+                }),
+                accept: *accept,
             },
             *json,
         ) {

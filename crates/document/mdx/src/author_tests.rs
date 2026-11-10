@@ -8,6 +8,47 @@ fn input(body: &str) -> String {
 }
 
 #[test]
+fn naming_authority_flow_comments_presence_and_exact_body_proof() {
+    for source in [
+        input("\n{/* exact 😀 */}\n<Key id='b' />\nBody.\n").replacen("title: T", "path: '/old' # path comment\ntitle: T", 1),
+        "---\n{format: leafbud-mdx/2, path: '/old', # path comment\n title: T, unknown: {bytes: [\"{literal}\", 2]}, '@leafbud': {id: 00000000-0000-0000-0000-000000000000, state: draft, mainPage: main}}\n---\n\n{/* exact 😀 */}\n<Key id='b' />\nBody.\n".into(),
+    ] {
+        let source = format!("\u{feff}{}", source.replace('\n', "\r\n"));
+        let original = parse(&source).unwrap();
+        let pair = Names { file: "nested/Éssay.mdx".into(), path: NamePath::Value("/nested/Éssay".into()) };
+        let output = patch_names(&source, Some("/nested/Éssay"), &pair).unwrap();
+        assert!(output.starts_with("\u{feff}---\r\n"));
+        assert!(output.contains("# path comment"));
+        assert_eq!(patch::split_managed(&source).unwrap().1, patch::split_managed(&output).unwrap().1);
+        let mut after = parse(&output).unwrap();
+        after.state.names = original.state.names.clone();
+        after.extra.insert("path".into(), json!("/old"));
+        assert_eq!(after, original);
+        assert_eq!(patch_names(&output, Some("/nested/Éssay"), &pair).unwrap(), output);
+        assert!(patch_names(&source, None, &pair).is_err(), "cannot witness a noncurrent author value");
+        let mut state = original.state.clone();
+        state.names = Some(pair);
+        assert!(patch_tracking(&source, &state).is_err(), "ordinary settlement has no naming authority");
+    }
+}
+
+#[test]
+fn naming_future_owned_state_refuses_instead_of_dropping_unknown_evidence() {
+    for owned in [
+        "futureOwned: true",
+        "names: {file: x.mdx, path: {kind: missing}, futureCoordinate: unsafe}",
+        "names: {file: x.mdx, path: {kind: future, value: x}}",
+    ] {
+        let source = input("\nBody.\n").replacen("\"@leafbud\":\n", &format!("\"@leafbud\":\n  {owned}\n"), 1);
+        let pair = Names {
+            file: "x.mdx".into(),
+            path: NamePath::Missing,
+        };
+        assert!(patch_names(&source, None, &pair).is_err());
+    }
+}
+
+#[test]
 fn each_metadata_field_changes_only_its_header_value() {
     let source = input("\n<Key id='b' />\nbody\n");
     for (field, edit) in [

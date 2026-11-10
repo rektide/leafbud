@@ -642,6 +642,27 @@ async fn resolution_provenance_survives_tidy_and_future_unknown_resolution_is_ne
     .unwrap();
     assert_eq!(tidy.failed, 0);
     assert_eq!(read(&path).state.last_resolution, summary);
+    for (from, accept) in [(None, true), (Some(crate::names::Direction::Filename), false)] {
+        let before = read(&path).state;
+        let tidy = crate::tidy::run(
+            &context,
+            crate::tidy::Request {
+                files: vec![path.clone()],
+                from,
+                accept,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(tidy.failed, 0);
+        assert_eq!(tidy.needs_choice, 0);
+        let mut after = read(&path).state;
+        after.names = before.names.clone();
+        assert_eq!(
+            after, before,
+            "names do not rewrite original attempt/resolution, writer, binding or receipt evidence"
+        );
+    }
     let text = std::fs::read_to_string(&path).unwrap();
     let mut header = leafbud_mdx::header(&text).unwrap();
     header["@leafbud"]["lastResolution"]["futureEvidence"] = json!({"keep":"unknown future state"});
@@ -669,6 +690,7 @@ async fn resolution_provenance_survives_tidy_and_future_unknown_resolution_is_ne
             &context,
             crate::tidy::Request {
                 files: vec![path.clone()],
+                accept: true,
                 ..Default::default()
             }
         )

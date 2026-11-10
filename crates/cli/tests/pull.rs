@@ -289,10 +289,10 @@ async fn status_json_conflict_and_convergence_are_successful_read_only_reports()
     let output = cli(&server.base_url, root, &["status", "doc.mdx", "--json"]).output().await.unwrap();
     assert_eq!(output.status.code(), Some(0));
     let report: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!((report["version"].as_u64(), report["selected"].as_u64()), (Some(1), Some(1)));
+    assert_eq!((report["version"].as_u64(), report["selected"].as_u64()), (Some(2), Some(1)));
     assert_eq!(report["items"][0]["outcome"], "both-changed");
     assert_eq!(report["items"][0]["remote"]["freshness"], "current");
-    assert_eq!(report["names"], "not-tracked");
+    assert_eq!(report["items"][0]["names"]["disposition"], "unassigned");
     assert_eq!(report["release"], "unknown-not-implemented");
     set_paragraph_text(current.write().unwrap().get_mut(TOKEN).unwrap(), "My current edit");
     let output = cli(&server.base_url, root, &["status", "--json"]).output().await.unwrap();

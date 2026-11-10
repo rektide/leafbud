@@ -163,15 +163,18 @@ async fn create_builds_checkable_drafts_offline() {
 }
 
 #[tokio::test]
-async fn tidy_rejects_unimplemented_selectors_honestly() {
+async fn tidy_naming_selectors_execute_and_are_exclusive() {
     let root = workspace();
-    let before = doc(root.path());
     for args in [vec!["tidy", "drafts/doc.mdx", "--from", "filename"], vec!["tidy", "drafts/doc.mdx", "--accept"]] {
         let output = cli(root.path(), &args).output().await.unwrap();
-        assert_eq!(output.status.code(), Some(1), "{args:?} must fail");
-        assert!(String::from_utf8_lossy(&output.stderr).contains("not implemented"), "{args:?}");
+        assert_eq!(output.status.code(), Some(0), "{args:?}: {}", String::from_utf8_lossy(&output.stderr));
     }
-    assert_eq!(doc(root.path()), before, "rejected selectors never touch the file");
+    assert_eq!(leafbud_mdx::header(&doc(root.path())).unwrap()["path"], "/drafts/doc");
+    let output = cli(root.path(), &["tidy", "drafts/doc.mdx", "--from", "filename", "--accept"])
+        .output()
+        .await
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
 }
 
 #[tokio::test]

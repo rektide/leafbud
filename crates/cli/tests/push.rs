@@ -137,6 +137,71 @@ async fn complete_cli_both_contexts_preview_first_combined_revision_pull_and_unc
 }
 
 #[tokio::test]
+async fn confirmed_naming_is_content_noop_push_and_never_settles_editor_drift() {
+    let (server, store) = server(true).await;
+    let root = tempfile::tempdir().unwrap();
+    assert!(
+        cli(
+            &server.base_url,
+            root.path(),
+            &["--publication", store::URI, "create", "doc.mdx", "--title", "Names"]
+        )
+        .output()
+        .await
+        .unwrap()
+        .status
+        .success()
+    );
+    let file = root.path().join("doc.mdx");
+    let source = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(&file, format!("{source}\n{{/* name-independent comment */}}\nA saved paragraph.\n")).unwrap();
+    invoke(&server.base_url, root.path(), &["push", "doc.mdx", "--yes", "--json"], 0).await;
+    let before_source = std::fs::read_to_string(&file).unwrap();
+    let before = leafbud_mdx::parse(&before_source).unwrap();
+    let pushes = store.lock().unwrap().pushes;
+    // Only local author path and its witness change; no native route claim.
+    invoke(&server.base_url, root.path(), &["tidy", "doc.mdx", "--from", "filename", "--json"], 0).await;
+    let source = std::fs::read_to_string(&file).unwrap();
+    let source = source.replacen("\"path\": \"/doc\"", "\"path\": \"/renamed\"", 1);
+    std::fs::write(&file, &source).unwrap();
+    let status = invoke(&server.base_url, root.path(), &["status", "doc.mdx", "--json"], 0).await;
+    assert_eq!(status["items"][0]["outcome"], "clean");
+    assert_eq!(status["items"][0]["names"]["disposition"], "path-changed");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), source, "status does not accept names");
+    invoke(&server.base_url, root.path(), &["tidy", "doc.mdx", "--from", "path", "--json"], 0).await;
+    let moved = root.path().join("renamed.mdx");
+    assert!(!file.exists());
+    let bytes = std::fs::read(&moved).unwrap();
+    let modified = std::fs::metadata(&moved).unwrap().modified().unwrap();
+    let after = leafbud_mdx::parse(std::str::from_utf8(&bytes).unwrap()).unwrap();
+    assert_eq!(after.state.id, before.state.id);
+    assert_eq!(after.state.binding, before.state.binding);
+    assert_eq!(after.state.nodes, before.state.nodes);
+    assert_eq!(after.state.sync, before.state.sync);
+    assert_eq!(after.state.writer, before.state.writer);
+    for args in [vec!["push", "renamed.mdx", "--json"], vec!["push", "renamed.mdx", "--yes", "--json"]] {
+        let report = invoke(&server.base_url, root.path(), &args, 0).await;
+        assert_eq!(report["items"][0]["outcome"], "unchanged");
+    }
+    invoke(&server.base_url, root.path(), &["pull", "renamed.mdx", "--json"], 0).await;
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+    assert_eq!(std::fs::read(&moved).unwrap(), bytes);
+    assert_eq!(std::fs::metadata(&moved).unwrap().modified().unwrap(), modified);
+    // Naming acceptance cannot clear a real editor input change.
+    let dirty = std::str::from_utf8(&bytes).unwrap().replace("A saved paragraph.", "A local unsaved paragraph.");
+    std::fs::write(&moved, &dirty).unwrap();
+    invoke(&server.base_url, root.path(), &["tidy", "renamed.mdx", "--accept", "--json"], 0).await;
+    let status = invoke(&server.base_url, root.path(), &["status", "renamed.mdx", "--json"], 0).await;
+    assert_eq!(status["items"][0]["outcome"], "local-changed");
+    assert_eq!(status["items"][0]["names"]["disposition"], "equal");
+    assert_eq!(
+        leafbud_mdx::parse(&std::fs::read_to_string(&moved).unwrap()).unwrap().state.sync,
+        before.state.sync
+    );
+    assert_eq!(store.lock().unwrap().pushes, pushes);
+}
+
+#[tokio::test]
 async fn source_spellings_prepare_save_and_repeat_preserve_page_associations() {
     let (server, store) = server(false).await;
     let root = tempfile::tempdir().unwrap();

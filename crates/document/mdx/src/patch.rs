@@ -182,7 +182,7 @@ fn reassemble(source: &str, lines: &[String], body: &str) -> String {
 
 /// Regenerate the reserved `@leafbud` envelope in-place, preserving every
 /// other frontmatter line and the body bytes.
-fn replace_envelope(source: &str, state: &State) -> Result<String> {
+pub(crate) fn replace_envelope(source: &str, state: &State) -> Result<String> {
     if let Some(result) = super::source::patch_flow_root(source, "@leafbud", Some(&json!(state)))? {
         return Ok(result);
     }
@@ -208,6 +208,7 @@ fn replace_envelope(source: &str, state: &State) -> Result<String> {
 /// must be identical before and after, together with the exact body bytes.
 pub fn patch_tracking(source: &str, next: &State) -> Result<String> {
     let existing = parse(source)?;
+    ensure!(existing.state.names == next.names, "tracking settlement cannot accept naming changes");
     ensure!(existing.state.id == next.id, "tracking settlement cannot change document identity");
     ensure!(next.state == "draft", "unsupported lifecycle");
     if let Some(before) = &existing.state.writer {
@@ -317,6 +318,10 @@ pub fn prepare_binding_defaults(source: &str, verified: &Document) -> Result<Str
 pub fn adopt_remote(source: &str, document: &Document) -> Result<String> {
     let parsed_source = super::parse_with_spans(source)?;
     let existing = &parsed_source.document;
+    ensure!(
+        existing.state.names == document.state.names,
+        "remote adoption cannot accept local naming changes"
+    );
     ensure!(existing.format == document.format, "adoption cannot change the document format");
     ensure!(
         existing.state.id == document.state.id

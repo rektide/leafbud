@@ -25,6 +25,7 @@ pub struct Report {
 #[derive(Serialize)]
 pub struct Item {
     pub path: PathBuf,
+    pub names: Option<crate::names::Evidence>,
     pub outcome: &'static str,
     /// Parsed current supported document, not merely a readable header.
     pub valid: bool,
@@ -73,7 +74,7 @@ pub fn inspect(context: &config::Context, request: Request) -> Result<Report> {
     // All identities, origins and lifecycles participate BEFORE filtering.
     let inventory = inventory::scan(&root, None)?;
     let mut report = Report {
-        version: 1,
+        version: 2,
         workspace: root,
         examined: inventory.paths.len(),
         ignored_unmanaged: inventory.unmanaged,
@@ -82,7 +83,7 @@ pub fn inspect(context: &config::Context, request: Request) -> Result<Report> {
         items: vec![],
     };
     for path in &inventory.paths {
-        let item = inspect_file(path, &inventory);
+        let item = inspect_file(&report.workspace, path, &inventory);
         let state = request.state.map(|s| match s {
             LeafletState::Draft => "draft",
             LeafletState::Published => "published",
@@ -102,9 +103,10 @@ pub fn inspect(context: &config::Context, request: Request) -> Result<Report> {
     Ok(report)
 }
 
-fn inspect_file(path: &Path, inventory: &inventory::Inventory) -> Item {
+fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory) -> Item {
     let mut item = Item {
         path: path.into(),
+        names: None,
         outcome: "invalid",
         valid: false,
         title: None,
@@ -185,6 +187,7 @@ fn inspect_file(path: &Path, inventory: &inventory::Inventory) -> Item {
     } else {
         match leafbud_mdx::parse(source) {
             Ok(doc) => {
+                item.names = Some(crate::names::inspect(root, path, &doc));
                 item.valid = true;
                 item.outcome = if doc.state.binding.is_some() { "bound" } else { "unbound" };
             }
@@ -199,6 +202,7 @@ fn inspect_file(path: &Path, inventory: &inventory::Inventory) -> Item {
     if std::fs::read(path).ok().as_deref() != Some(original.as_slice()) {
         item.outcome = "raced";
         item.valid = false;
+        item.names = None;
         item.diagnostics.push("source changed while listing; rerun for current evidence".into());
     }
     item

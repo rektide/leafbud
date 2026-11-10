@@ -19,6 +19,7 @@
 //!   text block with list facts); task/nested lists are unsupported input.
 mod author;
 mod keys;
+mod names;
 mod parse;
 mod patch;
 mod rekey;
@@ -39,6 +40,7 @@ use serde_json::Value;
 
 pub use author::{MetadataEdit, edit_metadata};
 pub use keys::{KeyPreparation, KeySource, TidyEdit, apply_key_preparation, prepare_keys};
+pub use names::patch_names;
 pub use parse::{BlockComment, BlockSpan, PROVISIONAL_MAIN_PAGE, Parsed, header, parse, parse_with_spans};
 pub use patch::{adopt_remote, patch_tracking, prepare_binding_defaults};
 pub use rekey::rename_key;

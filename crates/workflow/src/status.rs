@@ -24,7 +24,6 @@ pub struct Report {
     pub selected: usize,
     pub failed: usize,
     pub ignored_unmanaged: usize,
-    pub names: &'static str,
     pub release: &'static str,
     pub items: Vec<Item>,
 }
@@ -32,6 +31,7 @@ pub struct Report {
 #[derive(Serialize)]
 pub struct Item {
     pub path: PathBuf,
+    pub names: Option<crate::names::Evidence>,
     pub outcome: &'static str,
     pub detail: &'static str,
     pub local: Change,
@@ -75,18 +75,17 @@ pub async fn inspect(context: &config::Context, request: Request, remote: Option
     }
     inventory.include_operands(&paths);
     let mut report = Report {
-        version: 1,
+        version: 2,
         workspace: root,
         offline: remote.is_none(),
         selected: paths.len(),
         failed: 0,
         ignored_unmanaged: inventory.unmanaged,
-        names: "not-tracked",
         release: "unknown-not-implemented",
         items: vec![],
     };
     for path in paths {
-        let item = inspect_file(&path, &inventory, remote).await;
+        let item = inspect_file(&report.workspace, &path, &inventory, remote).await;
         if matches!(item.outcome, "invalid" | "ambiguous" | "failed" | "local-missing" | "raced") {
             report.failed += 1;
         }
@@ -95,9 +94,10 @@ pub async fn inspect(context: &config::Context, request: Request, remote: Option
     Ok(report)
 }
 
-async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Option<&RemoteReader>) -> Item {
+async fn inspect_file(root: &Path, path: &Path, inventory: &inventory::Inventory, remote: Option<&RemoteReader>) -> Item {
     let mut item = Item {
         path: path.to_owned(),
+        names: None,
         outcome: "unknown",
         detail: "remote state is unknown; offline status never implies clean agreement",
         local: Change::Unknown,
@@ -164,6 +164,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         }
     };
     let existing = &parsed.document;
+    item.names = Some(crate::names::inspect(root, path, existing));
     item.document_id = Some(existing.state.id);
     item.needs_preparation = parsed.unkeyed().len() + usize::from(parsed.main_page_provisional());
     item.local = editor_state::local_change(existing);
@@ -310,6 +311,7 @@ async fn inspect_file(path: &Path, inventory: &inventory::Inventory, remote: Opt
         item.detail = "local file changed during observation; rerun status; no files were written";
         item.local = Change::Unknown;
         item.endpoints_equal = None;
+        item.names = None;
     }
     item
 }

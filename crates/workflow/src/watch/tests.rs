@@ -693,6 +693,13 @@ async fn rescan_follows_explicit_identity_rename_blocks_duplicates_and_never_rec
     let temp = tempfile::tempdir().unwrap();
     let path = http.seed(temp.path(), TOKEN, "doc.mdx");
     let renamed = temp.path().join("renamed.mdx");
+    let original = std::fs::read_to_string(&path).unwrap();
+    let source = original
+        .replacen("\"title\":", "path: /renamed\n\"title\":", 1)
+        .replacen("<Key ", "{/* filename-independent anchor */}\n<Key ", 1);
+    assert_ne!(source, original);
+    std::fs::write(&path, &source).unwrap();
+    let before = leafbud_mdx::parse(&source).unwrap();
     let duplicate = temp.path().join("copy.mdx");
     let reader = http.reader();
     let context = fixtures::context(temp.path());
@@ -713,7 +720,17 @@ async fn rescan_follows_explicit_identity_rename_blocks_duplicates_and_never_rec
     );
     let actions = async {
         outcome(&mut events, refresh::Outcome::Unchanged).await;
-        std::fs::rename(&path, &renamed).unwrap();
+        let tidy = crate::tidy::run(
+            &context,
+            crate::tidy::Request {
+                files: vec![path.clone()],
+                from: Some(crate::names::Direction::Path),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(tidy.normalized, 1, "{:?}", tidy.items[0].error);
+        let names = leafbud_mdx::parse(&std::fs::read_to_string(&renamed).unwrap()).unwrap().state.names;
         let report = outcome(&mut events, refresh::Outcome::Unchanged).await;
         assert_eq!(report.path, renamed);
         std::fs::copy(&renamed, &duplicate).unwrap();
@@ -725,6 +742,11 @@ async fn rescan_follows_explicit_identity_rename_blocks_duplicates_and_never_rec
         std::fs::remove_file(&duplicate).unwrap();
         outcome(&mut events, refresh::Outcome::Updated).await;
         assert!(std::fs::read_to_string(&renamed).unwrap().contains("Remote while duplicate exists"));
+        let adopted = leafbud_mdx::parse(&std::fs::read_to_string(&renamed).unwrap()).unwrap();
+        assert_eq!(adopted.state.id, before.state.id);
+        assert_eq!(adopted.state.binding, before.state.binding);
+        assert_eq!(adopted.state.names, names);
+        assert!(std::fs::read_to_string(&renamed).unwrap().contains("{/* filename-independent anchor */}"));
         std::fs::remove_file(&renamed).unwrap();
         outcome(&mut events, refresh::Outcome::SourceLost).await;
         socket.poke();

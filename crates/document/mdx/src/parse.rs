@@ -834,6 +834,7 @@ mod tests {
 
     fn bound_state() -> State {
         State {
+            names: None,
             last_resolution: None,
             writer: None,
             pending: None,

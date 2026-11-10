@@ -12,6 +12,7 @@ pub mod import;
 mod inventory;
 pub mod list;
 mod lock;
+pub mod names;
 pub mod native;
 pub mod pull;
 pub mod push;

@@ -672,7 +672,25 @@ async fn typed_pending_survives_status_pull_tidy_and_inspects_known_detached_ent
         .failed,
         1
     );
-    assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+    for (from, accept) in [
+        (None, true),
+        (Some(crate::names::Direction::Filename), false),
+        (Some(crate::names::Direction::Path), false),
+    ] {
+        let report = crate::tidy::run(
+            &context,
+            crate::tidy::Request {
+                files: vec![path.clone()],
+                from,
+                accept,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.failed, 1);
+        assert!(report.items[0].error.as_ref().unwrap().contains("pending"));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+    }
     *server.ack.lock().unwrap() = Some((client_id.to_string(), 0));
     assert_eq!(
         reader.recover_native(&context, &path, Selection::default(), true).await.unwrap().outcome,
