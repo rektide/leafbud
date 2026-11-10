@@ -442,10 +442,18 @@ current AGENTS and the operator's explicit decisions; do not relitigate them.
 
 ## 6. Private deployed objects and effect boundaries
 
-The user authorized **at most two new unpublished verification drafts**. Both
-creation slots are consumed. There is no new mint budget. Existing P1 and the
-standalone draft have been used only within the authorized test scope; neither
-was published or emailed, and no unrelated document or asset was cleaned up.
+The user authorized **at most two new unpublished verification drafts**; both
+creation slots are consumed. **2026-11-10 update:** the operator relaxed this —
+a **modest disposable live-test loop** is now permitted: freshly minted test
+drafts may be created, verified against, and **deleted afterward** once the
+delete capability lands, at low volume (markers under `.test-agent` prevent
+accidental repeats). Quiet publish (forced `sendEmail:false`) suppresses
+subscriber email only, **not public record visibility**, and the native
+`deleteLeaflet` action deletes the editor rather than the public record —
+verify a published-record deletion path exists upstream before any test
+publish. Existing P1 and the standalone draft have been used only within the
+authorized test scope; neither was published or emailed, and no unrelated
+document or asset was cleaned up.
 
 - **P1:** user explicitly selected the candidate after the original publication
   action response decoder lost its locator. Its original-action attribution is

@@ -46,6 +46,11 @@ sources:
 - Local content currently on this computer, including `~/l`, is rebuildable.
   Formats and earlier design choices may be revised when useful; avoid building
   migration machinery solely to preserve this disposable corpus.
+- Live Leaflet testing is permitted **in moderation when quiet and self-cleaning**:
+  prefer freshly minted disposable drafts that are deleted after verification.
+  Quiet publish suppresses subscriber email only, not public record visibility;
+  verify a published-record deletion path exists before any test publish.
+  Record markers under `.test-agent` prevent accidental repeats.
 - Include **persistent live watch/sync from Leaflet** in the build direction.
   Repeated one-shot pulls alone do not fulfill that request. Reuse guarded
   adoption inside a connected subscription-driven session; polling/full reads
